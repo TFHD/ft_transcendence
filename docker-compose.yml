@@ -1,0 +1,32 @@
+services:
+  frontend:
+    build: ./front
+    container_name: frontend
+    ports:
+      - "3000:3000"
+      # - "3000:80"
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    env_file:
+      - ./front/.env
+    networks:
+      - transcendance
+
+  backend:
+    build: ./back
+    container_name: backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./back:/app
+      - /app/node_modules
+    networks:
+      - transcendance
+
+networks:
+  transcendance:
+    name: transcendance
+    driver: bridge
