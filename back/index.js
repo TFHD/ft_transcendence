@@ -1,7 +1,7 @@
 //import fs from 'fs';
 //import https from 'https';
-import express from 'express';
-import cors from 'cors';
+import Fastify from 'fastify';
+import fastifyCors from '@fastify/cors';
 import sequelize from './configs/database.config.js'; 
 import User from './models/User.js';
 
@@ -52,7 +52,7 @@ sequelize.authenticate()
 
 */
 
-const app = express();
+const app = Fastify();
 const port = 8000;
 
 
@@ -74,10 +74,7 @@ const port = 8000;
 
 */
 
-
-app.use(cors());
-app.use(express.json());
-
+app.register(fastifyCors);
 
 /*
 
@@ -94,7 +91,7 @@ app.post('/api/users', async (req, res) => {
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
-      return res.status(400).json({ error: 'Tous les champs sont requis (username, email, password)' });
+      return res.status(400).send({ error: 'Tous les champs sont requis (username, email, password)' });
     }
 
     try {
@@ -103,9 +100,9 @@ app.post('/api/users', async (req, res) => {
 
       const newUser = await User.create({ username, email, password });
 
-      res.status(201).json(newUser);
+      res.status(201).send(newUser);
 
-    } catch (error) { res.status(500).json({ error: 'Erreur interne du serveur' }); }
+    } catch (error) { res.status(500).send({ error: 'Erreur interne du serveur' }); }
 });
 
 
@@ -125,9 +122,9 @@ app.get('/api/users', async (req, res) => {
   try {
     
     const users = await User.findAll();
-    res.status(200).json(users);
+    res.status(200).send(users);
 
-  } catch (error) { res.status(500).json({ error: 'Erreur lors de la récupération des utilisateurs' }); }
+  } catch (error) { res.status(500).send({ error: 'Erreur lors de la récupération des utilisateurs' }); }
 });
 
 
@@ -144,17 +141,24 @@ app.get('/api/users', async (req, res) => {
 */
 
 
-app.listen(port, () => {
-  console.log(`Backend listening on port ${port}`);
-});
+const start = async () => {
+  try {
+    await app.listen({port : port, host: '0.0.0.0' });
+    console.log('Backend listening on port 8000');
+  } catch (err) {
+    console.error('Erreur de démarrage du serveur Fastify:', err);
+    process.exit(1);
+  }
+};
 
 
+start();
 //EN PLUS pour test
 
 
 app.get('/api/button', async (req, res) => {
 
-  res.json({newLabel : "coucou"});
+  res.send({newLabel : "coucou"});
 });
 
 
