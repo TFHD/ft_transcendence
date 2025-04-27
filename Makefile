@@ -21,7 +21,7 @@ down:
 	@docker compose -f ./docker-compose.yml down
 
 clean: down
-	@printf "\n🔧 $(_GREEN)Delete data$(_RESET) 🔧\n\n"
+	@printf "\n🔧 $(_GREEN)Delete /home/$(LOGIN)/data$(_RESET) 🔧\n\n"
 
 
 fclean: clean

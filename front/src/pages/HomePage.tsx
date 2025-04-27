@@ -6,7 +6,7 @@ const HomePage = () => {
   const navigate = useNavigate();
   const fetchLabel = async (e: React.MouseEvent) => {
     e.preventDefault();
-    navigate("/about");
+    navigate("/babylon");
 
   };
 
