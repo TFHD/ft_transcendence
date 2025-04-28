@@ -17,9 +17,11 @@ import {
     Sound,
     SceneLoader,
     GlowLayer,
+    Texture,
+    DefaultRenderingPipeline,
     // Ajoute ici tous les autres imports dont tu as besoin
   } from '@babylonjs/core';
-  
+
   interface BabylonJS {
     Engine: typeof Engine;
     Scene: typeof Scene;
@@ -39,6 +41,8 @@ import {
     Sound: typeof Sound;
     SceneLoader: typeof SceneLoader;
     GlowLayer: typeof GlowLayer;
+    Texture: typeof Texture;
+    DefaultRenderingPipeline: typeof DefaultRenderingPipeline;
   }
   
   const BABYLON: BabylonJS = {
@@ -60,6 +64,8 @@ import {
     Sound,
     SceneLoader,
     GlowLayer,
+    Texture,
+    DefaultRenderingPipeline
   };
   
   export default BABYLON;
