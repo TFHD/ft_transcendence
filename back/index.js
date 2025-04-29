@@ -1,9 +1,11 @@
 //import fs from 'fs';
 //import https from 'https';
 import Fastify from 'fastify';
+import bcrypt from 'bcrypt';
 import fastifyCors from '@fastify/cors';
 import sequelize from './configs/database.config.js'; 
 import User from './models/User.js';
+import Websocket from '@fastify/websocket';
 
 //
 /*
@@ -38,15 +40,11 @@ sequelize.authenticate()
 
 /*
 
-############################################# On initialise le serveur Express ###########################################
+############################################# On initialise le serveur Fastify ###########################################
 
-    express() :
-    Cela crée une instance de l'application Express.
-    Express est un framework qui simplifie la gestion des requêtes HTTP dans une application Node.js.
-
-    port :
-    La variable port définit sur quel port le serveur va écouter les requêtes.
-    Ici, il écoute sur le port 8000, ce qui signifie que ton API sera accessible à l'adresse http://localhost:8000.
+    Initialisation du serveur Fastify
+    Définition du port à 8000
+    Enregistrement du middleware CORS pour permettre les requêtes cross-origin
 
 ##########################################################################################################################
 
@@ -54,26 +52,6 @@ sequelize.authenticate()
 
 const app = Fastify();
 const port = 8000;
-
-
-/*
-
-############################################################## middleware #############################################################
-    cors() :
-    Le middleware cors() permet de résoudre les problèmes de politique de même origine (CORS).
-    En d'autres termes, cela permet à ton API d'accepter des requêtes venant de domaines différents de celui de l'API.
-    Cela est particulièrement utile si ton frontend et ton backend sont hébergés sur des serveurs différents pendant le développement.
-
-    express.json() :
-    Ce middleware permet de parser les données JSON envoyées dans le corps des requêtes HTTP.
-    Par exemple, quand un utilisateur crée un compte et envoie des données comme username,
-    email et password, ces données sont envoyées en JSON, et ce middleware va automatiquement
-    les convertir en objet JavaScript dans req.body.
-
-########################################################################################################################################
-
-*/
-
 app.register(fastifyCors);
 
 /*
@@ -97,14 +75,44 @@ app.post('/api/users', async (req, res) => {
     try {
 
       await sequelize.sync();
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-      const newUser = await User.create({ username, email, password });
+      const newUser = await User.create({
+        username : username,
+        email : email,
+        password : hashedPassword
+      });
 
       res.status(201).send(newUser);
 
     } catch (error) { res.status(500).send({ error: 'Erreur interne du serveur' }); }
 });
 
+
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+      return res.status(400).send({ error: 'Email et mot de passe sont requis.' });
+  }
+
+  try {
+      const user = await User.findOne({ where: { email } });
+
+      if (!user) {
+          return res.status(401).send({ error: 'Utilisateur non trouvé.' });
+      }
+      const isPasswordCorrect = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordCorrect) {
+          return res.status(401).send({ error: 'Mot de passe incorrect.' });
+      }
+
+      res.status(200).send({ message: 'Connexion réussie.' });
+  } catch (error) {
+      res.status(500).send({ error: 'Erreur interne du serveur' });
+  }
+});
 
 /*
 
@@ -133,40 +141,67 @@ app.get('/api/users', async (req, res) => {
 
 ############################################ Lancement du serveur ############################################
 
-    Cela démarre le serveur Express et lui dit d'écouter sur le port 8000.
-    Dès que le serveur est lancé, le message "Backend listening on port 8000" sera affiché dans la console.
+    Cette fonction démarre le serveur Fastify et le fait écouter sur le port 8000 sur toutes les
+    interfaces réseau (0.0.0.0). Si une erreur survient lors du démarrage,
+    elle est affichée et le processus s'arrête avec un code d'erreur.
 
 ###############################################################################################################
 
 */
 
 
-const start = async () => {
-  try {
-    await app.listen({port : port, host: '0.0.0.0' });
-    console.log('Backend listening on port 8000');
-  } catch (err) {
-    console.error('Erreur de démarrage du serveur Fastify:', err);
-    process.exit(1);
-  }
-};
+//Dans l'idee il faudras une class Users et Games, Users recupere les infos depuis les sockets
+//qui se connectent et de la db ?? Surement jsp
+//La class Games contient 2 users et pos de la balle des 2 paddles
+//Voila
 
+app.get('/api/pong/test', {websocket: true}, async (connection, req) => {
+	const { socket } = connection;
+
+	console.log('Reiceived socket connection');
+	
+	// setTimeout(() => {
+	// 	try {
+	// 		// socket.write(JSON.stringify({ msg: 'cacaboudin' }));
+	// 	} catch (err) {
+	// 		console.error('💥 Send error:', err);
+	// 	}
+	// }, 100);
+
+	socket.on('message', (message) => {
+		console.log('received a message ig');
+	})
+
+	socket.on('close', () => {
+		console.log('goodbye client (he disconnected)');
+	})
+
+	socket.on('error', (err) => {
+		console.error('WebSocket error:', err);
+	})
+});
+
+const start = async () =>
+{
+	try
+	{
+		await app.listen({port : port, host: '0.0.0.0' });
+		console.log('Backend listening on port 8000');
+	}
+	catch (err)
+	{
+    	console.error('Erreur de démarrage du serveur Fastify:', err);
+    	process.exit(1);
+	}
+};
 
 start();
 //EN PLUS pour test
-
 
 app.get('/api/button', async (req, res) => {
 
   res.send({newLabel : "coucou"});
 });
-
-
-
-
-
-
-
 
 //const options = {
 //  key: fs.readFileSync('/app/certs/key.pem'),
