@@ -1,4 +1,9 @@
 import {
+    Control,
+    AdvancedDynamicTexture
+  } from '@babylonjs/gui'
+
+import {
     Engine,
     Scene,
     ArcRotateCamera,
@@ -9,6 +14,7 @@ import {
     MeshBuilder,
     StandardMaterial,
     Color3,
+    Color4,
     Vector3,
     Vector4,
     Matrix,
@@ -17,7 +23,10 @@ import {
     Sound,
     SceneLoader,
     GlowLayer,
-    // Ajoute ici tous les autres imports dont tu as besoin
+    Scalar,
+    ArcRotateCameraKeyboardMoveInput,
+    ArcRotateCameraPointersInput,
+    KeyboardEventTypes
   } from '@babylonjs/core';
   
   interface BabylonJS {
@@ -31,6 +40,7 @@ import {
     MeshBuilder: typeof MeshBuilder;
     StandardMaterial: typeof StandardMaterial;
     Color3: typeof Color3;
+    Color4: typeof Color4;
     Vector3: typeof Vector3;
     Vector4: typeof Vector4;
     Matrix: typeof Matrix;
@@ -39,6 +49,12 @@ import {
     Sound: typeof Sound;
     SceneLoader: typeof SceneLoader;
     GlowLayer: typeof GlowLayer;
+    Control: typeof Control;
+    AdvancedDynamicTexture: typeof AdvancedDynamicTexture;
+    Scalar: typeof Scalar;
+    ArcRotateCameraKeyboardMoveInput: typeof ArcRotateCameraKeyboardMoveInput;
+    ArcRotateCameraPointersInput: typeof ArcRotateCameraPointersInput;
+    KeyboardEventTypes: typeof KeyboardEventTypes;
   }
   
   const BABYLON: BabylonJS = {
@@ -52,6 +68,7 @@ import {
     MeshBuilder,
     StandardMaterial,
     Color3,
+    Color4,
     Vector3,
     Vector4,
     Matrix,
@@ -60,6 +77,12 @@ import {
     Sound,
     SceneLoader,
     GlowLayer,
+    Control,
+    AdvancedDynamicTexture,
+    Scalar,
+    ArcRotateCameraKeyboardMoveInput,
+    ArcRotateCameraPointersInput,
+    KeyboardEventTypes
   };
   
   export default BABYLON;

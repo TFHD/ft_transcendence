@@ -6,6 +6,8 @@ import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import UserForm from './pages/UserForm';
 import BabylonPage from "./pages/Babylonjs";
+import Users from "./pages/Users";
+import Login from "./pages/Login";
 
 const App = () => {
   return (
@@ -16,6 +18,8 @@ const App = () => {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/users" element={<UserForm />} />
         <Route path="/babylon" element={<BabylonPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/userslist" element={<Users />} />
       </Routes>
     </Router>
   );
