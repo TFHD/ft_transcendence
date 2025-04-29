@@ -155,7 +155,7 @@ app.get('/api/users', async (req, res) => {
 //La class Games contient 2 users et pos de la balle des 2 paddles
 //Voila
 
-app.get('/api/pong/test', {websocket: true}, async (connection, req) => {
+app.get('/api/pong/test', {websocket: true}, (connection, req) => {
 	const { socket } = connection;
 
 	console.log('Reiceived socket connection');
