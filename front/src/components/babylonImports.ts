@@ -1,6 +1,9 @@
 import {
     Control,
-    AdvancedDynamicTexture
+    AdvancedDynamicTexture,
+    TextBlock,
+    Button,
+    Rectangle
   } from '@babylonjs/gui'
 
 import {
@@ -26,7 +29,11 @@ import {
     Scalar,
     ArcRotateCameraKeyboardMoveInput,
     ArcRotateCameraPointersInput,
-    KeyboardEventTypes
+    KeyboardEventTypes,
+    DefaultRenderingPipeline,
+    ParticleSystem,
+    Texture,
+    Ray,
   } from '@babylonjs/core';
   
   interface BabylonJS {
@@ -55,6 +62,13 @@ import {
     ArcRotateCameraKeyboardMoveInput: typeof ArcRotateCameraKeyboardMoveInput;
     ArcRotateCameraPointersInput: typeof ArcRotateCameraPointersInput;
     KeyboardEventTypes: typeof KeyboardEventTypes;
+    DefaultRenderingPipeline: typeof DefaultRenderingPipeline;
+    TextBlock: typeof TextBlock;
+    Button: typeof Button;
+    ParticleSystem: typeof ParticleSystem;
+    Texture: typeof Texture;
+    Ray: typeof Ray;
+    Rectangle: typeof Rectangle;
   }
   
   const BABYLON: BabylonJS = {
@@ -82,7 +96,13 @@ import {
     Scalar,
     ArcRotateCameraKeyboardMoveInput,
     ArcRotateCameraPointersInput,
-    KeyboardEventTypes
+    KeyboardEventTypes,
+    DefaultRenderingPipeline,
+    TextBlock,
+    Button,
+    ParticleSystem,
+    Texture,
+    Ray,
+    Rectangle
   };
-  
-  export default BABYLON;
+export default BABYLON;

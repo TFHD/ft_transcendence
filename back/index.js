@@ -163,7 +163,6 @@ const start = async () => {
 start();
 //EN PLUS pour test
 
-
 app.get('/api/button', async (req, res) => {
 
   res.send({newLabel : "coucou"});
