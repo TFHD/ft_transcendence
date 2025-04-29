@@ -6,7 +6,7 @@ import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import UserForm from './pages/UserForm';
 import BabylonPage from "./pages/Babylonjs";
-import PongPage from "./pages/PongPage";
+import Pong from "./pages/Pong";
 
 const App = () => {
   return (
@@ -18,7 +18,7 @@ const App = () => {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/users" element={<UserForm />} />
         <Route path="/babylon" element={<BabylonPage />} />
-        <Route path="/pong" element={<PongPage />} />
+        <Route path="/pong" element={<Pong />} />
       </Routes>
     </Router>
   );

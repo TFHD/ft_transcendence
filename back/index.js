@@ -156,7 +156,6 @@ app.get('/api/users', async (req, res) => {
 //Voila
 
 app.get('/api/pong/test', {websocket: true}, (connection, req) => {
-	const { socket } = connection;
 
 	console.log('Reiceived socket connection');
 	
