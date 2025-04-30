@@ -30,10 +30,11 @@ const BabylonScene = () => {
     camera.angularSensibilityY = 4000;
     camera.inertia = 0.9;
 
+    // disable lateral movement
+    camera.inputs.attached.pointers.buttons = [0];
+
     const CUBE = BB.MeshBuilder.CreateBox("registerHouse", {width:0.5, height:0.5, depth:0.5}, scene);
     CUBE.position = new BB.Vector3(0, 0.9, 0);
-
-
 
     const cubeMaterial = new BB.StandardMaterial("cubeMat", scene);
     cubeMaterial.diffuseColor = new BB.Color4(1, 1, 1);
@@ -73,11 +74,6 @@ const BabylonScene = () => {
     const planet = BB.MeshBuilder.CreateSphere("planet", { diameter: 2, segments: 128 }, scene);
     // planet.renderingGroupId = 2;
 
-    const planet2 = BB.MeshBuilder.CreateSphere("planet2", { diameter: 1, segments: 128 }, scene);
-    // planet2.renderingGroupId = 2;
-    planet2.position = new BB.Vector3(10, 0, 0);
-    
-
     const planet_pbr = new BB.PBRMaterial("planet.pbr", scene);
     
     planet_pbr.albedoTexture = new BB.Texture("../../assets/albedo_veins.png", scene);
@@ -86,9 +82,38 @@ const BabylonScene = () => {
     planet_pbr.roughnessTexture = new BB.Texture("../../assets/roughness_veins.png", scene);
     planet_pbr.metallicTexture = new BB.Texture("../../assets/metallic.png", scene);
     planet_pbr.emissiveColor = new BB.Color3(1, 1, 1); // White glow
-    planet_pbr.emissiveIntensity = 1.5;
+    planet_pbr.emissiveIntensity = 0.8;
 
     planet.material = planet_pbr;
+
+    var starsParticles = new BB.ParticleSystem("starsParticles", 500, scene);
+    starsParticles.particleTexture = new BB.Texture("https://raw.githubusercontent.com/PatrickRyanMS/BabylonJStextures/master/ParticleSystems/Sun/T_Star.png", scene);
+
+    var stars = BB.MeshBuilder.CreateBox("emitter", new BB.Vector3(0.01, 0.01, 0.01), scene);
+
+    var starsEmitter = new BB.SphereParticleEmitter();
+    starsEmitter.radius = 20;
+    starsEmitter.radiusRange = 0; // emit only from shape surface
+
+    starsParticles.emitter = stars; // the starting object, the emitter
+    starsParticles.particleEmitterType = starsEmitter;
+    starsParticles.color1 = new BB.Color4(0.898, 0.737, 0.718, 1.0);
+    starsParticles.color2 = new BB.Color4(0.584, 0.831, 0.894, 1.0);
+    starsParticles.minSize = 0.15;
+    starsParticles.maxSize = 0.3;
+    starsParticles.minLifeTime = 999999;
+    starsParticles.maxLifeTime = 999999;
+    starsParticles.manualEmitCount = 500;
+    starsParticles.maxEmitPower = 0.0;
+    starsParticles.blendMode = BB.ParticleSystem.BLENDMODE_STANDARD;
+    starsParticles.gravity = new BB.Vector3(0, 0, 0);
+    starsParticles.minAngularSpeed = 0.0;
+    starsParticles.maxAngularSpeed = 0.0;
+    starsParticles.minEmitPower = 0.0;
+    starsParticles.maxAngularSpeed = 0.0;
+    starsParticles.isBillboardBased = true;
+    starsParticles.renderingGroupId = 0;
+    starsParticles.start();
 
     const mainLight = new BB.HemisphericLight("mainLight", new BB.Vector3(-1, 1, 0), scene);
     mainLight.intensity = 0.8;
@@ -118,13 +143,56 @@ const BabylonScene = () => {
     const pulseAmplitude = 0.09;  // Original: 0.05
     const rotationSpeed = 0.003;  // Original: 0.002
 
+    let id = 0;
+
+    /**
+     * Spawns a planet of diameter `d` at a random position with distance > 4 from (0,0,0).
+     * @param d        Diameter of the planet
+     * @param maxDist  Maximum radial distance for placement (default: 50)
+     */
+    const generate_planet = (d: number, maxDist: number = 50) => {
+      // 1. Pick a random radius r in [minR, maxDist]
+      const minR = 6 + d / 2; 
+      const r = minR + Math.random() * (maxDist - minR);
+    
+      // 2. Uniform direction on sphere
+      const u = Math.random();
+      const v = Math.random();
+      const theta = 2 * Math.PI * u;             // azimuth
+      const phi   = Math.acos(2 * v - 1);         // inclination
+    
+      // 3. Convert spherical → Cartesian
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta);
+      const z = r * Math.cos(phi);
+    
+      // 4. Create and position the sphere
+      const name = `planet_${id++}`;
+      const p = BB.MeshBuilder.CreateSphere(name, { diameter: d, segments: 128 }, scene);
+      p.position = new BB.Vector3(x, y, z);
+      p.rotation = new BB.Vector3(
+        Math.random() * Math.PI * 2,   // random yaw
+        Math.random() * Math.PI * 2,   // random pitch
+        Math.random() * Math.PI * 2    // random roll
+      );
+
+      p.material = planet_pbr;
+    
+      return p;
+    };
+
+    for (let i = 0; i < 100; i++) {
+      const diameter = 0.5 + Math.random() * 0.5; // between 0.5 and 2.5
+      generate_planet(diameter);
+    }
+
     scene.onBeforeRenderObservable.add(() => {
       // Calculate pulse using sine wave
       pulseTime += (engine.getDeltaTime() ) / 1000;
-      const pulse = Math.sin(pulseTime * 1.5) * pulseAmplitude;
+      const pulse = Math.sin(pulseTime * 1.8) * pulseAmplitude;
       
       // Apply to both emissive intensity and bloom
-      planet_pbr.emissiveIntensity = baseIntensity + pulse;
+      glow.intensity = baseIntensity + pulse + 0.3;
       // pipeline.bloomWeight = 0.2 + (pulse * 2);
 
     });
@@ -147,7 +215,7 @@ const BabylonScene = () => {
     <div className="bg-black flex items-center justify-center min-h-screen pt-[0px]">
       <canvas
         ref={canvasRef}
-        style={{ width: "100%", height: "100vh", outline: "none"}}
+        style={{ width: "90%", height: "100vh", outline: "none"}}
       />
     </div>
   );

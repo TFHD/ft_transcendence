@@ -29,6 +29,12 @@ import {
     ActionManager,
     InterpolateValueAction,
     ExecuteCodeAction,
+    ParticleSystem,
+    SphereParticleEmitter,
+    GPUParticleSystem,
+    MeshParticleEmitter,
+    SolidParticleSystem,
+    Axis,
     // Ajoute ici tous les autres imports dont tu as besoin
   } from '@babylonjs/core';
 
@@ -63,6 +69,12 @@ import {
     ActionManager: typeof ActionManager;
     InterpolateValueAction: typeof InterpolateValueAction;
     ExecuteCodeAction: typeof ExecuteCodeAction;
+    ParticleSystem: typeof ParticleSystem;
+    SphereParticleEmitter: typeof SphereParticleEmitter;
+    GPUParticleSystem: typeof GPUParticleSystem;
+    MeshParticleEmitter: typeof MeshParticleEmitter;
+    SolidParticleSystem: typeof SolidParticleSystem;
+    Axis: typeof Axis
   }
   
   const BABYLON: BabylonJS = {
@@ -96,6 +108,12 @@ import {
     ActionManager,
     InterpolateValueAction,
     ExecuteCodeAction,
+    ParticleSystem,
+    SphereParticleEmitter,
+    GPUParticleSystem,
+    MeshParticleEmitter,
+    SolidParticleSystem,
+    Axis
   };
   
   export default BABYLON;
