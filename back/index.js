@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import fastifyCors from '@fastify/cors';
 import sequelize from './configs/database.config.js'; 
 import User from './models/User.js';
-import Websocket from '@fastify/websocket';
+import fastifyWebsocket from '@fastify/websocket';
 
 //
 /*
@@ -53,6 +53,7 @@ sequelize.authenticate()
 const app = Fastify();
 const port = 8000;
 app.register(fastifyCors);
+app.register(fastifyWebsocket);
 
 /*
 
@@ -155,30 +156,22 @@ app.get('/api/users', async (req, res) => {
 //La class Games contient 2 users et pos de la balle des 2 paddles
 //Voila
 
-app.get('/api/pong/test', {websocket: true}, (connection, req) => {
-
-	console.log('Reiceived socket connection');
+const router = (fastify) => {
+	fastify.get('/pong/test', {websocket: true}, (connection, req) => {
+		const socket = connection.socket;
 	
-	// setTimeout(() => {
-	// 	try {
-	// 		// socket.write(JSON.stringify({ msg: 'cacaboudin' }));
-	// 	} catch (err) {
-	// 		console.error('💥 Send error:', err);
-	// 	}
-	// }, 100);
+		console.log('Reiceived socket connection');
+	});
+}
 
-	socket.on('message', (message) => {
-		console.log('received a message ig');
-	})
+app.register(router, {prefix: '/api'});
 
-	socket.on('close', () => {
-		console.log('goodbye client (he disconnected)');
-	})
+app.get('/api/pong/input', async (req, res) => {
 
-	socket.on('error', (err) => {
-		console.error('WebSocket error:', err);
-	})
-});
+	console.log('Bonjour j\'ai appuye');
+  });
+
+console.log(app.printRoutes());
 
 const start = async () =>
 {
@@ -186,6 +179,7 @@ const start = async () =>
 	{
 		await app.listen({port : port, host: '0.0.0.0' });
 		console.log('Backend listening on port 8000');
+		
 	}
 	catch (err)
 	{
@@ -196,6 +190,11 @@ const start = async () =>
 
 start();
 //EN PLUS pour test
+
+app.addHook('onRequest', (req, reply, done) => {
+	console.log(`[REQUETE] ${req.raw.method} ${req.raw.url}`);
+	done();
+  });
 
 app.get('/api/button', async (req, res) => {
 
