@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import fastifyCors from '@fastify/cors';
 import sequelize from './configs/database.config.js'; 
 import User from './models/User.js';
+import fastifyWebsocket from '@fastify/websocket';
 
 //
 /*
@@ -52,6 +53,7 @@ sequelize.authenticate()
 const app = Fastify();
 const port = 8000;
 app.register(fastifyCors);
+app.register(fastifyWebsocket);
 
 /*
 
@@ -148,6 +150,23 @@ app.get('/api/users', async (req, res) => {
 
 */
 
+const router = (fastify) => {
+	fastify.get('/pong/test', {websocket: true}, (connection, req) => {
+		const socket = connection.socket;
+	
+		console.log('Reiceived socket connection');
+	});
+}
+
+app.register(router, {prefix: '/api'});
+
+app.post('/api/pong/input', async (req, res) => {
+  const { key } = req.body;
+  console.log(`Touche pressée reçue par HTTP: ${key}`);
+  res.send({ message: `Touche ${key} bien reçue` });
+});
+
+console.log(app.printRoutes());
 
 const start = async () => {
   try {
@@ -158,7 +177,6 @@ const start = async () => {
     process.exit(1);
   }
 };
-
 
 start();
 //EN PLUS pour test

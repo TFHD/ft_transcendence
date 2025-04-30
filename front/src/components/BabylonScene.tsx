@@ -1,8 +1,13 @@
 import React from 'react';
 import { useEffect, useRef } from "react";
 import BABYLON from '../components/babylonImports';
+
+let ws:WebSocket | null = null;
+
 const BabylonScene = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wsRef = useRef(null);
+	const host = import.meta.env.VITE_ADRESS;
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -210,6 +215,14 @@ const BabylonScene = () => {
       else if (event.key in keyState) {
         keyState[event.key] = true;
       }
+
+      const reponse = fetch(`http://${host}:8000/api/pong/input`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ key: event.key })
+      }).then(res => res.text()).then(console.log).catch(console.error);
     };
     //Fonction pour les touches qui ne sont plus préssées
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -353,17 +366,30 @@ const BabylonScene = () => {
     const handleResize = () => { engine.resize(); };
     window.addEventListener("resize", handleResize);
 
+    ws = new WebSocket(`ws://${host}:8000/api/pong/test`);
+    wsRef.current = ws;
+    ws.onopen = () =>
+	  {
+    	console.log('Connected to server');
+    	console.log('Entre les 2');
+    };
+
+    ws.onmessage = (message) => { console.log(`Received message from server: ${message.data}`); };
+    ws.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); ws = null; };
+    ws.onerror = (e) => { console.log('Connection erroreuh', e); };
+
     return () => {
       engine.dispose();
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      console.log('Fermeture WebSocket');
     };
   }, []);
 
   return (
     //style={{ overflow: "hidden" }} c'est pour cacher le surplus de la page
-    <div className="bg-black flex items-center justify-center min-h-screen pt-[0px]" style={{ overflow: "hidden" }}>
+    <div className="bg-white flex items-center justify-center min-h-screen pt-[0px]" style={{ overflow: "hidden" }}>
       <canvas
         ref={canvasRef}
         // outiline "none" c'est pour desactiver le contour blanc pas beau du canvas quand on clique dessus hein Remi :)
