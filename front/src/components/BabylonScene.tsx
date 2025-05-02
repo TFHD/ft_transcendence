@@ -108,32 +108,34 @@ const BabylonScene = () => {
 
     //Fonction qui update la position de la balle et gère aussi son angle en fonction du Y de la raquette
     //sur laquelle elle est frappée
-    const updateAnglePosBall = (ball: BABYLON.Mesh, paddle: BABYLON.Mesh) => {
-      const paddleHalfHeight = 2.5; // 2.5 car 5 / 2 = 2.5 :)
-      const withinXRange = Math.abs(ball.position.x - paddle.position.x) <= 0.5;
-      const withinYRange = Math.abs(ball.position.y - paddle.position.y) <= paddleHalfHeight;
+    const updateAnglePosBall = (ball: BABYLON.Mesh, paddle: BABYLON.Mesh) =>
+	{
+    	const paddleHalfHeight = 2.5; // 2.5 car 5 / 2 = 2.5 :)
+    	const withinXRange = Math.abs(ball.position.x - paddle.position.x) <= 0.5;
+    	const withinYRange = Math.abs(ball.position.y - paddle.position.y) <= paddleHalfHeight;
     
-      if (withinXRange && withinYRange) {
-
-        const relativeIntersectY = ball.position.y - paddle.position.y;
-        const normalizedRelativeY = relativeIntersectY / paddleHalfHeight;
-        const bounceAngle = normalizedRelativeY * Math.PI / 4;
-        const direction = ballVelocity.x > 0 ? -1 : 1;
-        var speed = ballVelocity.length() * SPEED_MULTIPLIER;
-        if (speed > 1.5)
-          speed = 1.5;
-        ballVelocity.x = direction * speed * Math.cos(bounceAngle);
-        ballVelocity.y = speed * Math.sin(bounceAngle);
-      }
+    	if (withinXRange && withinYRange)
+		{
+        	const relativeIntersectY = ball.position.y - paddle.position.y;
+        	const normalizedRelativeY = relativeIntersectY / paddleHalfHeight;
+        	const bounceAngle = normalizedRelativeY * Math.PI / 4;
+        	const direction = ballVelocity.x > 0 ? -1 : 1;
+        	var speed = ballVelocity.length() * SPEED_MULTIPLIER;
+        	if (speed > 1.5)
+        		speed = 1.5;
+        	ballVelocity.x = direction * speed * Math.cos(bounceAngle);
+        	ballVelocity.y = speed * Math.sin(bounceAngle);
+    	}
     };
 
-    const updateBall = () => {
+    const updateBall = () =>
+	{
 
-      previousBallPosition.copyFrom(ball.position);
-      ball.position.addInPlace(ballVelocity);
-      const direction = ballVelocity.clone().normalize();
-      const rayLength = ballVelocity.length();
-      const ray = new BABYLON.Ray(previousBallPosition, direction, rayLength);
+    	previousBallPosition.copyFrom(ball.position);
+    	ball.position.addInPlace(ballVelocity);
+    	const direction = ballVelocity.clone().normalize();
+    	const rayLength = ballVelocity.length();
+    	const ray = new BABYLON.Ray(previousBallPosition, direction, rayLength);
       //J'utilise un Ray (quand la balle va trop vite) genre je fais un rayon de mon ancienne pos de balle avec la nouvelle
       //et je regarde si le rayon passe par un paddle et si c'est le cas je TP la balle sur la position du paddle
       //visuellement ça va tlm vite qu'on voit que dalle
@@ -146,91 +148,108 @@ const BabylonScene = () => {
       //                        | \
       //                        |  O (Nouvelle pos de Balle)
       //
-      const hitLeft = ray.intersectsMesh(leftPaddle, false);
-      const hitRight = ray.intersectsMesh(rightPaddle, false);
-      if (hitLeft.hit) {
-        updateAnglePosBall(ball, leftPaddle);
-        ball.position = new BABYLON.Vector3(leftPaddle.position.x + 1, previousBallPosition.y, leftPaddle.position.z);
-      }
-      if (hitRight.hit) {
-        updateAnglePosBall(ball, rightPaddle);
-        ball.position = new BABYLON.Vector3(rightPaddle.position.x - 1, previousBallPosition.y, rightPaddle.position.z);
-      }
-      createExplosion(ball.position);
-      if (ball.position.y > MAX_BALL_Y || ball.position.y < MIN_BALL_Y) {
-        ballVelocity.y = -ballVelocity.y;
-      }
-      updateAnglePosBall(ball, leftPaddle);
-      updateAnglePosBall(ball, rightPaddle);
-      if (ball.position.x > MAX_BALL_X || ball.position.x < MIN_BALL_X) {
-        if (ball.position.x > MAX_BALL_X) {
-          ScorePlayer1++;
-          Player1Score.text = ScorePlayer1 + "";
-        }
-        if (ball.position.x < MAX_BALL_X) {
-          ScorePlayer2++;
-          Player2Score.text = ScorePlayer2 + "";
-        }
-          
-        ball.position = new BABYLON.Vector3(0, 0, 0);
-        ballVelocity = new BABYLON.Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
-      }
+    	const hitLeft = ray.intersectsMesh(leftPaddle, false);
+    	const hitRight = ray.intersectsMesh(rightPaddle, false);
+    	if (hitLeft.hit)
+		{
+    		updateAnglePosBall(ball, leftPaddle);
+    		ball.position = new BABYLON.Vector3(leftPaddle.position.x + 1, previousBallPosition.y, leftPaddle.position.z);
+      	}
+    	if (hitRight.hit)
+		{
+    		updateAnglePosBall(ball, rightPaddle);
+    		ball.position = new BABYLON.Vector3(rightPaddle.position.x - 1, previousBallPosition.y, rightPaddle.position.z);
+    	}
+      	createExplosion(ball.position);
+      	if (ball.position.y > MAX_BALL_Y || ball.position.y < MIN_BALL_Y)
+		{
+      		ballVelocity.y = -ballVelocity.y;
+      	}
+    	updateAnglePosBall(ball, leftPaddle);
+    	updateAnglePosBall(ball, rightPaddle);
+    	if (ball.position.x > MAX_BALL_X || ball.position.x < MIN_BALL_X)
+		{
+        	if (ball.position.x > MAX_BALL_X)
+			{
+        		ScorePlayer1++;
+        		Player1Score.text = ScorePlayer1 + "";
+        	}
+        	if (ball.position.x < MAX_BALL_X)
+			{
+        		ScorePlayer2++;
+        		Player2Score.text = ScorePlayer2 + "";
+        	}
+		
+        	ball.position = new BABYLON.Vector3(0, 0, 0);
+        	ballVelocity = new BABYLON.Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+    	}
     };
 
     //Fonctions movePaddle + smoothMovePaddles permettent de moove les raquettes en changeant leurs positions Y
-    const movePaddle = (direction: number, bool : number) => {
-      if (bool == 1) {
-        let newTarget = leftPaddle.position.y + SPEED * direction;
-        if (newTarget >= PADDLE_MIN_Y && newTarget <= PADDLE_MAX_Y)
-          leftPaddle.position.y = newTarget;
-      }
-      else {
-        let newTarget = rightPaddle.position.y + SPEED * direction;
-        if (newTarget >= PADDLE_MIN_Y && newTarget <= PADDLE_MAX_Y)
-          rightPaddle.position.y = newTarget;
-      }
-    };
+    // const movePaddle = (direction: number, bool : number) =>
+	// {
+	// 	if (bool == 1)
+	// 	{
+    //     	let newTarget = leftPaddle.position.y + SPEED * direction;
+    //     	if (newTarget >= PADDLE_MIN_Y && newTarget <= PADDLE_MAX_Y)
+    //     		leftPaddle.position.y = newTarget;
+	// 	}
+    // 	else
+	// 	{
+    //     	let newTarget = rightPaddle.position.y + SPEED * direction;
+    //     	if (newTarget >= PADDLE_MIN_Y && newTarget <= PADDLE_MAX_Y)
+	// 			rightPaddle.position.y = newTarget;
+	// 	}
+    // };
 
-    const smoothMovePaddles = () => {
-      if (keyState.ArrowUp) movePaddle(1, 0);
-      if (keyState.ArrowDown) movePaddle(-1, 0);
-      if (keyState.w) movePaddle(1, 1);
-      if (keyState.s) movePaddle(-1, 1);
-    };
+    // const smoothMovePaddles = () =>
+	// {
+    // 	if (keyState.ArrowUp)
+	// 		movePaddle(1, 0);
+    // 	if (keyState.ArrowDown)
+	// 		movePaddle(-1, 0);
+    // 	if (keyState.w)
+	// 		movePaddle(1, 1);
+    // 	if (keyState.s)
+	// 		movePaddle(-1, 1);
+    // };
 
     //Fonction pour les touches qui sont préssées
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (Status == ENUM_STATUS.InGame) {
-          Status = ENUM_STATUS.pause;
-          gui.addControl(PauseBackgroundBox);
-          gui.addControl(PauseTextBox);
-        } else {
-          Status = ENUM_STATUS.InGame;
-          gui.removeControl(PauseBackgroundBox);
-          gui.removeControl(PauseTextBox);
-        }
-        console.log(Status);
-      }
-      else if (event.key in keyState) {
-        keyState[event.key] = true;
-      }
-
-      const reponse = fetch(`http://${host}:8000/api/pong/input`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ key: event.key })
-      }).then(res => res.text()).then(console.log).catch(console.error);
+    const handleKeyDown = (event: KeyboardEvent) =>
+	{
+		if (event.key === "Escape")
+		{
+        	if (Status == ENUM_STATUS.InGame)
+			{
+          		Status = ENUM_STATUS.pause;
+        		gui.addControl(PauseBackgroundBox);
+        		gui.addControl(PauseTextBox);
+        	}
+			else
+			{
+        		Status = ENUM_STATUS.InGame;
+        		gui.removeControl(PauseBackgroundBox);
+        		gui.removeControl(PauseTextBox);
+        	}
+        	console.log(Status);
+		}
+      	else if (event.key in keyState)
+		{
+        	keyState[event.key] = true;
+			const reponse = fetch(`http://${host}:8000/api/pong/input`, { method: "POST", headers: { "Content-Type": "application/json"}, body: JSON.stringify({ key: event.key, state: true }) })
+			.then(res => res.text()).then(console.log).catch(console.error);
+		}
     };
     //Fonction pour les touches qui ne sont plus préssées
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key in keyState) {
-        keyState[event.key] = false;
-      }
+    const handleKeyUp = (event: KeyboardEvent) =>
+	{
+    	if (event.key in keyState)
+		{
+        	keyState[event.key] = false;
+			const reponse = fetch(`http://${host}:8000/api/pong/input`, { method: "POST", headers: { "Content-Type": "application/json"}, body: JSON.stringify({ key: event.key, state: false }) })
+			.then(res => res.text()).then(console.log).catch(console.error);
+		}
     };
-
 
     const createExplosion = (position: BABYLON.Vector3) => {
       const particleSystem = new BABYLON.ParticleSystem("particles", 200, scene);
@@ -344,46 +363,62 @@ const BabylonScene = () => {
     let ballVelocity = new BABYLON.Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
     let previousBallPosition = ball.position.clone();
 
-    //Creation des murs
     createWall("topWall", {width: 45, height : WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, 11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
     createWall("bottomWall", {width: 45, height: WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, -11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
-    //createWall("leftWall", WALL_THICKNESS, 23, WALL_DEPTH, new BABYLON.Vector3(-22, 0, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
-    //createWall("rightWall", WALL_THICKNESS, 23, WALL_DEPTH, new BABYLON.Vector3(22, 0, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
-    //createWall("back", {width: 45, height: 23, depth: 1}, new BABYLON.Vector3(0, 0, 20.5), new BABYLON.Color3(0.5, 0.5, 0.5));
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
     //Je créer une loop render un peu comme la Macro genre add_loop_hook()
-    engine.runRenderLoop(() => {
-      if (Status == ENUM_STATUS.InGame) {
-        updateBall();
-        smoothMovePaddles();
-      }
-      scene.render();
+    engine.runRenderLoop(() =>
+	{
+    	if (Status == ENUM_STATUS.InGame)
+		{
+        	updateBall();
+        	// smoothMovePaddles();
+    	}
+      	scene.render();
     });
 
-    const handleResize = () => { engine.resize(); };
+    const handleResize = () =>
+	{
+		engine.resize();
+	};
     window.addEventListener("resize", handleResize);
 
-    ws = new WebSocket(`ws://${host}:8000/api/pong/test`);
-    wsRef.current = ws;
+	if (!ws)
+	{
+    	ws = new WebSocket(`ws://${host}:8000/api/pong/test`);
+    	wsRef.current = ws;
+	}
     ws.onopen = () =>
-	  {
-    	console.log('Connected to server');
-    	console.log('Entre les 2');
+	{
+    	console.log('Successfully connected to server');
     };
+    ws.onmessage = (message) =>
+	{
+		const server_packet = JSON.parse(message.data);
 
-    ws.onmessage = (message) => { console.log(`Received message from server: ${message.data}`); };
-    ws.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); ws = null; };
-    ws.onerror = (e) => { console.log('Connection erroreuh', e); };
+		rightPaddle.position.y = server_packet.player2Y;
+		leftPaddle.position.y = server_packet.player1Y;
+	};
+    ws.onclose = (event) =>
+	{
+		console.log('Disconnected from server', event.code, event.reason);
+		ws = null;
+	};
+    ws.onerror = (e) =>
+	{
+		console.log('Connection error', e);
+	};
 
-    return () => {
-      engine.dispose();
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      console.log('Fermeture WebSocket');
+    return () =>
+	{
+    	engine.dispose();
+    	window.removeEventListener("resize", handleResize);
+    	window.removeEventListener("keydown", handleKeyDown);
+    	window.removeEventListener("keyup", handleKeyUp);
+    	console.log('Fermeture WebSocket');
     };
   }, []);
 
