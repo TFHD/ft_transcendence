@@ -125,7 +125,6 @@ app.post('/api/login', async (req, res) => {
 
 */
 
-
 app.get('/api/users', async (req, res) => {
 
   try {
@@ -173,10 +172,12 @@ let	players = new PongPlayers();
 //Fonction pour sleep en ms comme ca jpeux envoyer les infos 60 fois par secondes
 const mssleep = ms => new Promise(r => setTimeout(r, ms));
 
-class	PongGameClass
+let	pongIDs = 0;
+
+class	PongSoloGameClass
 {
 	// constructor(player1, player2)
-	constructor(player1)
+	constructor(player)
 	{
 		this.player1Y = 0;
 		this.player1UpInput = false;
@@ -188,6 +189,9 @@ class	PongGameClass
 		
 		this.ballX = 0;
 		this.ballY = 0;
+
+		this.ID = pongIDs++;
+		this.running = true;
 	}
 }
 
@@ -196,84 +200,120 @@ const PongMaxY = 10;
 const PongMinX = 0;
 const PongMinY = 0;
 
-const ballX = 0;
-const ballY = 0;
+let soloGames = [];
 
-let game = null;
+let	user_socket_map = new Map();
+let	total_users = 0;
 
-const movePaddle = (direction, bool) =>
+const movePaddle = (socket, direction, bool) =>
 {
 	if (bool)
 	{
-    	let newTarget = game.player1Y + 1 * direction;
+    	let newTarget = soloGames[user_socket_map.get(socket)].player1Y + 0.2 * direction;
     	if (newTarget >= -8 && newTarget <= 8)
-    		game.player1Y = newTarget;
+    		soloGames[user_socket_map.get(socket)].player1Y = newTarget;
 	}
 	else
 	{
-    	let newTarget = game.player2Y + 1 * direction;
+    	let newTarget = soloGames[user_socket_map.get(socket)].player2Y + 0.2 * direction;
     	if (newTarget >= -8 && newTarget <= 8)
-			game.player2Y = newTarget;
+			soloGames[user_socket_map.get(socket)].player2Y = newTarget;
 	}
 };
 
-const smoothMovePaddles = () =>
+const smoothMovePaddles = (socket) =>
 {
-	if (game.player2UpInput)
-		movePaddle(1, 0);
-	if (game.player2DownInput)
-		movePaddle(-1, 0);
-	if (game.player1UpInput)
-		movePaddle(1, 1);
-	if (game.player1DownInput)
-		movePaddle(-1, 1);
+	if (soloGames[user_socket_map.get(socket)].player2UpInput)
+		movePaddle(socket, 1, 0);
+	if (soloGames[user_socket_map.get(socket)].player2DownInput)
+		movePaddle(socket, -1, 0);
+	if (soloGames[user_socket_map.get(socket)].player1UpInput)
+		movePaddle(socket, 1, 1);
+	if (soloGames[user_socket_map.get(socket)].player1DownInput)
+		movePaddle(socket, -1, 1);
 };
 
 //Fonction qui dans l'idee tournera pour chaque game dcp on lui enverras une class game qui contient les 2 joueurs et toutes les pos necessaires.
 const	PongGame = async (player) =>
 {
-	game = new PongGameClass(player);
-	while (player.socket.readyState)
+	soloGames.push(new PongSoloGameClass(player));
+	while (soloGames[user_socket_map.get(player.socket)].running)
 	{
-		smoothMovePaddles();
-		player.socket.send(JSON.stringify({ballX: game.ballX, ballY: game.ballY, player1Y: game.player1Y, player2Y: game.player2Y}));
+		smoothMovePaddles(player.socket);
+		player.socket.send(JSON.stringify({ballX: soloGames[user_socket_map.get(player.socket)].ballX, ballY: soloGames[user_socket_map.get(player.socket)].ballY, player1Y: soloGames[user_socket_map.get(player.socket)].player1Y, player2Y: soloGames[user_socket_map.get(player.socket)].player2Y}));
+		console.log(user_socket_map.get(player.socket));
 		// ^ Send all infos of the frame
 		await mssleep(16);
 	}
+	console.log('Stopped game');
 }
 
 const router = (fastify) => {
 	//Gere la connection du websocket
+	fastify.websocketServer.on("connection", (connection) =>
+	{
+
+		const socket = connection;
+
+		socket.send(JSON.stringify({msg: 'you connected'}));
+		console.log(`${socket}`);
+		players.addNewPlayer(socket);
+		user_socket_map.set(socket, total_users);
+		PongGame(players.playerslist[total_users]);
+		total_users++;
+	});
+
 	fastify.get('/pong/test', {websocket: true}, (connection, req) =>
 	{
 		const socket = connection;
-	
-		players.addNewPlayer(socket);
-		console.log('Reiceived socket connection');
-		PongGame(players.playerslist[0]);
+		
+		socket.on('message', message =>
+		{
+			let	packet = null
+			try
+			{
+				packet = JSON.parse(message);
+			}
+			catch (e)
+			{
+				console.log(e);
+			}
+
+			if (packet.key == 'w')
+				soloGames[user_socket_map.get(socket)].player1UpInput = packet.state;
+			if (packet.key == 's')
+				soloGames[user_socket_map.get(socket)].player1DownInput = packet.state;
+			if (packet.key == 'ArrowUp')
+				soloGames[user_socket_map.get(socket)].player2UpInput = packet.state;
+			if (packet.key == 'ArrowDown')
+				soloGames[user_socket_map.get(socket)].player2DownInput = packet.state;
+
+			// console.log(`Touche pressée reçue par HTTP: ${packet.key} and it is ${packet.state}`);
+			// console.log(`received smth ${message}`);
+		})
+
+		socket.on('close', () => {
+			soloGames[user_socket_map.get(socket)].running = false;
+			console.log('goodbye client');
+		})
 	});
 
 	//Gere la reception des inputs joueurs
-	fastify.post('/pong/input', async (req, res) =>
-	{
-		const packet = req.body;
-		if (packet.key == 'w')
-			game.player1UpInput = packet.state;
-		if (packet.key == 's')
-			game.player1DownInput = packet.state;
-		if (packet.key == 'ArrowUp')
-			game.player2UpInput = packet.state;
-		if (packet.key == 'ArrowDown')
-			game.player2DownInput = packet.state;
-		console.log(`Touche pressée reçue par HTTP: ${packet.key} and it is ${packet.state}`);
-		// res.send({ message: `Touche ${packet.key} bien reçue`});
-	});
+	// fastify.post('/pong/input', async (req, res) =>
+	// {
+	// 	const packet = req.body;
+	// 	if (packet.key == 'w')
+	// 		soloGames[0].player1UpInput = packet.state;
+	// 	if (packet.key == 's')
+	// 		soloGames[0].player1DownInput = packet.state;
+	// 	if (packet.key == 'ArrowUp')
+	// 		soloGames[0].player2UpInput = packet.state;
+	// 	if (packet.key == 'ArrowDown')
+	// 		soloGames[0].player2DownInput = packet.state;
+	// 	console.log(`Touche pressée reçue par HTTP: ${packet.key} and it is ${packet.state}`);
+	// 	// res.send({ message: `Touche ${packet.key} bien reçue`});
+	// });
 
-	//Reset la position des coos envoyees par le serveur (c'est du debug)
-	fastify.post('/pong/resetball', async (req, res) =>
-	{
-		console.log('resetting ball pos');
-	});
 }
 
 //register le router a /api dcp tout ce qui commence par /api vas passer par le routeur pour voir si il a le reste qu'il faut

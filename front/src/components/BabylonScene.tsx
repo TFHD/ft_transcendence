@@ -235,9 +235,8 @@ const BabylonScene = () => {
 		}
       	else if (event.key in keyState)
 		{
+			ws?.send(JSON.stringify({ key: event.key, state: true }));
         	keyState[event.key] = true;
-			const reponse = fetch(`http://${host}:8000/api/pong/input`, { method: "POST", headers: { "Content-Type": "application/json"}, body: JSON.stringify({ key: event.key, state: true }) })
-			.then(res => res.text()).then(console.log).catch(console.error);
 		}
     };
     //Fonction pour les touches qui ne sont plus préssées
@@ -246,8 +245,7 @@ const BabylonScene = () => {
     	if (event.key in keyState)
 		{
         	keyState[event.key] = false;
-			const reponse = fetch(`http://${host}:8000/api/pong/input`, { method: "POST", headers: { "Content-Type": "application/json"}, body: JSON.stringify({ key: event.key, state: false }) })
-			.then(res => res.text()).then(console.log).catch(console.error);
+			ws?.send(JSON.stringify({ key: event.key, state: false }));
 		}
     };
 
@@ -399,6 +397,7 @@ const BabylonScene = () => {
 	{
 		const server_packet = JSON.parse(message.data);
 
+		console.log(server_packet.msg);
 		rightPaddle.position.y = server_packet.player2Y;
 		leftPaddle.position.y = server_packet.player1Y;
 	};
