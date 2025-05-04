@@ -1,15 +1,16 @@
 import {
-    Control,
-    AdvancedDynamicTexture,
-    TextBlock,
-    Button,
-    Rectangle
-  } from '@babylonjs/gui'
+  Control,
+  AdvancedDynamicTexture,
+  TextBlock,
+  Button,
+  Rectangle
+} from '@babylonjs/gui'
 
 import {
     Engine,
     Scene,
     ArcRotateCamera,
+    FreeCamera,
     HemisphericLight,
     DirectionalLight,
     SpotLight,
@@ -26,20 +27,33 @@ import {
     Sound,
     SceneLoader,
     GlowLayer,
-    Scalar,
-    ArcRotateCameraKeyboardMoveInput,
-    ArcRotateCameraPointersInput,
-    KeyboardEventTypes,
-    DefaultRenderingPipeline,
-    ParticleSystem,
     Texture,
+    DefaultRenderingPipeline,
+    PBRMaterial,
+    FresnelParameters,
+    HDRCubeTexture,
+    HighlightLayer,
+    SSAO2RenderingPipeline,
+    ActionManager,
+    InterpolateValueAction,
+    ExecuteCodeAction,
+    ParticleSystem,
+    SphereParticleEmitter,
+    GPUParticleSystem,
+    MeshParticleEmitter,
+    SolidParticleSystem,
+    Axis,
+    Scalar,
     Ray,
+    ArcRotateCameraKeyboardMoveInput
+    // Ajoute ici tous les autres imports dont tu as besoin
   } from '@babylonjs/core';
-  
+
   interface BabylonJS {
     Engine: typeof Engine;
     Scene: typeof Scene;
     ArcRotateCamera: typeof ArcRotateCamera;
+    FreeCamera: typeof FreeCamera;
     HemisphericLight: typeof HemisphericLight;
     DirectionalLight: typeof DirectionalLight;
     SpotLight: typeof SpotLight;
@@ -56,25 +70,37 @@ import {
     Sound: typeof Sound;
     SceneLoader: typeof SceneLoader;
     GlowLayer: typeof GlowLayer;
-    Control: typeof Control;
-    AdvancedDynamicTexture: typeof AdvancedDynamicTexture;
-    Scalar: typeof Scalar;
-    ArcRotateCameraKeyboardMoveInput: typeof ArcRotateCameraKeyboardMoveInput;
-    ArcRotateCameraPointersInput: typeof ArcRotateCameraPointersInput;
-    KeyboardEventTypes: typeof KeyboardEventTypes;
+    Texture: typeof Texture;
     DefaultRenderingPipeline: typeof DefaultRenderingPipeline;
+    PBRMaterial: typeof PBRMaterial;
+    FresnelParameters: typeof FresnelParameters;
+    HDRCubeTexture: typeof HDRCubeTexture;
+    HighlightLayer: typeof HighlightLayer;
+    SSAO2RenderingPipeline: typeof SSAO2RenderingPipeline;
+    ActionManager: typeof ActionManager;
+    InterpolateValueAction: typeof InterpolateValueAction;
+    ExecuteCodeAction: typeof ExecuteCodeAction;
+    ParticleSystem: typeof ParticleSystem;
+    SphereParticleEmitter: typeof SphereParticleEmitter;
+    GPUParticleSystem: typeof GPUParticleSystem;
+    MeshParticleEmitter: typeof MeshParticleEmitter;
+    SolidParticleSystem: typeof SolidParticleSystem;
+    Axis: typeof Axis;
+    Scalar: typeof Scalar;
+    AdvancedDynamicTexture: typeof AdvancedDynamicTexture;
     TextBlock: typeof TextBlock;
     Button: typeof Button;
-    ParticleSystem: typeof ParticleSystem;
-    Texture: typeof Texture;
     Ray: typeof Ray;
     Rectangle: typeof Rectangle;
+    Control: typeof Control;
+    ArcRotateCameraKeyboardMoveInput: typeof ArcRotateCameraKeyboardMoveInput;
   }
   
   const BABYLON: BabylonJS = {
     Engine,
     Scene,
     ArcRotateCamera,
+    FreeCamera,
     HemisphericLight,
     DirectionalLight,
     SpotLight,
@@ -91,18 +117,30 @@ import {
     Sound,
     SceneLoader,
     GlowLayer,
+    Texture,
+    DefaultRenderingPipeline,
+    PBRMaterial,
+    FresnelParameters,
+    HDRCubeTexture,
+    HighlightLayer,
+    SSAO2RenderingPipeline,
+    ActionManager,
+    InterpolateValueAction,
+    ExecuteCodeAction,
+    ParticleSystem,
+    SphereParticleEmitter,
+    GPUParticleSystem,
+    MeshParticleEmitter,
+    SolidParticleSystem,
+    Axis,
+    Scalar,
+    Ray,
     Control,
     AdvancedDynamicTexture,
-    Scalar,
-    ArcRotateCameraKeyboardMoveInput,
-    ArcRotateCameraPointersInput,
-    KeyboardEventTypes,
-    DefaultRenderingPipeline,
     TextBlock,
     Button,
-    ParticleSystem,
-    Texture,
-    Ray,
-    Rectangle
+    Rectangle,
+    ArcRotateCameraKeyboardMoveInput
   };
-export default BABYLON;
+  
+  export default BABYLON;
