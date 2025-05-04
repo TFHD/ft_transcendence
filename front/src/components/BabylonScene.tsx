@@ -108,82 +108,82 @@ const BabylonScene = () => {
 
     //Fonction qui update la position de la balle et gère aussi son angle en fonction du Y de la raquette
     //sur laquelle elle est frappée
-    const updateAnglePosBall = (ball: BABYLON.Mesh, paddle: BABYLON.Mesh) =>
-	{
-    	const paddleHalfHeight = 2.5; // 2.5 car 5 / 2 = 2.5 :)
-    	const withinXRange = Math.abs(ball.position.x - paddle.position.x) <= 0.5;
-    	const withinYRange = Math.abs(ball.position.y - paddle.position.y) <= paddleHalfHeight;
+    // const updateAnglePosBall = (ball: BABYLON.Mesh, paddle: BABYLON.Mesh) =>
+	// {
+    // 	const paddleHalfHeight = 2.5; // 2.5 car 5 / 2 = 2.5 :)
+    // 	const withinXRange = Math.abs(ball.position.x - paddle.position.x) <= 0.5;
+    // 	const withinYRange = Math.abs(ball.position.y - paddle.position.y) <= paddleHalfHeight;
     
-    	if (withinXRange && withinYRange)
-		{
-        	const relativeIntersectY = ball.position.y - paddle.position.y;
-        	const normalizedRelativeY = relativeIntersectY / paddleHalfHeight;
-        	const bounceAngle = normalizedRelativeY * Math.PI / 4;
-        	const direction = ballVelocity.x > 0 ? -1 : 1;
-        	var speed = ballVelocity.length() * SPEED_MULTIPLIER;
-        	if (speed > 1.5)
-        		speed = 1.5;
-        	ballVelocity.x = direction * speed * Math.cos(bounceAngle);
-        	ballVelocity.y = speed * Math.sin(bounceAngle);
-    	}
-    };
+    // 	if (withinXRange && withinYRange)
+	// 	{
+    //     	const relativeIntersectY = ball.position.y - paddle.position.y;
+    //     	const normalizedRelativeY = relativeIntersectY / paddleHalfHeight;
+    //     	const bounceAngle = normalizedRelativeY * Math.PI / 4;
+    //     	const direction = ballVelocity.x > 0 ? -1 : 1;
+    //     	var speed = ballVelocity.length() * SPEED_MULTIPLIER;
+    //     	if (speed > 1.5)
+    //     		speed = 1.5;
+    //     	ballVelocity.x = direction * speed * Math.cos(bounceAngle);
+    //     	ballVelocity.y = speed * Math.sin(bounceAngle);
+    // 	}
+    // };
 
-    const updateBall = () =>
-	{
+    // const updateBall = () =>
+	// {
 
-    	previousBallPosition.copyFrom(ball.position);
-    	ball.position.addInPlace(ballVelocity);
-    	const direction = ballVelocity.clone().normalize();
-    	const rayLength = ballVelocity.length();
-    	const ray = new BABYLON.Ray(previousBallPosition, direction, rayLength);
-      //J'utilise un Ray (quand la balle va trop vite) genre je fais un rayon de mon ancienne pos de balle avec la nouvelle
-      //et je regarde si le rayon passe par un paddle et si c'est le cas je TP la balle sur la position du paddle
-      //visuellement ça va tlm vite qu'on voit que dalle
-      //
-      //                    O (ancienne pos de Balle)
-      //                     \  |
-      //                      \ |
-      //Elle va etre TP ici> (O)| (Paddle)
-      //                        |\
-      //                        | \
-      //                        |  O (Nouvelle pos de Balle)
-      //
-    	const hitLeft = ray.intersectsMesh(leftPaddle, false);
-    	const hitRight = ray.intersectsMesh(rightPaddle, false);
-    	if (hitLeft.hit)
-		{
-    		updateAnglePosBall(ball, leftPaddle);
-    		ball.position = new BABYLON.Vector3(leftPaddle.position.x + 1, previousBallPosition.y, leftPaddle.position.z);
-      	}
-    	if (hitRight.hit)
-		{
-    		updateAnglePosBall(ball, rightPaddle);
-    		ball.position = new BABYLON.Vector3(rightPaddle.position.x - 1, previousBallPosition.y, rightPaddle.position.z);
-    	}
-      	createExplosion(ball.position);
-      	if (ball.position.y > MAX_BALL_Y || ball.position.y < MIN_BALL_Y)
-		{
-      		ballVelocity.y = -ballVelocity.y;
-      	}
-    	updateAnglePosBall(ball, leftPaddle);
-    	updateAnglePosBall(ball, rightPaddle);
-    	if (ball.position.x > MAX_BALL_X || ball.position.x < MIN_BALL_X)
-		{
-        	if (ball.position.x > MAX_BALL_X)
-			{
-        		ScorePlayer1++;
-        		Player1Score.text = ScorePlayer1 + "";
-        	}
-        	if (ball.position.x < MAX_BALL_X)
-			{
-        		ScorePlayer2++;
-        		Player2Score.text = ScorePlayer2 + "";
-        	}
+    // 	previousBallPosition.copyFrom(ball.position);
+    // 	ball.position.addInPlace(ballVelocity);
+    // 	const direction = ballVelocity.clone().normalize();
+    // 	const rayLength = ballVelocity.length();
+    // 	const ray = new BABYLON.Ray(previousBallPosition, direction, rayLength);
+    //   //J'utilise un Ray (quand la balle va trop vite) genre je fais un rayon de mon ancienne pos de balle avec la nouvelle
+    //   //et je regarde si le rayon passe par un paddle et si c'est le cas je TP la balle sur la position du paddle
+    //   //visuellement ça va tlm vite qu'on voit que dalle
+    //   //
+    //   //                    O (ancienne pos de Balle)
+    //   //                     \  |
+    //   //                      \ |
+    //   //Elle va etre TP ici> (O)| (Paddle)
+    //   //                        |\
+    //   //                        | \
+    //   //                        |  O (Nouvelle pos de Balle)
+    //   //
+    // 	const hitLeft = ray.intersectsMesh(leftPaddle, false);
+    // 	const hitRight = ray.intersectsMesh(rightPaddle, false);
+    // 	if (hitLeft.hit)
+	// 	{
+    // 		updateAnglePosBall(ball, leftPaddle);
+    // 		ball.position = new BABYLON.Vector3(leftPaddle.position.x + 1, previousBallPosition.y, leftPaddle.position.z);
+    //  }
+    // 	if (hitRight.hit)
+	// 	{
+    // 		updateAnglePosBall(ball, rightPaddle);
+    // 		ball.position = new BABYLON.Vector3(rightPaddle.position.x - 1, previousBallPosition.y, rightPaddle.position.z);
+    // 	}
+    //   	createExplosion(ball.position);
+    //   	if (ball.position.y > MAX_BALL_Y || ball.position.y < MIN_BALL_Y)
+	// 	{
+    //   		ballVelocity.y = -ballVelocity.y;
+    //   	}
+    // 	updateAnglePosBall(ball, leftPaddle);
+    // 	updateAnglePosBall(ball, rightPaddle);
+    // 	if (ball.position.x > MAX_BALL_X || ball.position.x < MIN_BALL_X)
+	// 	{
+    //     	if (ball.position.x > MAX_BALL_X)
+	// 		{
+    //     		ScorePlayer1++;
+    //     		Player1Score.text = ScorePlayer1 + "";
+    //     	}
+    //     	if (ball.position.x < MAX_BALL_X)
+	// 		{
+    //     		ScorePlayer2++;
+    //     		Player2Score.text = ScorePlayer2 + "";
+    //     	}
 		
-        	ball.position = new BABYLON.Vector3(0, 0, 0);
-        	ballVelocity = new BABYLON.Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
-    	}
-    };
+    //     	ball.position = new BABYLON.Vector3(0, 0, 0);
+    //     	ballVelocity = new BABYLON.Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+    // 	}
+    // };
 
     //Fonctions movePaddle + smoothMovePaddles permettent de moove les raquettes en changeant leurs positions Y
     // const movePaddle = (direction: number, bool : number) =>
@@ -235,9 +235,8 @@ const BabylonScene = () => {
 		}
       	else if (event.key in keyState)
 		{
+			ws?.send(JSON.stringify({ key: event.key, state: true }));
         	keyState[event.key] = true;
-			const reponse = fetch(`http://${host}:8000/api/pong/input`, { method: "POST", headers: { "Content-Type": "application/json"}, body: JSON.stringify({ key: event.key, state: true }) })
-			.then(res => res.text()).then(console.log).catch(console.error);
 		}
     };
     //Fonction pour les touches qui ne sont plus préssées
@@ -246,48 +245,47 @@ const BabylonScene = () => {
     	if (event.key in keyState)
 		{
         	keyState[event.key] = false;
-			const reponse = fetch(`http://${host}:8000/api/pong/input`, { method: "POST", headers: { "Content-Type": "application/json"}, body: JSON.stringify({ key: event.key, state: false }) })
-			.then(res => res.text()).then(console.log).catch(console.error);
+			ws?.send(JSON.stringify({ key: event.key, state: false }));
 		}
     };
 
-    const createExplosion = (position: BABYLON.Vector3) => {
-      const particleSystem = new BABYLON.ParticleSystem("particles", 200, scene);
-      particleSystem.particleTexture = new BABYLON.Texture("https://playground.babylonjs.com/textures/flare.png", scene);
+    // const createExplosion = (position: BABYLON.Vector3) => {
+    //   const particleSystem = new BABYLON.ParticleSystem("particles", 200, scene);
+    //   particleSystem.particleTexture = new BABYLON.Texture("https://playground.babylonjs.com/textures/flare.png", scene);
       
-      particleSystem.emitter = position.clone(); // position de l'explosion
-      particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5); 
-      particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5); 
+    //   particleSystem.emitter = position.clone(); // position de l'explosion
+    //   particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5); 
+    //   particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5); 
     
-      particleSystem.color1 = new BABYLON.Color4(0, 1, 0, 1.0);  // orange
-      particleSystem.color2 = new BABYLON.Color4(0, 0.2, 0, 1.0);    // rouge
-      particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
+    //   particleSystem.color1 = new BABYLON.Color4(0, 1, 0, 1.0);  // orange
+    //   particleSystem.color2 = new BABYLON.Color4(0, 0.2, 0, 1.0);    // rouge
+    //   particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
     
-      particleSystem.minSize = 0.1;
-      particleSystem.maxSize = 0.3;
-      particleSystem.minLifeTime = 0.2;
-      particleSystem.maxLifeTime = 0.4;
+    //   particleSystem.minSize = 0.1;
+    //   particleSystem.maxSize = 0.3;
+    //   particleSystem.minLifeTime = 0.2;
+    //   particleSystem.maxLifeTime = 0.4;
     
-      particleSystem.emitRate = 1000;
-      particleSystem.gravity = new BABYLON.Vector3(0, -9.81, 0);
+    //   particleSystem.emitRate = 1000;
+    //   particleSystem.gravity = new BABYLON.Vector3(0, -9.81, 0);
     
-      particleSystem.direction1 = new BABYLON.Vector3(-1, 1, 1);
-      particleSystem.direction2 = new BABYLON.Vector3(1, 1, -1);
+    //   particleSystem.direction1 = new BABYLON.Vector3(-1, 1, 1);
+    //   particleSystem.direction2 = new BABYLON.Vector3(1, 1, -1);
     
-      particleSystem.minAngularSpeed = 0;
-      particleSystem.maxAngularSpeed = Math.PI;
+    //   particleSystem.minAngularSpeed = 0;
+    //   particleSystem.maxAngularSpeed = Math.PI;
     
-      particleSystem.minEmitPower = 0.5;
-      particleSystem.maxEmitPower = 2;
-      particleSystem.updateSpeed = 0.01;
+    //   particleSystem.minEmitPower = 0.5;
+    //   particleSystem.maxEmitPower = 2;
+    //   particleSystem.updateSpeed = 0.01;
     
-      particleSystem.start();
+    //   particleSystem.start();
     
-      setTimeout(() => {
-        particleSystem.stop();
-        particleSystem.dispose();
-      }, 500);
-    };
+    //   setTimeout(() => {
+    //     particleSystem.stop();
+    //     particleSystem.dispose();
+    //   }, 500);
+    // };
 
     //   #######################################################################################################################
     //   ###################################################   SETUP SCÈNE   ###################################################
@@ -374,7 +372,7 @@ const BabylonScene = () => {
 	{
     	if (Status == ENUM_STATUS.InGame)
 		{
-        	updateBall();
+        	// updateBall();
         	// smoothMovePaddles();
     	}
       	scene.render();
@@ -388,7 +386,7 @@ const BabylonScene = () => {
 
 	if (!ws)
 	{
-    	ws = new WebSocket(`ws://${host}:8000/api/pong/test`);
+    	ws = new WebSocket(`ws://${host}:8000/api/pong/solo`);
     	wsRef.current = ws;
 	}
     ws.onopen = () =>
@@ -399,8 +397,13 @@ const BabylonScene = () => {
 	{
 		const server_packet = JSON.parse(message.data);
 
+		console.log(server_packet.msg);
 		rightPaddle.position.y = server_packet.player2Y;
 		leftPaddle.position.y = server_packet.player1Y;
+		ball.position.x = server_packet.ballX;
+		ball.position.y = server_packet.ballY;
+		Player1Score.text = server_packet.player1Score + "";
+		Player2Score.text = server_packet.player2Score + "";
 	};
     ws.onclose = (event) =>
 	{
