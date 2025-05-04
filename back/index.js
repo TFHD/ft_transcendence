@@ -5,16 +5,20 @@ import cloudinary from "cloudinary";
 import { cloudinaryConfig } from "./config/cloudinary.config.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import websocket from '@fastify/websocket';
 import fs from "fs";
 
-const app = fastify({
-	https: {
-		key: fs.readFileSync("./certs/key.pem"),
-		cert: fs.readFileSync("./certs/cert.pem"),
-	}
-});
+// const app = fastify({
+// 	https: {
+// 		key: fs.readFileSync("./certs/key.pem"),
+// 		cert: fs.readFileSync("./certs/cert.pem"),
+// 	}
+// });
+
+const app = fastify();
 
 app.register(cors);
+app.register(websocket);
 app.register(multipart, {
 	attachFieldsToBody: true,
 	limits: {

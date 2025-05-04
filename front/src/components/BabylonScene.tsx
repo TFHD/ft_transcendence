@@ -13,22 +13,8 @@ const BabylonScene = () => {
     if (!canvasRef.current) return;
 
     //toutes les valeurs const du jeu
-    const INIT_SPEED_BALL_X = 0.2;
-    const INIT_SPEED_BALL_Y = 0.2;
-    const PADDLE_MIN_Y = -8;
-    const PADDLE_MAX_Y = 8;
-    const SPEED_MULTIPLIER = 1.05;
-    const WALL_THICKNESS = 1;
     const WALL_HEIGHT = 1;
     const WALL_DEPTH = 40;
-    const SPEED = 0.5;
-    const MAX_BALL_X = 20;
-    const MIN_BALL_X = -20;
-    const MAX_BALL_Y = 10;
-    const MIN_BALL_Y = -10;
-
-    var ScorePlayer1 = 0;
-    var ScorePlayer2 = 0;
 
     const ENUM_STATUS = {
       pause : "pause",
@@ -105,115 +91,6 @@ const BabylonScene = () => {
         gui.addControl(label);
       return label;
     };
-
-    //Fonction qui update la position de la balle et gère aussi son angle en fonction du Y de la raquette
-    //sur laquelle elle est frappée
-    // const updateAnglePosBall = (ball: BABYLON.Mesh, paddle: BABYLON.Mesh) =>
-	// {
-    // 	const paddleHalfHeight = 2.5; // 2.5 car 5 / 2 = 2.5 :)
-    // 	const withinXRange = Math.abs(ball.position.x - paddle.position.x) <= 0.5;
-    // 	const withinYRange = Math.abs(ball.position.y - paddle.position.y) <= paddleHalfHeight;
-    
-    // 	if (withinXRange && withinYRange)
-	// 	{
-    //     	const relativeIntersectY = ball.position.y - paddle.position.y;
-    //     	const normalizedRelativeY = relativeIntersectY / paddleHalfHeight;
-    //     	const bounceAngle = normalizedRelativeY * Math.PI / 4;
-    //     	const direction = ballVelocity.x > 0 ? -1 : 1;
-    //     	var speed = ballVelocity.length() * SPEED_MULTIPLIER;
-    //     	if (speed > 1.5)
-    //     		speed = 1.5;
-    //     	ballVelocity.x = direction * speed * Math.cos(bounceAngle);
-    //     	ballVelocity.y = speed * Math.sin(bounceAngle);
-    // 	}
-    // };
-
-    // const updateBall = () =>
-	// {
-
-    // 	previousBallPosition.copyFrom(ball.position);
-    // 	ball.position.addInPlace(ballVelocity);
-    // 	const direction = ballVelocity.clone().normalize();
-    // 	const rayLength = ballVelocity.length();
-    // 	const ray = new BABYLON.Ray(previousBallPosition, direction, rayLength);
-    //   //J'utilise un Ray (quand la balle va trop vite) genre je fais un rayon de mon ancienne pos de balle avec la nouvelle
-    //   //et je regarde si le rayon passe par un paddle et si c'est le cas je TP la balle sur la position du paddle
-    //   //visuellement ça va tlm vite qu'on voit que dalle
-    //   //
-    //   //                    O (ancienne pos de Balle)
-    //   //                     \  |
-    //   //                      \ |
-    //   //Elle va etre TP ici> (O)| (Paddle)
-    //   //                        |\
-    //   //                        | \
-    //   //                        |  O (Nouvelle pos de Balle)
-    //   //
-    // 	const hitLeft = ray.intersectsMesh(leftPaddle, false);
-    // 	const hitRight = ray.intersectsMesh(rightPaddle, false);
-    // 	if (hitLeft.hit)
-	// 	{
-    // 		updateAnglePosBall(ball, leftPaddle);
-    // 		ball.position = new BABYLON.Vector3(leftPaddle.position.x + 1, previousBallPosition.y, leftPaddle.position.z);
-    //  }
-    // 	if (hitRight.hit)
-	// 	{
-    // 		updateAnglePosBall(ball, rightPaddle);
-    // 		ball.position = new BABYLON.Vector3(rightPaddle.position.x - 1, previousBallPosition.y, rightPaddle.position.z);
-    // 	}
-    //   	createExplosion(ball.position);
-    //   	if (ball.position.y > MAX_BALL_Y || ball.position.y < MIN_BALL_Y)
-	// 	{
-    //   		ballVelocity.y = -ballVelocity.y;
-    //   	}
-    // 	updateAnglePosBall(ball, leftPaddle);
-    // 	updateAnglePosBall(ball, rightPaddle);
-    // 	if (ball.position.x > MAX_BALL_X || ball.position.x < MIN_BALL_X)
-	// 	{
-    //     	if (ball.position.x > MAX_BALL_X)
-	// 		{
-    //     		ScorePlayer1++;
-    //     		Player1Score.text = ScorePlayer1 + "";
-    //     	}
-    //     	if (ball.position.x < MAX_BALL_X)
-	// 		{
-    //     		ScorePlayer2++;
-    //     		Player2Score.text = ScorePlayer2 + "";
-    //     	}
-		
-    //     	ball.position = new BABYLON.Vector3(0, 0, 0);
-    //     	ballVelocity = new BABYLON.Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
-    // 	}
-    // };
-
-    //Fonctions movePaddle + smoothMovePaddles permettent de moove les raquettes en changeant leurs positions Y
-    // const movePaddle = (direction: number, bool : number) =>
-	// {
-	// 	if (bool == 1)
-	// 	{
-    //     	let newTarget = leftPaddle.position.y + SPEED * direction;
-    //     	if (newTarget >= PADDLE_MIN_Y && newTarget <= PADDLE_MAX_Y)
-    //     		leftPaddle.position.y = newTarget;
-	// 	}
-    // 	else
-	// 	{
-    //     	let newTarget = rightPaddle.position.y + SPEED * direction;
-    //     	if (newTarget >= PADDLE_MIN_Y && newTarget <= PADDLE_MAX_Y)
-	// 			rightPaddle.position.y = newTarget;
-	// 	}
-    // };
-
-    // const smoothMovePaddles = () =>
-	// {
-    // 	if (keyState.ArrowUp)
-	// 		movePaddle(1, 0);
-    // 	if (keyState.ArrowDown)
-	// 		movePaddle(-1, 0);
-    // 	if (keyState.w)
-	// 		movePaddle(1, 1);
-    // 	if (keyState.s)
-	// 		movePaddle(-1, 1);
-    // };
-
     //Fonction pour les touches qui sont préssées
     const handleKeyDown = (event: KeyboardEvent) =>
 	{
@@ -358,8 +235,6 @@ const BabylonScene = () => {
     const ball = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 1 }, scene);
     ball.position = new BABYLON.Vector3(0, 0, 0);
     ball.material = ballMaterial;
-    let ballVelocity = new BABYLON.Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
-    let previousBallPosition = ball.position.clone();
 
     createWall("topWall", {width: 45, height : WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, 11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
     createWall("bottomWall", {width: 45, height: WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, -11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
@@ -386,7 +261,7 @@ const BabylonScene = () => {
 
 	if (!ws)
 	{
-    	ws = new WebSocket(`wss://${host}:8000/api/pong/solo`);
+    	ws = new WebSocket(`ws://${host}:8000/api/pong/solo`);
     	wsRef.current = ws;
 	}
     ws.onopen = () =>
