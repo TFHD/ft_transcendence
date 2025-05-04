@@ -10,8 +10,8 @@ import fs from "fs";
 
 const app = fastify({
 	https: {
-		key: fs.readFileSync("./certs/key.pem"),
-		cert: fs.readFileSync("./certs/cert.pem"),
+		key: fs.readFileSync("/certs/key.pem"),
+		cert: fs.readFileSync("/certs/cert.pem"),
 	}
 });
 
