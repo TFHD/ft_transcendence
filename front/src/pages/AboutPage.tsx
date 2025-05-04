@@ -9,7 +9,7 @@ const AboutPage = () => {
     e.preventDefault();
     console.log(host);
     try {
-      const response = await fetch(`http://${host}:8000/api/button`);
+      const response = await fetch(`https://${host}:8000/api/button`);
       if (response.ok) {
         const data = await response.json();
         setLinkLabel(clicked ? 'Changer de label' : data.newLabel); 

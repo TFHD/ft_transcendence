@@ -15,7 +15,7 @@ const UserForm = () => {
     try {
         const host = import.meta.env.VITE_ADRESS;
         console.log(host);
-        const response = await axios.post(`http://${host}:8000/api/users`, {
+        const response = await axios.post(`https://${host}:8000/api/users`, {
             username,
             email,
             password

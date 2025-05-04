@@ -17,7 +17,7 @@ const UsersList: React.FC = () => {
     const fetchUsers = async () => {
       try {
         const host = import.meta.env.VITE_ADRESS;
-        const response = await axios.get(`http://${host}:8000/api/button`);
+        const response = await axios.get(`https://${host}:8000/api/button`);
         setUsers(response.data);
       } catch (err: any) {
         setError('Erreur lors de la récupération des utilisateurs');

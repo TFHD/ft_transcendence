@@ -15,7 +15,7 @@ const Login: React.FC = () => {
 
     try {
       const host = import.meta.env.VITE_ADRESS;
-      const response = await axios.post(`http://${host}:8000/api/login`, { email, password });
+      const response = await axios.post(`https://${host}:8000/api/login`, { email, password });
 
       if (response.status === 200) {
 
