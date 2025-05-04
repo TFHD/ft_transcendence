@@ -125,7 +125,6 @@ app.post('/api/login', async (req, res) => {
 
 */
 
-
 app.get('/api/users', async (req, res) => {
 
   try {
@@ -150,130 +149,11 @@ app.get('/api/users', async (req, res) => {
 
 */
 
-class	PongPlayer {
-	constructor(socket) {
-		this.socket = socket;
-	}
-}
+import { PongWebsocket } from "./pong/Socket.js"
 
-class	PongPlayers {
-	constructor() {
-		this.playerslist = [];
-	}
-
-	addNewPlayer(socket) {
-		let p = new PongPlayer(socket);
-		this.playerslist.push(p);
-		return p;
-	}
-}
-
-let	players = new PongPlayers();
-
-//Fonction pour sleep en ms comme ca jpeux envoyer les infos 60 fois par secondes
-const mssleep = ms => new Promise(r => setTimeout(r, ms));
-
-class	PongGameClass
+const router = (fastify) =>
 {
-	// constructor(player1, player2)
-	constructor(player1)
-	{
-		this.player1Y = 0;
-		this.player1UpInput = false;
-		this.player1DownInput = false;
-		
-		this.player2Y = 0;
-		this.player2UpInput = false;
-		this.player2DownInput = false;
-		
-		this.ballX = 0;
-		this.ballY = 0;
-	}
-}
-
-const PongMaxX = 10;
-const PongMaxY = 10;
-const PongMinX = 0;
-const PongMinY = 0;
-
-const ballX = 0;
-const ballY = 0;
-
-let game = null;
-
-const movePaddle = (direction, bool) =>
-{
-	if (bool)
-	{
-    	let newTarget = game.player1Y + 1 * direction;
-    	if (newTarget >= -8 && newTarget <= 8)
-    		game.player1Y = newTarget;
-	}
-	else
-	{
-    	let newTarget = game.player2Y + 1 * direction;
-    	if (newTarget >= -8 && newTarget <= 8)
-			game.player2Y = newTarget;
-	}
-};
-
-const smoothMovePaddles = () =>
-{
-	if (game.player2UpInput)
-		movePaddle(1, 0);
-	if (game.player2DownInput)
-		movePaddle(-1, 0);
-	if (game.player1UpInput)
-		movePaddle(1, 1);
-	if (game.player1DownInput)
-		movePaddle(-1, 1);
-};
-
-//Fonction qui dans l'idee tournera pour chaque game dcp on lui enverras une class game qui contient les 2 joueurs et toutes les pos necessaires.
-const	PongGame = async (player) =>
-{
-	game = new PongGameClass(player);
-	while (player.socket.readyState)
-	{
-		smoothMovePaddles();
-		player.socket.send(JSON.stringify({ballX: game.ballX, ballY: game.ballY, player1Y: game.player1Y, player2Y: game.player2Y}));
-		// ^ Send all infos of the frame
-		await mssleep(16);
-	}
-}
-
-const router = (fastify) => {
-	//Gere la connection du websocket
-	fastify.get('/pong/test', {websocket: true}, (connection, req) =>
-	{
-		const socket = connection;
-	
-		players.addNewPlayer(socket);
-		console.log('Reiceived socket connection');
-		PongGame(players.playerslist[0]);
-	});
-
-	//Gere la reception des inputs joueurs
-	fastify.post('/pong/input', async (req, res) =>
-	{
-		const packet = req.body;
-		if (packet.key == 'w')
-			game.player1UpInput = packet.state;
-		if (packet.key == 's')
-			game.player1DownInput = packet.state;
-		if (packet.key == 'ArrowUp')
-			game.player2UpInput = packet.state;
-		if (packet.key == 'ArrowDown')
-			game.player2DownInput = packet.state;
-		console.log(`Touche pressée reçue par HTTP: ${packet.key} and it is ${packet.state}`);
-		// res.send({ message: `Touche ${packet.key} bien reçue`});
-	});
-
-	//Reset la position des coos envoyees par le serveur (c'est du debug)
-	fastify.post('/pong/resetball', async (req, res) =>
-	{
-		console.log('resetting ball pos');
-	});
+	PongWebsocket(fastify);
 }
 
 //register le router a /api dcp tout ce qui commence par /api vas passer par le routeur pour voir si il a le reste qu'il faut
