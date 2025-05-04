@@ -47,6 +47,30 @@ export const errorCodes = Object.freeze({
 		message: 'A user with this email or username already exists.',
 		status: 409
 	},
+	TWOFA_REQUIRED: {
+		code: 'TWOFA_REQUIRED',
+		type: 'authentication_error',
+		message: 'Two-factor authentication is required.',
+		status: 401
+	},
+	TWOFA_ALREADY_ENABLED: {
+		code: 'TWOFA_ALREADY_ENABLED',
+		type: 'validation_error',
+		message: 'Two-factor authentication is already enabled.',
+		status: 409
+	},
+	TWOFA_NOT_ENABLED: {
+		code: '2FA_NOT_ENABLED',
+		type: 'authentication_error',
+		message: 'Two-factor authentication is not enabled.',
+		status: 401
+	},
+	INVALID_TWOFA_TOKEN: {
+		code: 'INVALID_2FA_TOKEN',
+		type: 'authentication_error',
+		message: 'Invalid two-factor authentication token.',
+		status: 401
+	},
 	UNAUTHORIZED: {
 		code: 'UNAUTHORIZED',
 		type: 'authentication_error',

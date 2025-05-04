@@ -14,6 +14,8 @@ await db.exec(`
 		password TEXT NOT NULL,
 		email TEXT NOT NULL UNIQUE,
 		avatar_url TEXT DEFAULT NULL,
+		twofa_enabled BOOLEAN DEFAULT FALSE,
+		twofa_secret TEXT DEFAULT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);

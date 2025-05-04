@@ -1,12 +1,15 @@
 import fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
+import websocket from '@fastify/websocket';
 import cloudinary from "cloudinary";
+import fs from "fs";
+
+import { PongWebsocket } from "./pong/Socket.js"
 import { cloudinaryConfig } from "./config/cloudinary.config.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-import websocket from '@fastify/websocket';
-import fs from "fs";
+import twofaRoutes from "./routes/2faRoutes.js";
 
 const app = fastify({
 	https: {
@@ -28,14 +31,13 @@ cloudinary.config(cloudinaryConfig);
 
 await app.register(authRoutes);
 await app.register(userRoutes);
-
-import { PongWebsocket } from "./pong/Socket.js"
+await app.register(twofaRoutes);
 
 const router = (fastify) => {
 	PongWebsocket(fastify);
 };
 
-app.register(router, {prefix: '/api'});
+app.register(router, { prefix: '/api' });
 
 app.listen({ port: 8000, host: '0.0.0.0' }, (err, address) => {
 	if (err) {

@@ -1,6 +1,6 @@
-import { deleteUser, findUserByEmail, findUserByUserId, findUserByUsername, updateUser } from "../models/userModel.js";
+import { deleteUser, findUserByEmail, findUserByUsername, updateUser } from "../models/userModel.js";
 import { errorCodes } from "../utils/errorCodes.js";
-import { deleteSession, getSessionByUserId } from "../models/sessionModel.js";
+import { deleteSession } from "../models/sessionModel.js";
 import { isValidUsername, isValidEmail, isValidPassword } from "../utils/validators.js";
 import bcrypt from "bcrypt";
 import fs from "fs";
@@ -17,39 +17,43 @@ export async function getUsersFromId(req, res) {
 		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 	const { id } = req.params;
 
-	if (!id)
-		return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
-	if (id === '@me' || id == req.user_id) {
-		if (!req.user_id)
-			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-		const user = await findUserByUserId(req.user_id);
-		if (!user)
-			return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-		const sesssion = await getSessionByUserId(user.user_id);
-		if (!sesssion)
-			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-		return res.status(200).send({
-			id: user.user_id,
-			username: user.username,
-			email: user.email,
-			created_at: user.created_at,
-			updated_at: user.updated_at,
-			last_seen: sesssion.last_seen
-		});
-	} else {
-		const user = await findUserByUserId(id);
-		if (!user)
-			return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-		const sesssion = await getSessionByUserId(user.user_id);
-		if (!sesssion)
-			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-		return res.status(200).send({
-			id: user.user_id,
-			username: user.username,
-			created_at: user.created_at,
-			updated_at: user.updated_at,
-			last_seen: sesssion.last_seen
-		});
+	try {
+		if (!id)
+			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
+		if (id === '@me' || id == req.user.user_id) {
+			if (!req.user.user_id)
+				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+			const user = req.user;
+			if (!user)
+				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
+			const sesssion = req.session;
+			if (!sesssion)
+				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+			return res.status(200).send({
+				id: user.user_id,
+				username: user.username,
+				email: user.email,
+				created_at: user.created_at,
+				updated_at: user.updated_at,
+				last_seen: sesssion.last_seen
+			});
+		} else {
+			const user = req.user;
+			if (!user)
+				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
+			const sesssion = req.session
+			if (!sesssion)
+				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+			return res.status(200).send({
+				id: user.user_id,
+				username: user.username,
+				created_at: user.created_at,
+				updated_at: user.updated_at,
+				last_seen: sesssion.last_seen
+			});
+		};
+	} catch (error) {
+		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}
 };
 
@@ -65,12 +69,12 @@ export async function patchUserFromId(req, res) {
 	if (!id)
 		return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
 	
-	if (id != '@me' && id != req.user_id)
+	if (id != '@me' && id != req.user.user_id)
 		return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 
 	if (id == '@me')
-		id = req.user_id;
-	const user = await findUserByUserId(id);
+		id = req.user.user_id;
+	const user = req.user;
 	if (!user)
 		return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
 
@@ -82,7 +86,7 @@ export async function patchUserFromId(req, res) {
 				return res.status(errorCodes.USERNAME_INVALID.status).send(errorCodes.USERNAME_INVALID);
 
 			const existing = await findUserByUsername(username);
-			if (existing && existing.user_id !== req.user_id)
+			if (existing && existing.user_id !== req.user.user_id)
 				return res.status(errorCodes.USER_ALREADY_EXISTS.status).send(errorCodes.USER_ALREADY_EXISTS);
 
 			updates.username = username;
@@ -92,7 +96,7 @@ export async function patchUserFromId(req, res) {
 				return res.status(errorCodes.EMAIL_INVALID.status).send(errorCodes.EMAIL_INVALID);
 
 			const existing = await findUserByEmail(email);
-			if (existing && existing.user_id !== req.user_id)
+			if (existing && existing.user_id !== req.user.user_id)
 				return res.status(errorCodes.USER_ALREADY_EXISTS.status).send(errorCodes.USER_ALREADY_EXISTS);
 
 			updates.email = email;
@@ -124,7 +128,7 @@ export async function patchUserFromId(req, res) {
 		}
 		if (Object.keys(updates).length === 0)
 			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
-		await updateUser(req.user_id, updates);
+		await updateUser(req.user.user_id, updates);
 		return res.status(204).send();
 	} catch (error) {
 		console.error(error);
@@ -139,11 +143,11 @@ export async function deleteOwnUser(req, res) {
 
 	if (!id)
 		return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
-	if (id != '@me' && id != req.user_id)
+	if (id != '@me' && id != req.user.user_id)
 		return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 	if (id == '@me')
-		id = req.user_id;
-	const session = await getSessionByUserId(id);
+		id = req.user.user_id;
+	const session = req.session;
 	if (!session)
 		return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 	deleteUser(id);

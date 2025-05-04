@@ -10,7 +10,12 @@ export const findUserByUsername = async (username) => {
 };
 
 export const findUserByUserId = async (userId) => {
-	return await db.get('SELECT * FROM users WHERE user_id = ?', userId);
+	try {
+		const user = await db.get('SELECT * FROM users WHERE user_id = ?', userId);
+		return user;
+	} catch (error) {
+		throw error;
+	}
 };
 
 export const findUserByUsernameOrEmail = async (username, email) => {
@@ -45,12 +50,17 @@ export const createUser = async (email, username, password ) => {
 };
 
 export const updateUser = async (id, fields) => {
-	const keys = Object.keys(fields);
-	const values = Object.values(fields);
-
-	const setClause = keys.map((key) => `${key} = ?`).join(', ');
-	const stmt = await db.prepare(
-		`UPDATE users SET ${setClause} WHERE user_id = ?`
-	);
-	await stmt.run(...values, id);
+	try {
+		const keys = Object.keys(fields);
+		const values = Object.values(fields);
+	
+		const setClause = keys.map((key) => `${key} = ?`).join(', ');
+		const stmt = await db.prepare(
+			`UPDATE users SET ${setClause} WHERE user_id = ?`
+		);
+		const result = await stmt.run(...values, id);
+		return result;
+	} catch (error) {
+		throw error;
+	}
 };
