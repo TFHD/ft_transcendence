@@ -8,14 +8,12 @@ import userRoutes from "./routes/userRoutes.js";
 import websocket from '@fastify/websocket';
 import fs from "fs";
 
-// const app = fastify({
-// 	https: {
-// 		key: fs.readFileSync("./certs/key.pem"),
-// 		cert: fs.readFileSync("./certs/cert.pem"),
-// 	}
-// });
-
-const app = fastify();
+const app = fastify({
+	https: {
+		key: fs.readFileSync("./certs/key.pem"),
+		cert: fs.readFileSync("./certs/cert.pem"),
+	}
+});
 
 app.register(cors);
 app.register(websocket);

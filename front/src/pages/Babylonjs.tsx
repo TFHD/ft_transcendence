@@ -261,7 +261,7 @@ const BabylonPage = () => {
 
 	if (!ws)
 	{
-    	ws = new WebSocket(`ws://${host}:8000/api/pong/solo`);
+    	ws = new WebSocket(`wss://${host}:8000/api/pong/solo`);
     	wsRef.current = ws;
 	}
     ws.onopen = () =>
