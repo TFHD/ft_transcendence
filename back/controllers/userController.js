@@ -63,7 +63,7 @@ export async function patchUserFromId(req, res) {
 	if (!req.body)
 		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 	let { id } = req.params;
-	const { username, email, password } = req.body;
+	const { username, email, password, new_password } = req.body;
 
 	const file = req.body.file;
 	if (!id)
@@ -75,9 +75,17 @@ export async function patchUserFromId(req, res) {
 	if (id == '@me')
 		id = req.user.user_id;
 	const user = req.user;
+
 	if (!user)
 		return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-
+	if (user.password) {
+		if (!password)
+			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
+	
+		const validPassword = await bcrypt.compare(password, user.password);
+		if (!validPassword)
+			return res.status(errorCodes.INVALID_CREDENTIALS.status).send(errorCodes.INVALID_CREDENTIALS);
+	}
 	const updates = {};
 
 	try {
@@ -101,11 +109,11 @@ export async function patchUserFromId(req, res) {
 
 			updates.email = email;
 		}
-		if (password) {
-			if (!isValidPassword(password))
+		if (new_password) {
+			if (!isValidPassword(new_password))
 				return res.status(errorCodes.PASSWORD_INVALID.status).send(errorCodes.PASSWORD_INVALID);
 
-			updates.password = await bcrypt.hash(password, 10);
+			updates.password = await bcrypt.hash(new_password, 10);
 		}
 		if (file) {
 			const fileBuffer = await file.toBuffer();
@@ -131,7 +139,6 @@ export async function patchUserFromId(req, res) {
 		await updateUser(req.user.user_id, updates);
 		return res.status(204).send();
 	} catch (error) {
-		console.error(error);
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}
 };

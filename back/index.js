@@ -5,6 +5,7 @@ import websocket from '@fastify/websocket';
 import cookie from "@fastify/cookie";
 import cloudinary from "cloudinary";
 import fs from "fs";
+import dotenv from 'dotenv';
 
 import { PongWebsocket } from "./pong/Socket.js"
 import { cloudinaryConfig } from "./config/cloudinary.config.js";
@@ -12,6 +13,8 @@ import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import twofaRoutes from "./routes/2faRoutes.js";
 import { cookieSecret } from "./config/cookie.config.js";
+
+dotenv.config();
 
 const app = fastify({
 	https: {

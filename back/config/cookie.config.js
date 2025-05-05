@@ -1,1 +1,1 @@
-export const cookieSecret = 'cookiesecret';
+export const cookieSecret = process.env.COOKIE_SECRET;

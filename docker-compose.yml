@@ -27,6 +27,8 @@ services:
       - ./back:/app
       - /app/node_modules
       - ./certs:/certs
+    env_file:
+      - ./back/.env
     networks:
       - transcendance
 

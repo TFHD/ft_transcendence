@@ -25,6 +25,10 @@ export const findUserByUsernameOrEmail = async (username, email) => {
 	);
 };
 
+export const findUserByGoogleId = async (googleId) => {
+	return await db.get('SELECT * FROM users WHERE google_id = ?', googleId);
+};
+
 export const findUserById = async (id) => {
 	return await db.get('SELECT * FROM users WHERE id = ?', id);
 };
@@ -34,18 +38,24 @@ export function generateRandomUserID() {
 	return userId;
 };
 
+export function generateRandomUsername() {
+	const randomString = crypto.randomBytes(4).toString('hex');
+	const username = `user_${randomString}`;
+	return username;
+}
+
 export const deleteUser = async (userId) => {
 	const stmt = await db.prepare('DELETE FROM users WHERE user_id = ?');
 	await stmt.run(userId);
 }
 
-export const createUser = async (email, username, password ) => {
+export const createUser = async (email, username, password, google_id) => {
 	const userId = generateRandomUserID();
 
 	const stmt = await db.prepare(
-		'INSERT INTO users (user_id, email, username, password) VALUES (?, ?, ?, ?)'
+		'INSERT INTO users (user_id, email, username, password, google_id) VALUES (?, ?, ?, ?, ?)'
 	);
-	await stmt.run(userId, email, username, password);
+	await stmt.run(userId, email, username, password, google_id ? google_id : null);
 	return { id: userId, email, username };
 };
 

@@ -9,3 +9,13 @@ export function isValidPassword(password) {
 export function isValidUsername(username) {
 	return typeof username === 'string' && username.length >= 3;
 };
+
+export function cookieOpts() {
+	return {
+		httpOnly: true,
+		secure: true,
+		sameSite: 'Lax',
+		path: '/',
+		maxAge: 60 * 60
+	};
+};
