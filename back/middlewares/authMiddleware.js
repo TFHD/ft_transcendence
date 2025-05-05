@@ -4,14 +4,11 @@ import { verifyToken } from "../utils/jwt.js";
 import { findUserByUserId } from "../models/userModel.js";
 
 export async function authMiddleware(req, res) {
-	const authHeader = req.headers['authorization'];
-
 	try {
-		if (!authHeader || !authHeader.startsWith('Bearer '))
-			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-	
-		const token = authHeader.split(' ')[1];
+		const token = req.headers['authorization']?.split(' ')[1] || req.cookies?.token;
 		if (!token)
+			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+		if (req.headers['authorization'] && !req.headers['authorization'].startsWith('Bearer '))
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 		const session = await getSessionByToken(token);
 		if (!session || verifyToken(token) === false)

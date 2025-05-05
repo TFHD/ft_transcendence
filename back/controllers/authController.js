@@ -62,7 +62,13 @@ export async function loginUser(req, res) {
 
 			if (isValid) {
 				await updateLastSeen(existingSession.token);
-				return res.status(200).send({ token: existingSession.token });
+				return res.setCookie('token', existingSession.token, {
+					httpOnly: true,
+					secure: true,
+					sameSite: 'Lax',
+					path: '/',
+					maxAge: 60 * 60,
+				}).status(200).send({ success: true });
 			} else {
 				await deleteSession(existingSession.token);
 			}
@@ -72,7 +78,13 @@ export async function loginUser(req, res) {
 
 		await createSession(user.user_id, token);
 
-		return res.status(200).send({ token });
+		return res.setCookie('token', token, {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'Lax',
+			path: '/',
+			maxAge: 60 * 60,
+		}).status(200).send({ success: true });
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}
@@ -89,7 +101,7 @@ export async function logoutUser(req, res) {
 		if (!session || verifyToken(token) === false)
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 		await deleteSession(token);
-		return res.status(200).send({ message: 'Logged out successfully' });
+		return res.clearCookie('token', { path: '/' }).status(200).send({ success: true });
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}
