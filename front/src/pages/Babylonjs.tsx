@@ -8,7 +8,7 @@ let ws:WebSocket | null = null;
 const BabylonPage = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wsRef = useRef(null);
-	const host = import.meta.env.VITE_ADRESS;
+	const host = import.meta.env.VITE_ADDRESS;
 
   useEffect(() => {
     if (!canvasRef.current) return;

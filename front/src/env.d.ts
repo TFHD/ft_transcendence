@@ -1,5 +1,5 @@
 interface ImportMetaEnv {
-    readonly VITE_ADRESS: string;
+    readonly VITE_ADDRESS: string;
     readonly VITE_PORT: string;
   }
   

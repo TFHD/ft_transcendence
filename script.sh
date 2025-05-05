@@ -2,4 +2,4 @@
 
 IP=$(ifconfig eno2 | grep 'inet ' | awk '{print $2}')
 FICHIER="front/.env"
-sed -i "s/^VITE_ADRESS=.*/VITE_ADRESS=$IP/" "$FICHIER"
+sed -i "s/^VITE_ADDRESS=.*/VITE_ADDRESS=$IP/" "$FICHIER"
