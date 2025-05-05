@@ -45,9 +45,14 @@ import {
     Axis,
     Scalar,
     Ray,
-    ArcRotateCameraKeyboardMoveInput
+    ArcRotateCameraKeyboardMoveInput,
+    NodeMaterial,
+    Mesh,
+    DynamicTexture
     // Ajoute ici tous les autres imports dont tu as besoin
   } from '@babylonjs/core';
+
+  import '@babylonjs/loaders';
 
   interface BabylonJS {
     Engine: typeof Engine;
@@ -94,6 +99,9 @@ import {
     Rectangle: typeof Rectangle;
     Control: typeof Control;
     ArcRotateCameraKeyboardMoveInput: typeof ArcRotateCameraKeyboardMoveInput;
+    NodeMaterial: typeof NodeMaterial;
+    Mesh: typeof Mesh;
+    DynamicTexture: typeof DynamicTexture;
   }
   
   const BABYLON: BabylonJS = {
@@ -140,7 +148,10 @@ import {
     TextBlock,
     Button,
     Rectangle,
-    ArcRotateCameraKeyboardMoveInput
+    ArcRotateCameraKeyboardMoveInput,
+    NodeMaterial,
+    Mesh,
+    DynamicTexture
   };
   
   export default BABYLON;

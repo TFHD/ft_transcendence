@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEffect, useRef } from "react";
 import BABYLON from '../components/babylonImports';
+import homeGLB from '../../assets/home_2.glb';
 
 let ws:WebSocket | null = null;
 
@@ -91,85 +92,81 @@ const BabylonPage = () => {
         gui.addControl(label);
       return label;
     };
-    //Fonction pour les touches qui sont préssées
+
     const handleKeyDown = (event: KeyboardEvent) =>
-	{
-		if (event.key === "Escape")
-		{
-        	if (Status == ENUM_STATUS.InGame)
-			{
-          		Status = ENUM_STATUS.pause;
-        		gui.addControl(PauseBackgroundBox);
-        		gui.addControl(PauseTextBox);
-        	}
-			else
-			{
-        		Status = ENUM_STATUS.InGame;
-        		gui.removeControl(PauseBackgroundBox);
-        		gui.removeControl(PauseTextBox);
-        	}
-        	console.log(Status);
-		}
-      	else if (event.key in keyState)
-		{
-			ws?.send(JSON.stringify({ key: event.key, state: true }));
-        	keyState[event.key] = true;
-		}
+    {
+      if (event.key === "Escape")
+      {
+        if (Status == ENUM_STATUS.InGame)
+        {
+            Status = ENUM_STATUS.pause;
+            gui.addControl(PauseBackgroundBox);
+            gui.addControl(PauseTextBox);
+        }
+        else
+        {
+          Status = ENUM_STATUS.InGame;
+          gui.removeControl(PauseBackgroundBox);
+          gui.removeControl(PauseTextBox);
+        }
+      }
+      else if (event.key in keyState)
+      {
+        ws?.send(JSON.stringify({ key: event.key, state: true }));
+        keyState[event.key] = true;
+      }
     };
-    //Fonction pour les touches qui ne sont plus préssées
     const handleKeyUp = (event: KeyboardEvent) =>
-	{
+	  {
     	if (event.key in keyState)
-		{
-        	keyState[event.key] = false;
-			ws?.send(JSON.stringify({ key: event.key, state: false }));
-		}
+		  {
+        keyState[event.key] = false;
+			  ws?.send(JSON.stringify({ key: event.key, state: false }));
+		  }
     };
 
-    // const createExplosion = (position: BABYLON.Vector3) => {
-    //   const particleSystem = new BABYLON.ParticleSystem("particles", 200, scene);
-    //   particleSystem.particleTexture = new BABYLON.Texture("https://playground.babylonjs.com/textures/flare.png", scene);
+    const createExplosion = (position: BABYLON.Vector3, {r1, g1, b1}, {r2, g2, b2}, minEmitPower : number, maxEmitPower : number, minSize : number, maxSize : number, time : number) => {
+      const particleSystem = new BABYLON.ParticleSystem("particles", 200, scene);
+      particleSystem.particleTexture = new BABYLON.Texture("https://playground.babylonjs.com/textures/flare.png", scene);
       
-    //   particleSystem.emitter = position.clone(); // position de l'explosion
-    //   particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5); 
-    //   particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5); 
+      particleSystem.emitter = position.clone();
+      particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5); 
+      particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5); 
     
-    //   particleSystem.color1 = new BABYLON.Color4(0, 1, 0, 1.0);  // orange
-    //   particleSystem.color2 = new BABYLON.Color4(0, 0.2, 0, 1.0);    // rouge
-    //   particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
+      particleSystem.color1 = new BABYLON.Color4(r1, g1, b1, 1.0);
+      particleSystem.color2 = new BABYLON.Color4(r2, g2, b2, 1.0);
+      particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
     
-    //   particleSystem.minSize = 0.1;
-    //   particleSystem.maxSize = 0.3;
-    //   particleSystem.minLifeTime = 0.2;
-    //   particleSystem.maxLifeTime = 0.4;
+      particleSystem.minSize = minSize;
+      particleSystem.maxSize = maxSize;
+      particleSystem.minLifeTime = 0.2;
+      particleSystem.maxLifeTime = 0.4;
     
-    //   particleSystem.emitRate = 1000;
-    //   particleSystem.gravity = new BABYLON.Vector3(0, -9.81, 0);
+      particleSystem.emitRate = 1000;
+      particleSystem.gravity = new BABYLON.Vector3(0, -9.81, 0);
     
-    //   particleSystem.direction1 = new BABYLON.Vector3(-1, 1, 1);
-    //   particleSystem.direction2 = new BABYLON.Vector3(1, 1, -1);
+      particleSystem.direction1 = new BABYLON.Vector3(-1, 1, 1);
+      particleSystem.direction2 = new BABYLON.Vector3(1, 1, -1);
     
-    //   particleSystem.minAngularSpeed = 0;
-    //   particleSystem.maxAngularSpeed = Math.PI;
+      particleSystem.minAngularSpeed = 0;
+      particleSystem.maxAngularSpeed = Math.PI;
     
-    //   particleSystem.minEmitPower = 0.5;
-    //   particleSystem.maxEmitPower = 2;
-    //   particleSystem.updateSpeed = 0.01;
+      particleSystem.minEmitPower = minEmitPower;
+      particleSystem.maxEmitPower = maxEmitPower;
+      particleSystem.updateSpeed = 0.01;
     
-    //   particleSystem.start();
+      particleSystem.start();
     
-    //   setTimeout(() => {
-    //     particleSystem.stop();
-    //     particleSystem.dispose();
-    //   }, 500);
-    // };
+      setTimeout(() => {
+        particleSystem.stop();
+        particleSystem.dispose();
+      }, time);
+    };
 
     //   #######################################################################################################################
     //   ###################################################   SETUP SCÈNE   ###################################################
     //   #######################################################################################################################
 
-
-    //Creation Engine + Scene + Camera
     const engine = new BABYLON.Engine(canvasRef.current, true);
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
@@ -193,14 +190,12 @@ const BabylonPage = () => {
     const PauseTextBox = createTextBox("Pause", 70, 0, 0, "white", BABYLON.Control.HORIZONTAL_ALIGNMENT_CENTER, BABYLON.Control.VERTICAL_ALIGNMENT_CENTER, false);
     const PauseBackgroundBox = createBackgroundBox("300px", "120px", "gray", 2, 20, false);
 
-    //En gros ça me clc dès que je click sur le canvas bah je peux rotate avec les touches du clavier
-    //dcp je les enleve (et c'est chiant)
     camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
     const customKeyboardInput = new BABYLON.ArcRotateCameraKeyboardMoveInput();
-    customKeyboardInput.keysUp = [];    // Désactive la touche haut
-    customKeyboardInput.keysDown = [];  // ...
-    customKeyboardInput.keysLeft = [];  // ...
-    customKeyboardInput.keysRight = []; // ...
+    customKeyboardInput.keysUp = [];
+    customKeyboardInput.keysDown = [];
+    customKeyboardInput.keysLeft = [];
+    customKeyboardInput.keysRight = [];
     camera.inputs.add(customKeyboardInput);
 
     canvasRef.current.addEventListener("click", () => {
@@ -211,12 +206,9 @@ const BabylonPage = () => {
       }
     });
 
-
-    //Creation d'une lumiere sinon on voit rien :(
     const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 1), scene);
     light.intensity = 4;
 
-    //Creation des Paddles
     const paddleMaterial = new BABYLON.StandardMaterial("paddleMat", scene);
     paddleMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
 
@@ -228,7 +220,6 @@ const BabylonPage = () => {
     rightPaddle.position = new BABYLON.Vector3(20, 0, 0);
     rightPaddle.material = paddleMaterial;
 
-    //Creation de la Mesh ball
     const ballMaterial = new BABYLON.StandardMaterial("ballMat", scene);
     ballMaterial.diffuseColor = new BABYLON.Color3(0, 1, 0);
 
@@ -241,71 +232,65 @@ const BabylonPage = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-
-    //Je créer une loop render un peu comme la Macro genre add_loop_hook()
-    engine.runRenderLoop(() =>
-	{
-    	if (Status == ENUM_STATUS.InGame)
-		{
-        	// updateBall();
-        	// smoothMovePaddles();
-    	}
-      	scene.render();
-    });
-
-    const handleResize = () =>
-	{
-		engine.resize();
-	};
+    engine.runRenderLoop(() => { scene.render(); });
+    const handleResize = () => { engine.resize(); };
     window.addEventListener("resize", handleResize);
 
-	if (!ws)
-	{
-    	ws = new WebSocket(`wss://${host}:8000/api/pong/solo`);
-    	wsRef.current = ws;
-	}
+    //   #######################################################################################################################
+    //   ####################################################   WEBSOCKET   ####################################################
+    //   #######################################################################################################################
+
+    if (!ws)
+    {
+        ws = new WebSocket(`wss://${host}:8000/api/pong/solo`);
+        wsRef.current = ws;
+    }
+
     ws.onopen = () =>
-	{
-    	console.log('Successfully connected to server');
+    {
+        console.log('Successfully connected to server');
     };
+
     ws.onmessage = (message) =>
-	{
-		const server_packet = JSON.parse(message.data);
+    {
+      const server_packet = JSON.parse(message.data);
 
-		console.log(server_packet.msg);
-		rightPaddle.position.y = server_packet.player2Y;
-		leftPaddle.position.y = server_packet.player1Y;
-		ball.position.x = server_packet.ballX;
-		ball.position.y = server_packet.ballY;
-		Player1Score.text = server_packet.player1Score + "";
-		Player2Score.text = server_packet.player2Score + "";
-	};
-    ws.onclose = (event) =>
-	{
-		console.log('Disconnected from server', event.code, event.reason);
-		ws = null;
-	};
-    ws.onerror = (e) =>
-	{
-		console.log('Connection error', e);
-	};
-
-    return () =>
-	{
-    	engine.dispose();
-    	window.removeEventListener("resize", handleResize);
-    	window.removeEventListener("keydown", handleKeyDown);
-    	window.removeEventListener("keyup", handleKeyUp);
-    	console.log('Fermeture WebSocket');
+      rightPaddle.position.y = server_packet.player2Y;
+      leftPaddle.position.y = server_packet.player1Y;
+      ball.position.x = server_packet.ballX;
+      ball.position.y = server_packet.ballY;
+      Player1Score.text = server_packet.player1Score + "";
+      Player2Score.text = server_packet.player2Score + "";
+      createExplosion(ball.position, {r1 : 0, g1 : 1, b1 : 0}, {r2 : 0, g2 : 1, b2 : 0}, 0.5, 2, 0.1, 0.2, 200);
+      if (ball.position.x >= 19.6 || ball.position.x <= -19.6)
+        createExplosion(ball.position, {r1 : 1, g1 : 0, b1 : 0}, {r2 : 1, g2 : 0.1, b2 : 0.1}, 10, 20, 1, 5, 700);
     };
+
+    ws.onclose = (event) =>
+    {
+      console.log('Disconnected from server', event.code, event.reason);
+      ws = null;
+    };
+
+    ws.onerror = (e) =>
+    {
+      console.log('Connection error', e);
+    };
+
+      return () =>
+    {
+        engine.dispose();
+        window.removeEventListener("resize", handleResize);
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+        console.log('Fermeture WebSocket');
+      };
   }, []);
 
   return (
-    //style={{ overflow: "hidden" }} c'est pour cacher le surplus de la page
     <div className="bg-white flex items-center justify-center min-h-screen pt-[0px]" style={{ overflow: "hidden" }}>
       <canvas
         ref={canvasRef}
-        // outiline "none" c'est pour desactiver le contour blanc pas beau du canvas quand on clique dessus hein Remi :)
         style={{ width: "100%", height: "100vh", outline: "none"}}
       />
     </div>

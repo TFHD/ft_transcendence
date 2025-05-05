@@ -1,10 +1,13 @@
 import React from 'react';
 import { useEffect, useRef } from "react";
-import { useNavigate } from 'react-router-dom';
 import BB from '../components/babylonImports';
+import { createObjectClickable, setActions, CreateDynamicText } from '../components/LobbyAssets';
+import { useNavigate } from 'react-router-dom';
+
 const BabylonScene = () => {
-  const navigate = useNavigate();
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -19,8 +22,8 @@ const BabylonScene = () => {
     // Camera control
     const camera = new BB.ArcRotateCamera(
       "camera",
-      Math.PI / 2, Math.PI / 4, 4,
-      new BB.Vector3(0, 0, 0), scene
+      -Math.PI / 2, Math.PI / 4, 4,
+      new BB.Vector3(0, 0.3, 0), scene
     );
     camera.attachControl(canvasRef.current, true);
     camera.lowerRadiusLimit = 1.7;
@@ -31,94 +34,23 @@ const BabylonScene = () => {
     camera.angularSensibilityY = 4000;
     camera.inertia = 0.9;
 
-    // disable lateral movement
     camera.inputs.attached.pointers.buttons = [0];
 
-    const CUBE = BB.MeshBuilder.CreateBox("registerHouse", {width:0.5, height:0.5, depth:0.5}, scene);
-    CUBE.position = new BB.Vector3(0, 0.9, 0);
+    const mainLight = new BB.HemisphericLight("mainLight", new BB.Vector3(-1, 1, 0), scene);
+    mainLight.intensity = 0.7;
 
-    const cubeMaterial = new BB.StandardMaterial("cubeMat", scene);
-    cubeMaterial.diffuseColor = new BB.Color3(1, 1, 1);
-
-    CUBE.material = cubeMaterial;
-    CUBE.isPickable = true;
-    CUBE.actionManager = new BB.ActionManager(scene);
-
-    CUBE.actionManager.registerAction(
-      new BB.InterpolateValueAction(
-              BB.ActionManager.OnPointerOverTrigger,
-              CUBE.material,
-              "diffuseColor",
-            BB.Color3.Red(),
-            100
-        )
-    );
-    CUBE.actionManager.registerAction(
-      new BB.InterpolateValueAction(
-          BB.ActionManager.OnPointerOutTrigger,
-          CUBE.material,
-          "diffuseColor",
-          BB.Color3.White(),
-          100
-      )
-    );
-
-    CUBE.actionManager.registerAction(
-      new BB.ExecuteCodeAction(
-        BB.ActionManager.OnPickTrigger,
-        function(evt) {
-          if (camera.radius > 2) {
-          const zoomTargetRadius = 2;
-          const zoomTargetPosition = CUBE.position.clone();
-          const duration = 500;
-          const startTarget = camera.target.clone();
-          const startRadius = camera.radius;
-          let startTime = performance.now();
+    const fuse1 = createObjectClickable("/assets/", "red_big_space_ship.glb", scene, new BB.Vector3(0, 0.96, 0), new BB.Vector3(0.25, 0.25, 0.25), new BB.Vector3(0, Math.PI, 0));
+    const fuse2 = createObjectClickable("/assets/", "red_big_space_ship.glb", scene, new BB.Vector3(0.6, 0.85, 0), new BB.Vector3(0.25, 0.25, 0.25), new BB.Vector3(0, Math.PI, Math.PI / 5));
+    const fuse3 = createObjectClickable("/assets/", "red_big_space_ship.glb", scene, new BB.Vector3(-0.6, 0.85, 0), new BB.Vector3(0.25, 0.25, 0.25), new BB.Vector3(0, Math.PI, -Math.PI / 5));
     
-          const animate = (now: number) => {
-
-            const t = Math.min((now - startTime) / duration, 1);
-            camera.target = BB.Vector3.Lerp(startTarget, zoomTargetPosition, t);
-            if (t < 1) requestAnimationFrame(animate);
-            else { startTime = performance.now(); requestAnimationFrame(animate2); }
-          };
-
-          const animate2 = (now: number) => {
-
-            const t = Math.min((now - startTime) / duration, 1);
-            camera.radius = startRadius + (zoomTargetRadius - startRadius) * t;
-            if (t < 1) requestAnimationFrame(animate2);
-          };
-    
-          requestAnimationFrame(animate);
-        } else {
-
-          const duration = 100;
-          let startTime = performance.now();
-          const animate3 = (now: number) => {
-
-            const t = Math.min((now - startTime) / duration, 1);
-            mainLight.intensity -= t * 2;
-            planet_pbr._emissiveIntensity -= t * 2;
-            
-            if (t < 1) requestAnimationFrame(animate3);
-            else navigate("/pong");
-          };
-          requestAnimationFrame(animate3);
-          starsParticles.dispose();
-        }
-      }
-      )
-    );
-
     const planet = BB.MeshBuilder.CreateSphere("planet", { diameter: 2, segments: 128 }, scene);
     // planet.renderingGroupId = 2;
 
     const planet_pbr = new BB.PBRMaterial("planet.pbr", scene);
     
-    planet_pbr.albedoTexture = new BB.Texture("../../assets/albedo_veins.png", scene);
-    planet_pbr.emissiveTexture = new BB.Texture("../../assets/emissive_veins.png", scene);
-    planet_pbr.metallicTexture = new BB.Texture("../../assets/metallic.png", scene);
+    planet_pbr.albedoTexture = new BB.Texture("/assets/albedo_veins.png", scene);
+    planet_pbr.emissiveTexture = new BB.Texture("/assets/emissive_veins.png", scene);
+    planet_pbr.metallicTexture = new BB.Texture("/assets/metallic.png", scene);
     planet_pbr.emissiveColor = new BB.Color3(1, 1, 1); // White glow
     planet_pbr.emissiveIntensity = 0.8;
     planet.material = planet_pbr;
@@ -152,8 +84,12 @@ const BabylonScene = () => {
     starsParticles.renderingGroupId = 0;
     starsParticles.start();
 
-    const mainLight = new BB.HemisphericLight("mainLight", new BB.Vector3(-1, 1, 0), scene);
-    mainLight.intensity = 0.8;
+    setActions(fuse1, "/pong", camera, mainLight, planet_pbr, starsParticles, navigate);
+    setActions(fuse2, "/pong", camera, mainLight, planet_pbr, starsParticles, navigate);
+    setActions(fuse3, "/pong", camera, mainLight, planet_pbr, starsParticles, navigate);
+    CreateDynamicText(scene, new BB.Vector3(0, 1.4, 0), new BB.Vector3(Math.PI / 2, Math.PI, 0), "      Practice      ");
+    CreateDynamicText(scene, new BB.Vector3(0.9, 1.2, 0), new BB.Vector3(Math.PI / 2, Math.PI, 0), "          Multi      ");
+    CreateDynamicText(scene, new BB.Vector3(-0.9, 1.2, 0), new BB.Vector3(Math.PI / 2, Math.PI, 0), "      Solo          ");
 
     const glow = new BB.GlowLayer("glow", scene, {
       mainTextureFixedSize: 1024,
@@ -218,10 +154,10 @@ const BabylonScene = () => {
       return p;
     };
 
-    for (let i = 0; i < 100; i++) {
-      const diameter = 0.5 + Math.random() * 0.5; // between 0.5 and 2.5
-      generate_planet(diameter);
-    }
+    // for (let i = 0; i < 100; i++) {
+    //   const diameter = 0.5 + Math.random() * 0.5; // between 0.5 and 2.5
+    //   generate_planet(diameter);
+    // }
 
     scene.onBeforeRenderObservable.add(() => {
       // Calculate pulse using sine wave
