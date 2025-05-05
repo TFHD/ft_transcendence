@@ -21,10 +21,13 @@ down:
 	@docker compose -f ./docker-compose.yml down
 
 clean: down
-	@printf "\n🔧 $(_GREEN)Delete /home/$(LOGIN)/data$(_RESET) 🔧\n\n"
+	@rm -rf front/node_modules
+	@printf "\n🔧 $(_GREEN)Delete front/node_modules/$(_RESET) 🔧\n\n"
+	@rm -rf back/node_modules
+	@printf "\n🔧 $(_GREEN)Delete back/node_modules/$(_RESET) 🔧\n\n"
 
 
-fclean: clean
+fclean: down
 	@printf "\n🔧 $(_GREEN)Delete containers images$(_RESET) 🔧\n\n"
 	@docker system prune -af
 
