@@ -1,16 +1,26 @@
 import React from 'react';
 import { useEffect, useRef } from "react";
-import BABYLON from '../components/babylonImports';
-import homeGLB from '../../assets/home_2.glb';
+import { useNavigate } from 'react-router-dom'
+import {BABYLON, GUI, LOADERS} from '../components/babylonImports'
+import { CheckToken } from '../components/CheckConnection'
 
 let ws:WebSocket | null = null;
 
 const BabylonPage = () => {
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wsRef = useRef(null);
 	const host = import.meta.env.VITE_ADDRESS;
+  const navigate = useNavigate();
 
+  
   useEffect(() => {
+
+    CheckToken().then(res => {
+    if (!res)
+      navigate("/");
+    });
+
     if (!canvasRef.current) return;
 
     //toutes les valeurs const du jeu
@@ -37,7 +47,7 @@ const BabylonPage = () => {
     //   #######################################################################################################################
 
     //Fonction qui permet de creer les murs prcq la flm d'ecrire 10x la mm chose :)
-    const createWall = (name: string, size: BABYLON.Vector3, position: BABYLON.Vector3, color : BABYLON.Color3) => {
+    const createWall = (name: string, size: {width: number, height : number, depth: number}, position: BABYLON.Vector3, color : BABYLON.Color3) => {
       const wall = BABYLON.MeshBuilder.CreateBox(name, size, scene);
       wall.position = position;
       const wallMaterial = new BABYLON.StandardMaterial(name + "Mat", scene);
@@ -54,7 +64,7 @@ const BabylonPage = () => {
       cornerRadius: number,
       display: boolean
     ) => {
-      const rect = new BABYLON.Rectangle();
+      const rect = new GUI.Rectangle();
       rect.width = width;
       rect.height = height;
       rect.alpha = 0.4;
@@ -62,8 +72,8 @@ const BabylonPage = () => {
       rect.color = "white";
       rect.thickness = thickness;
       rect.background = backgroundColor;
-      rect.horizontalAlignment = BABYLON.Control.HORIZONTAL_ALIGNMENT_CENTER;
-      rect.verticalAlignment = BABYLON.Control.VERTICAL_ALIGNMENT_CENTER;
+      rect.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+      rect.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
       if (display)
         gui.addControl(rect);
       return rect;
@@ -80,7 +90,7 @@ const BabylonPage = () => {
       VerticalAlignment : number,
       display : boolean
     ) => {
-      const label = new BABYLON.TextBlock(name);
+      const label = new GUI.TextBlock(name);
       label.text = name;
       label.color = color;
       label.fontSize = fontSize;
@@ -181,13 +191,13 @@ const BabylonPage = () => {
     camera.attachControl(canvasRef.current, true);
     camera.beta = Math.PI / 2;
 
-    const gui = BABYLON.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    const gui = GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
-    createTextBox("Player1", 32, 25, 25, "white", BABYLON.Control.HORIZONTAL_ALIGNMENT_LEFT, BABYLON.Control.VERTICAL_ALIGNMENT_TOP, true);
-    createTextBox("Player2", 32, 25, -25, "white", BABYLON.Control.HORIZONTAL_ALIGNMENT_RIGHT, BABYLON.Control.VERTICAL_ALIGNMENT_TOP, true);
-    const Player1Score = createTextBox("0", 29, 55, 25, "red", BABYLON.Control.HORIZONTAL_ALIGNMENT_LEFT, BABYLON.Control.VERTICAL_ALIGNMENT_TOP, true);
-    const Player2Score = createTextBox("0", 29, 55, -25, "red", BABYLON.Control.HORIZONTAL_ALIGNMENT_RIGHT, BABYLON.Control.VERTICAL_ALIGNMENT_TOP, true);
-    const PauseTextBox = createTextBox("Pause", 70, 0, 0, "white", BABYLON.Control.HORIZONTAL_ALIGNMENT_CENTER, BABYLON.Control.VERTICAL_ALIGNMENT_CENTER, false);
+    createTextBox("Player1", 32, 25, 25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
+    createTextBox("Player2", 32, 25, -25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
+    const Player1Score = createTextBox("0", 29, 55, 25, "red", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
+    const Player2Score = createTextBox("0", 29, 55, -25, "red", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
+    const PauseTextBox = createTextBox("Pause", 70, 0, 0, "white", GUI.Control.HORIZONTAL_ALIGNMENT_CENTER, GUI.Control.VERTICAL_ALIGNMENT_CENTER, false);
     const PauseBackgroundBox = createBackgroundBox("300px", "120px", "gray", 2, 20, false);
 
     camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");

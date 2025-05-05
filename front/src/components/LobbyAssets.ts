@@ -1,29 +1,27 @@
-import BB from './babylonImports';
-
+import * as BABYLON from '@babylonjs/core';
 
 export const createObjectClickable = (
     folder : string,
     file : string,
-    scene : BB.Scene,
-    position : BB.Vector3,
-    scaling : BB.Vector3,
-    rotation : BB.Vector3,
+    scene : BABYLON.Scene,
+    position : BABYLON.Vector3,
+    scaling : BABYLON.Vector3,
+    rotation : BABYLON.Vector3,
     ) => {
-const mesh = BB.SceneLoader.ImportMesh(
+const mesh = BABYLON.SceneLoader.ImportMesh(
     "",
     folder,
     file,
     scene,
     (meshes) => {
-      const house = meshes[0];
-      house.position = position;
-      house.scaling = scaling;
-      house.rotation = rotation;
       meshes.forEach((mesh) => {
-        if (mesh instanceof BB.Mesh && mesh.material) {
+        if (mesh instanceof BABYLON.Mesh && mesh.material) {
+          mesh.position = position;
+          mesh.scaling = scaling;
+          mesh.rotation = rotation;
           const mat = mesh.material;
-          if (mat instanceof BB.PBRMaterial) {
-            mat.albedoColor = new BB.Color3(1, 1, 1);
+          if (mat instanceof BABYLON.PBRMaterial) {
+            mat.albedoColor = new BABYLON.Color3(1, 1, 1);
             mat.metallic = 0.8;
             mat.roughness = 0.5;
           }
@@ -36,31 +34,31 @@ const mesh = BB.SceneLoader.ImportMesh(
     }
   );
 
-  const CUBE = BB.MeshBuilder.CreateBox("registerHouse", {width:0.45, height: 1.1, depth:0.45}, scene);
-  CUBE.position = new BB.Vector3(position.x + rotation.x, position.y, position.z);
+  const CUBE = BABYLON.MeshBuilder.CreateBox("registerHouse", {width:0.45, height: 1.1, depth:0.45}, scene);
+  CUBE.position = new BABYLON.Vector3(position.x + rotation.x, position.y, position.z);
   CUBE.rotation = rotation;
 
-  const cubeMaterial = new BB.StandardMaterial("cubeMat", scene);
-  cubeMaterial.diffuseColor = new BB.Color3(1, 1, 1);
+  const cubeMaterial = new BABYLON.StandardMaterial("cubeMat", scene);
+  cubeMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
   cubeMaterial.alpha = 0;
 
   CUBE.material = cubeMaterial;
   CUBE.isPickable = true;
-  CUBE.actionManager = new BB.ActionManager(scene);
+  CUBE.actionManager = new BABYLON.ActionManager(scene);
   return CUBE;
 };
 
-export const setActions = (ClickableZone : BABYLON.MeshBuilder,
+export const setActions = (ClickableZone : BABYLON.Mesh,
     navigatePage : string,
-    camera : BB.ArcRotateCamera,
-    light : BB.HemisphericLight, 
-    planet : BB.PBRMaterial,
-    starsParticles : BB.ParticleSystem,
+    camera : BABYLON.ArcRotateCamera,
+    light : BABYLON.HemisphericLight, 
+    planet : BABYLON.PBRMaterial,
+    starsParticles : BABYLON.ParticleSystem,
     navigate: (path: string) => void
     ) => {
-    ClickableZone.actionManager.registerAction(
-        new BB.ExecuteCodeAction(
-          BB.ActionManager.OnPickTrigger,
+    ClickableZone.actionManager!.registerAction(
+        new BABYLON.ExecuteCodeAction(
+          BABYLON.ActionManager.OnPickTrigger,
           function(evt) {
             if (camera.radius > 2 || camera.target.x != ClickableZone.position.x) {
             const zoomTargetRadius = 2;
@@ -73,7 +71,7 @@ export const setActions = (ClickableZone : BABYLON.MeshBuilder,
             const animate = (now: number) => {
   
               const t = Math.min((now - startTime) / duration, 1);
-              camera.target = BB.Vector3.Lerp(startTarget, zoomTargetPosition, t);
+              camera.target = BABYLON.Vector3.Lerp(startTarget, zoomTargetPosition, t);
               if (t < 1) requestAnimationFrame(animate);
               else { startTime = performance.now(); requestAnimationFrame(animate2); }
             };
@@ -108,13 +106,13 @@ export const setActions = (ClickableZone : BABYLON.MeshBuilder,
 };
 
 export const CreateDynamicText = (
-    scene : BB.ArcRotateCamera,
-    position : BB.Vector3,
-    rotation : BB.Vector3,
+    scene : BABYLON.Scene,
+    position : BABYLON.Vector3,
+    rotation : BABYLON.Vector3,
     text : string,
     ) => {
 
-    const textRing = BB.MeshBuilder.CreateCylinder("textRing", {
+    const textRing = BABYLON.MeshBuilder.CreateCylinder("textRing", {
         diameter: 3,
         height: 0.01,
         tessellation: 128
@@ -123,12 +121,10 @@ export const CreateDynamicText = (
       textRing.position = position;
       textRing.rotation = rotation;
       const textureSize = 1024;
-      const dynamicTexture = new BB.DynamicTexture("dynamicTexture", textureSize, scene, true);
+      const dynamicTexture = new BABYLON.DynamicTexture("dynamicTexture", textureSize, scene, true);
       const ctx = dynamicTexture.getContext();
   
       ctx.clearRect(0, 0, textureSize, textureSize);
-  
-  
   
       const center = textureSize / 2;
       const radius = 100;
@@ -151,10 +147,10 @@ export const CreateDynamicText = (
         ctx.restore();
       }
       dynamicTexture.update();
-      const ringMaterial = new BB.StandardMaterial("ringMat", scene);
+      const ringMaterial = new BABYLON.StandardMaterial("ringMat", scene);
       ringMaterial.diffuseTexture = dynamicTexture;
       ringMaterial.diffuseTexture.hasAlpha = true;
-      ringMaterial.emissiveColor = new BB.Color3(1, 1, 1);
+      ringMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
       ringMaterial.backFaceCulling = false;
   
       textRing.material = ringMaterial;

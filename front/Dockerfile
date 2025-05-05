@@ -2,11 +2,10 @@ FROM node:latest
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json ./
 RUN npm install
-RUN npx tailwindcss init -p
-
 COPY . .
+RUN npx tailwindcss init -p
 
 EXPOSE 3000
 CMD ["npm", "run", "dev"]
