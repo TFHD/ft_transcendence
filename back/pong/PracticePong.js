@@ -35,7 +35,7 @@ const MIN_BALL_X = -20;
 const INIT_SPEED_BALL_X = 0.2;
 const INIT_SPEED_BALL_Y = 0;
 
-class	Player
+export class	Player
 {
 	constructor()
 	{
@@ -46,7 +46,7 @@ class	Player
 	}
 }
 
-class	Game
+export class	Game
 {
 	constructor()
 	{
@@ -56,6 +56,15 @@ class	Game
 		this.ballVelocity			= Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
 		this.previousBallPosition	= { position: Vector3(0, 0, 0) };
 		this.shouldStop				= false;
+
+		this.AITargetY				= 0;
+		this.aiBallY				= 0;
+		this.aiBallX				= 0;
+
+		this.aiPrevBallY			= 0;
+		this.aiPrevBallX			= 0;
+
+		this.aiPlayerY				= 0;
 	}
 }
 
@@ -108,6 +117,8 @@ function updateBall(currentGame)
 	let previousBallPosition = currentGame.previousBallPosition;
 	let ballVelocity = currentGame.ballVelocity;
 	let ball = currentGame.ball;
+	currentGame.previousBallPosition.position.x = ball.position.x;
+	currentGame.previousBallPosition.position.y = ball.position.y;
 
     copyFrom(previousBallPosition, ball.position);
     addInPlace(ball.position, ballVelocity);
@@ -144,9 +155,7 @@ function updateBall(currentGame)
 	updateAnglePosBall(ball, rightPaddle, currentGame.player2, ballVelocity);
 
     if (ball.position.y > MAX_BALL_Y || ball.position.y < MIN_BALL_Y)
-	{
         ballVelocity.y = -ballVelocity.y;
-    }
     if (ball.position.x > MAX_BALL_X || ball.position.x < MIN_BALL_X)
 	{
         if (ball.position.x > MAX_BALL_X)
@@ -159,11 +168,14 @@ function updateBall(currentGame)
     }
 }
 
+import	{ AILogic } from "./PongAI.js"
+
 const	SoloPongGame = async (socket) =>
 {
 	let currentGame = userGames.get(socket);
 
 	console.log('Starting solo pong game');
+	AILogic(currentGame); //Starts AI in an async function
 	while (!currentGame.shouldStop)
 	{
 		updatePaddlePos(currentGame);
@@ -188,7 +200,7 @@ const	SoloPongGame = async (socket) =>
 	console.log('Stopped game');
 }
 
-export function	soloPong(connection, req)
+export function	practicePong(connection, req)
 {
 	const socket = connection;
 
@@ -210,15 +222,13 @@ export function	soloPong(connection, req)
 		}
 		catch (e) {
 			console.log(e);
+			return ;
 		}
+
 		if (packet.key == 'w')
 			currentGame.player1.UpInput = packet.state;
 		if (packet.key == 's')
 			currentGame.player1.DownInput = packet.state;
-		if (packet.key == 'ArrowUp')
-			currentGame.player2.UpInput = packet.state;
-		if (packet.key == 'ArrowDown')
-			currentGame.player2.DownInput = packet.state;
 	})
 
 	socket.on('close', () =>
@@ -228,4 +238,4 @@ export function	soloPong(connection, req)
 		userGames.delete(socket);
 		console.log('goodbye client');
 	})
-};
+}
