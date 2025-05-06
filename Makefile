@@ -14,7 +14,7 @@ all: up
 
 up:
 	@./script.sh
-	@docker compose -f ./docker-compose.yml up --build
+	@bash -c 'docker compose -f ./docker-compose.yml up --build; status=$$?; if [ $$status -eq 130 ]; then exit 0; else exit $$status; fi'
 
 down:
 	@printf "\n🔧 $(_GREEN)Down containers$(_RESET) 🔧\n\n"
