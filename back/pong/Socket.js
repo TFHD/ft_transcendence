@@ -1,8 +1,5 @@
-const	userSockets = new Set();
-//Saves all sockets to check if they already have their websocket setup
 
-const	userGames = new Map();
-//Stores games based on sockets
+import { soloPong } from "./SoloPong.js"
 
 const mssleep = ms => new Promise(r => setTimeout(r, ms));
 //Sleep function like in c (use it like: "await mssleep(time)")
@@ -159,11 +156,35 @@ function updateBall(currentGame)
     }
 }
 
-const	SoloPongGame = async (socket) =>
+class	PlayerInfo
 {
-	let currentGame = userGames.get(socket);
+	constructor()
+	{
+		this.roomID = null;
+	}
+}
 
-	console.log('Starting solo pong game');
+class	Room
+{
+	constructor()
+	{
+		this.player1socket = null;
+		this.player2socket = null;
+		this.game = new Game();
+	}
+}
+
+const	userInfos = new Map();
+//Stores socket -> PlayerInfo
+
+const	rooms = new Map();
+
+async function startRoom(roomID)
+{
+	let	room = rooms.get(roomID);
+	let currentGame = room.game;
+
+	console.log('Starting duo pong game');
 	while (!currentGame.shouldStop)
 	{
 		updatePaddlePos(currentGame);
@@ -172,7 +193,17 @@ const	SoloPongGame = async (socket) =>
 
 		if (!currentGame.shouldStop)
 		{
-			socket.send(JSON.stringify({
+			room.player1socket.send(JSON.stringify({
+				player1Y: currentGame.player1.y,
+				player2Y: currentGame.player2.y,
+
+				player1Score: currentGame.player1.score,
+				player2Score: currentGame.player2.score,
+
+				ballX: currentGame.ball.position.x,
+				ballY: currentGame.ball.position.y
+			}))
+			room.player2socket.send(JSON.stringify({
 				player1Y: currentGame.player1.y,
 				player2Y: currentGame.player2.y,
 
@@ -188,48 +219,107 @@ const	SoloPongGame = async (socket) =>
 	console.log('Stopped game');
 }
 
+function	register_user(socket)
+{
+	if (!userInfos.has(socket))
+	{
+		console.log('New user, saving socket info');
+		userInfos.set(socket, new PlayerInfo());
+	}
+	else
+		console.log('Old user, doing nothing');	
+}
+
+function addUserToRoom(socket, roomID)
+{
+	let	player = userInfos.get(socket);
+	let	room = rooms.get(roomID);
+
+	player.roomID = roomID;
+	if (room)
+	{
+		if (room.player1socket == null)
+		{
+			console.log('added you in the room');
+			room.player1socket = socket;
+		}
+		else if (room.player2socket == null)
+		{
+			room.player2socket = socket;
+			startRoom(roomID);
+		}
+		else
+			console.log('erm, room is full boi');
+	}
+	else
+	{
+		rooms.set(roomID, new Room());
+		room = rooms.get(roomID);
+		room.player1socket = socket;
+	}
+}
+
+export function	duoPong(connection, req)
+{
+	const	socket = connection;
+
+	register_user(socket);
+	
+	let	currentRoom = null;
+	let	currentPlayerInfo = null;
+
+	currentPlayerInfo = userInfos.get(socket);
+	currentRoom = rooms.get(currentPlayerInfo.roomID);
+	if (!currentRoom)
+	{
+		console.log('User has yet to give a roomID');
+	}
+
+	socket.on('message', message =>
+	{
+		let packet = JSON.parse(message);
+		currentRoom = rooms.get(currentPlayerInfo.roomID);
+
+		if (packet.roomID)
+		{
+			if (currentRoom != null)
+				console.log('erm... You are already in a room lil bro');
+			else
+				addUserToRoom(socket, packet.roomID);
+		}
+		else
+		{
+			if (currentRoom != null)
+			{
+				if (socket == currentRoom.player1socket)
+				{
+					if (packet.key == 'w')
+						currentRoom.game.player1.UpInput = packet.state;
+					if (packet.key == 's')
+						currentRoom.game.player1.DownInput = packet.state;
+				}
+				else
+				{
+					if (packet.key == 'w')
+						currentRoom.game.player2.UpInput = packet.state;
+					if (packet.key == 's')
+						currentRoom.game.player2.DownInput = packet.state;
+				}
+			}
+			else
+				console.log('erm... You are not in a room lil bro');
+		}
+	})
+
+	socket.on('close', () =>
+	{
+		userInfos.delete(socket);
+		console.log('goodbye client');
+	})
+}
+
 export const PongWebsocket = (fastify) =>
 {
-	fastify.get('/pong/solo', {websocket: true}, (connection, req) =>
-	{
-		const socket = connection;
-
-		if (!userSockets.has(socket))
-		{
-			console.log('Adding new user to set');
-			userSockets.add(socket);
-			userGames.set(socket, new Game());
-			SoloPongGame(socket);
-		}
-
-		const currentGame = userGames.get(socket);
-
-		socket.on('message', message =>
-		{
-			let	packet = null
-			try {
-				packet = JSON.parse(message);
-			}
-			catch (e) {
-				console.log(e);
-			}
-
-			if (packet.key == 'w')
-				currentGame.player1.UpInput = packet.state;
-			if (packet.key == 's')
-				currentGame.player1.DownInput = packet.state;
-			if (packet.key == 'ArrowUp')
-				currentGame.player2.UpInput = packet.state;
-			if (packet.key == 'ArrowDown')
-				currentGame.player2.DownInput = packet.state;
-		})
-
-		socket.on('close', () =>
-		{
-			currentGame.shouldStop = true;
-			userSockets.delete(socket);
-			userGames.delete(socket);
-			console.log('goodbye client');
-		})
-	});
+	fastify.get('/pong/solo', {websocket: true}, soloPong);
+	fastify.get('/pong/duo', {websocket: true}, duoPong);
 }
