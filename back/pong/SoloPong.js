@@ -4,6 +4,18 @@ const	userSockets = new Set();
 const	userGames = new Map();
 //Stores games based on sockets
 
+function parseJSON(message)
+{
+	try
+	{
+		return (JSON.parse(message));
+	}
+	catch (ex)
+	{
+		return (null);
+	}
+}
+
 const mssleep = ms => new Promise(r => setTimeout(r, ms));
 //Sleep function like in c (use it like: "await mssleep(time)")
 
@@ -204,22 +216,19 @@ export function	soloPong(connection, req)
 
 	socket.on('message', message =>
 	{
-		let	packet = null
-		try {
-			packet = JSON.parse(message);
-		}
-		catch (e) {
-			console.log(e);
-		}
+		let packet = parseJSON(message);
 
-		if (packet.key == 'w')
-			currentGame.player1.UpInput = packet.state;
-		if (packet.key == 's')
-			currentGame.player1.DownInput = packet.state;
-		if (packet.key == 'ArrowUp')
-			currentGame.player2.UpInput = packet.state;
-		if (packet.key == 'ArrowDown')
-			currentGame.player2.DownInput = packet.state;
+		if (packet)
+		{
+			if (packet.key == 'w')
+				currentGame.player1.UpInput = packet.state;
+			if (packet.key == 's')
+				currentGame.player1.DownInput = packet.state;
+			if (packet.key == 'ArrowUp')
+				currentGame.player2.UpInput = packet.state;
+			if (packet.key == 'ArrowDown')
+				currentGame.player2.DownInput = packet.state;
+		}
 	})
 
 	socket.on('close', () =>
