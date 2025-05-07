@@ -38,7 +38,6 @@ const RegisterPage = () => {
     e.preventDefault();
 
     try {
-      // Envoi de la requête POST avec Axios
       const response = await axios.post(`https://${host}:8000/api/auth/register`, {
         username: formData.username,
         email: formData.email,
@@ -50,7 +49,6 @@ const RegisterPage = () => {
         type: "success",
       });
     } catch (err) {
-      // Gestion des erreurs : Afficher un message d'échec
       setStatusMessage({
         text: "Erreur lors de l'inscription. Veuillez réessayer.",
         type: "error",

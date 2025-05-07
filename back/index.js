@@ -16,6 +16,9 @@ import { cookieSecret } from "./config/cookie.config.js";
 
 dotenv.config();
 
+const PORT = process.env.PORT;
+const ADDRESS = process.env.ADDRESS;
+
 const app = fastify({
 	https: {
 		key: fs.readFileSync("/certs/key.pem"),
@@ -39,7 +42,8 @@ app.register(cors, {
 		else
 			callback(new Error("Origin not allowed"), false);
 	},
-	credentials: true
+	credentials: true,
+	methods: ['GET', 'POST', 'PATCH', 'DELETE']
 });
 app.register(websocket);
 app.register(multipart, {
@@ -61,10 +65,10 @@ const router = (fastify) => {
 
 app.register(router, { prefix: '/api' });
 
-app.listen({ port: 8000, host: '0.0.0.0' }, (err, address) => {
+app.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
 	if (err) {
 		console.error(err);
 		process.exit(1);
 	}
-	console.log(`Server is running at ${address}`);
+	console.log(`Server is running at https://${ADDRESS}:${PORT}`);
 });

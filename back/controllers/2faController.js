@@ -68,14 +68,12 @@ export async function delete2FA(req, res) {
 			return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 		if (!req.user)
 			return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-
 		const { token } = req.body;
 
 		if (!token)
 			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
 		if (!req.user.twofa_enabled)
 			return res.status(errorCodes.TWOFA_NOT_ENABLED.status).send(errorCodes.TWOFA_NOT_ENABLED);
-
 		const verified = speakeasy.totp.verify({
 			secret: req.user.twofa_secret,
 			encoding: 'base32',
@@ -84,7 +82,6 @@ export async function delete2FA(req, res) {
 		});
 		if (!verified)
 			return res.status(errorCodes.INVALID_TWOFA_TOKEN.status).send(errorCodes.INVALID_TWOFA_TOKEN);
-
 		await updateUser(req.user.user_id, {
 			twofa_enabled: false,
 			twofa_secret: null

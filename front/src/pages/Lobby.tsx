@@ -18,18 +18,15 @@ const BabylonScene = () => {
     CheckToken().then(res => {
       if (!res)
         navigate("/");
-      });
+    });
 
     if (!canvasRef.current) return;
 
-    // Engine and Scene declarations
     const engine = new BABYLON.Engine(canvasRef.current, true);
     const scene = new BABYLON.Scene(engine);
 
-    // Black background, fades with the black css background
     scene.clearColor = new BABYLON.Color4(0.0, 0.0, 0.0, 1.0);
 
-    // Camera control
     const camera = new BABYLON.ArcRotateCamera(
       "camera",
       -Math.PI / 2, Math.PI / 4, 4,
@@ -55,14 +52,13 @@ const BabylonScene = () => {
     const fuse4 = createObjectClickable("/assets/", "red_big_space_ship.glb", scene, new BABYLON.Vector3(-0.3, 0.96, 0), new BABYLON.Vector3(0.25, 0.25, 0.25), new BABYLON.Vector3(0, Math.PI, Math.PI * 1.9));
     
     const planet = BABYLON.MeshBuilder.CreateSphere("planet", { diameter: 2, segments: 128 }, scene);
-    // planet.renderingGroupId = 2;
 
     const planet_pbr = new BABYLON.PBRMaterial("planet.pbr", scene);
     
     planet_pbr.albedoTexture = new BABYLON.Texture("/assets/albedo_veins.png", scene);
     planet_pbr.emissiveTexture = new BABYLON.Texture("/assets/emissive_veins.png", scene);
     planet_pbr.metallicTexture = new BABYLON.Texture("/assets/metallic.png", scene);
-    planet_pbr.emissiveColor = new BABYLON.Color3(1, 1, 1); // White glow
+    planet_pbr.emissiveColor = new BABYLON.Color3(1, 1, 1);
     planet_pbr.emissiveIntensity = 0.8;
     planet.material = planet_pbr;
 
@@ -98,7 +94,7 @@ const BabylonScene = () => {
     setActions(fuse1, "/start-game-practice", camera, mainLight, planet_pbr, starsParticles, navigate);
     setActions(fuse2, "/start-game-multiplayer", camera, mainLight, planet_pbr, starsParticles, navigate);
     setActions(fuse3, "/settings", camera, mainLight, planet_pbr, starsParticles, navigate);
-    setActions(fuse4, "/pong", camera, mainLight, planet_pbr, starsParticles, navigate);
+    setActions(fuse4, "/pong/caca", camera, mainLight, planet_pbr, starsParticles, navigate);
     CreateDynamicText(scene, new BABYLON.Vector3(0.45, 1.4, 0), new BABYLON.Vector3(Math.PI / 2, Math.PI, 0), "        Practice      ");
     CreateDynamicText(scene, new BABYLON.Vector3(1.15, 0.98, 0), new BABYLON.Vector3(Math.PI / 2, Math.PI, 0), "        Multi   ");
     CreateDynamicText(scene, new BABYLON.Vector3(-0.45, 1.4, 0), new BABYLON.Vector3(Math.PI / 2, Math.PI, 0), "    Solo     ");

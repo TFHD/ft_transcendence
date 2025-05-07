@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { CheckToken } from "../components/CheckConnection";
+import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
 
 const host = import.meta.env.VITE_ADDRESS;
 
@@ -32,9 +32,9 @@ const HomePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    let code2FA = "";
+    let isConnected = false;
     try {
-      // Envoi de la requête POST avec Axios
       await axios.post(`https://${host}:8000/api/auth/login`, {
         username: formData.identifier,
         email: formData.identifier,
@@ -42,14 +42,40 @@ const HomePage = () => {
       }, {
         withCredentials: true
       });
-
+      const is2FA = await getIsAuthA2F();
+      if (is2FA) {
+        code2FA = prompt("Entrez votre code 2FA :")!;
+        try {
+          await axios.post(`https://${host}:8000/api/auth/2fa/verify`, {
+            token: code2FA,
+          }, {
+            withCredentials: true
+        });
+        isConnected = true;
+      } catch (err) {
+        await axios.post(`https://${host}:8000/api/auth/logout`, undefined, {
+          withCredentials: true,
+          headers: {
+            'Content-Type': ''
+          }
+        });
+      }
+    } else
+        isConnected = true;
+    if (isConnected) {
       setStatusMessage({
         text: "Connexion réussie !",
         type: "success",
       });
       navigate("/lobby");
+    }
+    else {
+      setStatusMessage({
+        text: "Code 2FA incorrect !",
+        type: "error",
+      });
+    }
     } catch (err) {
-      // Gestion des erreurs : Afficher un message d'échec
       setStatusMessage({
         text: "Erreur lors de la connection. Veuillez réessayer.",
         type: "error",

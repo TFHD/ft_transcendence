@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
 
 interface IAOption {
   name: string;
   isActive: boolean;
 }
 
-const StartGamePractice: React.FC = () => {
+const StartGamePractice = () => {
   const navigate = useNavigate();
+
+    useEffect(() => {
+      CheckToken().then(res => {
+        if (!res)
+          navigate("/");
+        });
+    }, []);
 
   const [options, setOptions] = useState<IAOption[]>([
     { name: 'Mode difficile', isActive: false },
@@ -23,7 +31,7 @@ const StartGamePractice: React.FC = () => {
 
   const handleValidate = () => {
     console.log('Options validées:', options);
-    navigate('/play');
+    navigate(`/pong/${generateTimeBasedId()}=practice`, { state: { fromStartGame: true } });
   };
 
   return (
@@ -67,7 +75,7 @@ const StartGamePractice: React.FC = () => {
 
       <div className="flex-1 flex justify-center md:justify-end items-center pr-10 pt-6 md:pt-0">
         <button
-          onClick={() => navigate('/play')}
+          onClick={handleValidate}
           className="bg-[#5d5570] text-white text-2xl py-3 px-[100px] rounded-lg hover:bg-[#3c434b] transition"
         >
           ▶️ Play

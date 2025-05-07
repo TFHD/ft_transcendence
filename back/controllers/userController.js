@@ -35,6 +35,7 @@ export async function getUsersFromId(req, res) {
 				email: user.email,
 				created_at: user.created_at,
 				updated_at: user.updated_at,
+				twofa_enabled: user.twofa_enabled,
 				last_seen: sesssion.last_seen
 			});
 		} else {
@@ -47,8 +48,10 @@ export async function getUsersFromId(req, res) {
 			return res.status(200).send({
 				id: user.user_id,
 				username: user.username,
+				email: user.email,
 				created_at: user.created_at,
 				updated_at: user.updated_at,
+				twofa_enabled: user.twofa_enabled,
 				last_seen: sesssion.last_seen
 			});
 		};

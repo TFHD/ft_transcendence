@@ -4,7 +4,6 @@ services:
     container_name: frontend
     ports:
       - "3000:3000"
-      # - "3000:80"
     volumes:
       - ./front:/app
       - /app/node_modules

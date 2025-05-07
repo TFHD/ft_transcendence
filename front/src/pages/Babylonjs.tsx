@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect, useRef } from "react";
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {BABYLON, GUI, LOADERS} from '../components/babylonImports'
 import { CheckToken } from '../components/CheckConnection'
 
@@ -9,9 +9,11 @@ let ws:WebSocket | null = null;
 const BabylonPage = () => {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const wsRef = useRef(null);
+  const wsRef = useRef<WebSocket | null>(null);
 	const host = import.meta.env.VITE_ADDRESS;
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromStartGame = location.state?.fromStartGame;
 
   
   useEffect(() => {
@@ -21,9 +23,11 @@ const BabylonPage = () => {
       navigate("/");
     });
 
+    if (!fromStartGame)
+      navigate("/lobby");
+
     if (!canvasRef.current) return;
 
-    //toutes les valeurs const du jeu
     const WALL_HEIGHT = 1;
     const WALL_DEPTH = 40;
 
@@ -34,7 +38,6 @@ const BabylonPage = () => {
 
     var Status = ENUM_STATUS.InGame;
 
-    //struct de mes Key un peu comme sur Cub3D hein Sato pour gerer les touches dynamiquement et de maniere fluide
     const keyState = {
       ArrowUp: false,
       ArrowDown: false,
@@ -293,7 +296,8 @@ const BabylonPage = () => {
         window.removeEventListener("resize", handleResize);
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
-        console.log('Fermeture WebSocket');
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN)
+          wsRef.current.close(1000, "Page quittée");
       };
   }, []);
 
