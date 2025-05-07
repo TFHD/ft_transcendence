@@ -216,7 +216,12 @@ async function startRoom(roomID)
 			await mssleep(16);
 		}
 	}
+	if (room.player1socket)
+		room.player1socket.send(JSON.stringify({ shouldStop: true}));
+	if (room.player2socket)
+		room.player2socket.send(JSON.stringify({ shouldStop: true}));
 	console.log('Stopped game');
+	rooms.delete(roomID);
 }
 
 function	register_user(socket)
@@ -259,6 +264,18 @@ function addUserToRoom(socket, roomID)
 	}
 }
 
+function parseJSON(message)
+{
+	try
+	{
+		return (JSON.parse(message));
+	}
+	catch (ex)
+	{
+		return (null);
+	}
+}
+
 export function	duoPong(connection, req)
 {
 	const	socket = connection;
@@ -277,42 +294,50 @@ export function	duoPong(connection, req)
 
 	socket.on('message', message =>
 	{
-		let packet = JSON.parse(message);
-		currentRoom = rooms.get(currentPlayerInfo.roomID);
-
-		if (packet.roomID)
+		let packet = parseJSON(message);
+		
+		if (packet)
 		{
-			if (currentRoom != null)
-				console.log('erm... You are already in a room lil bro');
-			else
+			currentRoom = rooms.get(currentPlayerInfo.roomID);
+	
+			if (!currentRoom && packet.roomID)
 				addUserToRoom(socket, packet.roomID);
-		}
-		else
-		{
-			if (currentRoom != null)
+			else
 			{
-				if (socket == currentRoom.player1socket)
+				if (currentRoom)
 				{
-					if (packet.key == 'w')
-						currentRoom.game.player1.UpInput = packet.state;
-					if (packet.key == 's')
-						currentRoom.game.player1.DownInput = packet.state;
+					if (socket == currentRoom.player1socket)
+					{
+						if (packet.key == 'w')
+							currentRoom.game.player1.UpInput = packet.state;
+						if (packet.key == 's')
+							currentRoom.game.player1.DownInput = packet.state;
+					}
+					else
+					{
+						if (packet.key == 'w')
+							currentRoom.game.player2.UpInput = packet.state;
+						if (packet.key == 's')
+							currentRoom.game.player2.DownInput = packet.state;
+					}
 				}
 				else
-				{
-					if (packet.key == 'w')
-						currentRoom.game.player2.UpInput = packet.state;
-					if (packet.key == 's')
-						currentRoom.game.player2.DownInput = packet.state;
-				}
+					console.log('erm... You are not in a room lil bro');
 			}
-			else
-				console.log('erm... You are not in a room lil bro');
 		}
 	})
 
 	socket.on('close', () =>
 	{
+		currentRoom = rooms.get(currentPlayerInfo.roomID);
+		if (currentRoom)
+		{
+			if (currentRoom.player1socket == socket)
+				currentRoom.player1socket = null;
+			if (currentRoom.player2socket == socket)
+				currentRoom.player2socket = null;
+			currentRoom.game.shouldStop = true;
+		}
 		userInfos.delete(socket);
 		console.log('goodbye client');
 	})
