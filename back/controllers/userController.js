@@ -36,6 +36,7 @@ export async function getUsersFromId(req, res) {
 				created_at: user.created_at,
 				updated_at: user.updated_at,
 				twofa_enabled: user.twofa_enabled,
+				avatar_url : user.avatar_url,
 				last_seen: sesssion.last_seen
 			});
 		} else {
@@ -52,6 +53,7 @@ export async function getUsersFromId(req, res) {
 				created_at: user.created_at,
 				updated_at: user.updated_at,
 				twofa_enabled: user.twofa_enabled,
+				avatar_url : user.avatar_url,
 				last_seen: sesssion.last_seen
 			});
 		};
@@ -78,13 +80,11 @@ export async function patchUserFromId(req, res) {
 	if (id == '@me')
 		id = req.user.user_id;
 	const user = req.user;
-
 	if (!user)
 		return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-	if (user.password) {
+	if (user.password && !file) {
 		if (!password)
 			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
-	
 		const validPassword = await bcrypt.compare(password, user.password);
 		if (!validPassword)
 			return res.status(errorCodes.INVALID_CREDENTIALS.status).send(errorCodes.INVALID_CREDENTIALS);
@@ -137,8 +137,8 @@ export async function patchUserFromId(req, res) {
 			updates.avatar_url = avatar_url;
 			fs.unlinkSync(tmpPath);
 		}
-		if (Object.keys(updates).length === 0)
-			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
+		if (Object.keys(updates).length === 0) {
+			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS); }
 		await updateUser(req.user.user_id, updates);
 		return res.status(204).send();
 	} catch (error) {

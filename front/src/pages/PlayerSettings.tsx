@@ -26,10 +26,21 @@ const PlayerSettingsPage = () => {
       if (!res) navigate("/");
       const check2FA = async () => {
         const isEnabled = await getIsAuthA2F();
-        console.log(isEnabled);
         setTwoFA(isEnabled);
+        try {
+          const userResponse = await axios.get(`https://${host}:8000/api/users/@me`, {
+            withCredentials: true
+          });
+          const avatar = userResponse.data.avatar_url;
+          if (avatar) {
+            setAvatarPreview(avatar);
+          }
+        } catch (error) {
+          console.error("Erreur lors de la récupération de l'utilisateur :", error);
+        }
       };
       check2FA();
+      
     });
   }, []);
 
@@ -95,6 +106,7 @@ const PlayerSettingsPage = () => {
           type: "failed",
       });
     }
+    setNewPassword({ ...changePassword, password: "" });
   };
 
   const ChangePassword = async (e) => {
@@ -120,45 +132,10 @@ const PlayerSettingsPage = () => {
           'Content-Type': ''
         }
       });
-        navigate("/");
+      setNewPassword({ ...changePassword, password: "" });
+      navigate("/");
     } catch (err) {
       console.log("failed", err.response?.data || err.message);
-    }
-  };
-
-  const patchProfile = async (file : File) => {
-    let code2FA = "";
-    const is2FA = await getIsAuthA2F();
-    if (is2FA)
-      code2FA = prompt("Entrez votre code 2FA :")!;
-    try {
-      await axios.patch(`https://${host}:8000/api/users/@me`,
-        {file : file},
-        {
-          headers: {
-            'x-2fa-token': code2FA,
-          },
-          withCredentials: true
-        }
-      );
-      alert("Profil mis à jour !");
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour :", error);
-    }
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    setSelectedFile(file!);
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          setAvatarPreview(reader.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-      patchProfile(selectedFile!);
     }
   };
 
@@ -178,7 +155,6 @@ const PlayerSettingsPage = () => {
         },
         withCredentials: true
       });
-      console.log("1");
       alert("Votre compte a été supprimé.");
       navigate("/");
     } catch (err) {
@@ -203,6 +179,42 @@ const PlayerSettingsPage = () => {
     } catch (err) { alert('Code incorrect ❌'); }
   };
 
+  const handleAvatarSubmit = async () => {
+    if (!selectedFile) return;
+  
+    let code2FA = "";
+    const is2FA = await getIsAuthA2F();
+    if (is2FA) {
+      code2FA = prompt("Entrez votre code 2FA :")!;
+    }
+  
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+  
+    try {
+      await axios.patch(`https://${host}:8000/api/users/@me`, formData, {
+        headers: {
+          'x-2fa-token': code2FA
+        },
+        withCredentials: true,
+      });
+  
+      alert("Avatar mis à jour avec succès !");
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Erreur lors du changement d'avatar :", error);
+      alert("Échec du changement d'avatar. Vérifie ton mot de passe.");
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0c10] text-white p-8">
       <div className="max-w-3xl mx-auto space-y-8">
@@ -210,9 +222,33 @@ const PlayerSettingsPage = () => {
 
         <section className="bg-[#1e2933] p-6 rounded-lg shadow space-y-4">
           <h2 className="text-xl font-semibold">Changer l'avatar</h2>
-          <div className="flex items-center space-x-4">
-            <img src={avatarPreview} alt="Avatar actuel" className="w-20 h-20 rounded-full" />
-            <input type="file" className="text-sm" onChange={handleAvatarChange} />
+          <div className="flex items-center justify-between space-x-6">
+            <img
+              src={avatarPreview || 'url-default-avatar'} 
+              alt="Avatar actuel"
+              className="w-32 h-32 rounded-full object-cover border-4 border-[#44a29f]"
+            />
+            <div className="flex flex-col justify-center space-y-2">
+              <label
+                htmlFor="avatar-upload"
+                className="cursor-pointer bg-[#44a29f] hover:bg-[#3b8a8a] px-6 py-3 rounded text-white text-lg"
+              >
+                Choisir un fichier
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                className="bg-[#44a29f] hover:bg-[#3b8a8a] px-4 py-2 rounded text-white"
+                onClick={handleAvatarSubmit}
+                disabled={!selectedFile}
+              >
+                Valider l'avatar
+              </button>
+            </div>
           </div>
         </section>
 

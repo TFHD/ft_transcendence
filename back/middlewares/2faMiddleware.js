@@ -5,7 +5,6 @@ export async function twoFAMiddleware(req, res) {
 	try {
 		if (req.user.twofa_enabled) {
 			const token2fa = req.headers['x-2fa-token'];
-			console.log(token2fa);
 			if (!token2fa)
 				return res.status(errorCodes.TWOFA_REQUIRED.status).send(errorCodes.TWOFA_REQUIRED);
 
