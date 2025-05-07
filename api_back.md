@@ -35,6 +35,7 @@ Toutes les routes sont préfixées par `/api`.
 **Body JSON :**
 ```json
 {
+  "username": "string",
   "email": "string",
   "password": "string"
 }
