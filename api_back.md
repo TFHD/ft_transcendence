@@ -117,6 +117,8 @@ x-2fa-token: 123456
 	"email":  "adsadasdfsfsdsdcdassca@gmail.com",
 	"created_at":  "2025-05-04 23:36:38",
 	"updated_at":  "2025-05-04 23:36:38",
+	"twofa_enabled":  "1",
+	"avatar_url":  "https://res.cl[...].png",
 	"last_seen":  "2025-05-04 23:36:42"
 }
 ```
