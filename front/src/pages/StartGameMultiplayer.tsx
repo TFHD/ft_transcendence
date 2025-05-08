@@ -18,9 +18,9 @@ const StartGameMultiplayer = () => {
     console.log('Room ID:', roomId);
     console.log('Mode tournoi:', isTournamentMode);
     if (isTournamentMode)
-      navigate(`/pong/${roomId}=tournament`, { state: { fromStartGame: true } });
+      navigate(`/pong/duo`, { state: { fromStartGame: true, roomID: roomId } });
     else
-      navigate(`/pong/${roomId}=multiplayer`, { state: { fromStartGame: true } });
+      navigate(`/pong/duo`, { state: { fromStartGame: true, roomID: roomId } });
   };
 
   const isValidRoomId = roomId.length === 6;

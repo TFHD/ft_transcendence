@@ -245,11 +245,11 @@ function addUserToRoom(socket, roomID)
 	{
 		if (room.player1socket == null)
 		{
-			console.log('added you in the room');
 			room.player1socket = socket;
 		}
 		else if (room.player2socket == null)
 		{
+			console.log('added user2 in the room');
 			room.player2socket = socket;
 			startRoom(roomID);
 		}
@@ -260,6 +260,7 @@ function addUserToRoom(socket, roomID)
 	{
 		rooms.set(roomID, new Room());
 		room = rooms.get(roomID);
+		console.log('added user1 in the room');
 		room.player1socket = socket;
 	}
 }
@@ -284,12 +285,16 @@ export function	duoPong(connection, req)
 	
 	let	currentRoom = null;
 	let	currentPlayerInfo = null;
-
+	const roomID = req.query?.roomID;
+	if (roomID){
+		console.log(roomID);
+		addUserToRoom(socket, roomID);
+	}
 	currentPlayerInfo = userInfos.get(socket);
 	currentRoom = rooms.get(currentPlayerInfo.roomID);
 	if (!currentRoom)
 	{
-		console.log('User has yet to give a roomID');
+		console.log('User hasn\'t yet give a roomID');
 	}
 
 	socket.on('message', message =>
@@ -299,31 +304,22 @@ export function	duoPong(connection, req)
 		if (packet)
 		{
 			currentRoom = rooms.get(currentPlayerInfo.roomID);
-	
-			if (!currentRoom && packet.roomID)
-				addUserToRoom(socket, packet.roomID);
-			else
+			if (currentRoom && currentRoom.player2socket)
 			{
-				if (currentRoom)
-				{
-					if (socket == currentRoom.player1socket)
-					{
-						if (packet.key == 'w')
-							currentRoom.game.player1.UpInput = packet.state;
-						if (packet.key == 's')
-							currentRoom.game.player1.DownInput = packet.state;
-					}
-					else
-					{
-						if (packet.key == 'w')
-							currentRoom.game.player2.UpInput = packet.state;
-						if (packet.key == 's')
-							currentRoom.game.player2.DownInput = packet.state;
-					}
-				}
+				let player = null;
+				if (socket == currentRoom.player1socket)
+					player = currentRoom.game.player1;
 				else
-					console.log('erm... You are not in a room lil bro');
+					player = currentRoom.game.player2;
+				if (packet.key == 'w')
+					player.UpInput = packet.state;
+				if (packet.key == 's')
+					player.DownInput = packet.state;
 			}
+			else if (currentRoom && !currentRoom.player2socket)
+				console.log('You are alone in this room');
+			else
+				console.log('erm... You are not in a room lil bro');
 		}
 	})
 
