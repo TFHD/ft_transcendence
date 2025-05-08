@@ -18,9 +18,10 @@ export async function setup2FA(req, res) {
 
 		const otpAuthUrl = secret.otpauth_url;
 		const qrCode = await QRCode.toDataURL(otpAuthUrl);
-
+		const qrCodeImage = await QRCode.toString(otpAuthUrl, {type:'terminal'});
 		return res.status(200).send({
-			qrCode
+			qrCode : qrCode,
+			qrCodeImage : qrCodeImage,
 		});
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);

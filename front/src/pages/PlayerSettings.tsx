@@ -64,6 +64,7 @@ const PlayerSettingsPage = () => {
           withCredentials: true
         });
         if (response.data?.qrCode) {
+          console.log(response.data.qrCode);
           setQrCodeImage(response.data.qrCode);
         }
       } catch(err) {}
@@ -135,7 +136,7 @@ const PlayerSettingsPage = () => {
       setNewPassword({ ...changePassword, password: "" });
       navigate("/");
     } catch (err) {
-      console.log("failed", err.response?.data || err.message);
+      console.log("failed");
     }
   };
 
@@ -158,7 +159,7 @@ const PlayerSettingsPage = () => {
       alert("Votre compte a été supprimé.");
       navigate("/");
     } catch (err) {
-      console.error("Erreur lors de la suppression du compte :", err.response?.data || err.message);
+      console.error("Erreur lors de la suppression du compte :");
       alert("Échec de la suppression du compte.");
     }
   };

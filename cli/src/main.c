@@ -107,6 +107,7 @@
 #include <stdio.h>
 #include <nopoll.h>
 #include <curl.h>
+#include <cJSON.h>
 
 #define	CLI_URL			"https://10.12.1.1:8000/api/"
 

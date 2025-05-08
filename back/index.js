@@ -33,18 +33,32 @@ app.register(cors, {
 	origin: (origin, callback) => {
 		const clientIp = origin ? new URL(origin).hostname : null;
 
-		const allowedOrigins = [
-			'https://localhost:3000',
-			`https://${clientIp}:3000`
-		];
-		if (allowedOrigins.includes(origin))
-			callback(null, true);
-		else
-			callback(new Error("Origin not allowed"), false);
+		const allowedOrigins = ['*'];
+		callback(null, true);
 	},
 	credentials: true,
 	methods: ['GET', 'POST', 'PATCH', 'DELETE']
 });
+
+// app.register(cors, {
+// 	origin: (origin, callback) => {
+// 		const clientIp = origin ? new URL(origin).hostname : null;
+
+// 		const allowedOrigins = [
+// 			'https://localhost:3000',
+// 			`https://${clientIp}:3000`
+// 		];
+// 		if (allowedOrigins.includes(origin))
+// 			callback(null, true);
+// 		else
+// 			callback(new Error("Origin not allowed"), false);
+// 	},
+// 	credentials: true,
+// 	methods: ['GET', 'POST', 'PATCH', 'DELETE']
+// });
+
+
+
 app.register(websocket);
 app.register(multipart, {
 	attachFieldsToBody: true,

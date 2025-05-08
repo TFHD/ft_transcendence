@@ -13,20 +13,29 @@ OBJS 		:=	$(addprefix $(OBJ_DIR)/, $(SRCS:%.c=%.o))
 CC			:=	clang
 
 CFLAGS		:=	-Wall -Wextra -g
-IFLAGS		:=	-Iinclude 								\
-				-I/home/rgramati/.local/include/nopoll	\
-				-I/home/rgramati/.local/include/curl	\
+IFLAGS		:=	-I include 			\
+				-I ./include/nopoll	\
+				-I ./include/curl	\
+				-I ./include/cJSON	\
 
 RM			:=	rm -rf
+
+LIB_DIR		:= lib
 
 #
 # Rules
 #
 
-all:			$(NAME)
+all:			check-libs $(NAME)
+
+check-libs:
+	@bash -c '\
+		if [ -z "$$(ls -A lib 2>/dev/null)" ]; then \
+			bash ./commands.sh; \
+		fi'
 
 $(NAME):	 	$(OBJS)
-	@$(CC) $(CFLAGS) $^ -L/home/rgramati/.local/lib -lnopoll -lcurl -o $(NAME) $(IFLAGS) 
+	@$(CC) $(CFLAGS) $^ -L ./lib -lnopoll -lcurl -lcjson -o $(NAME) $(IFLAGS) 
 
 	@echo " $(GREEN)$(BOLD)$(ITALIC)■$(RESET)  building	$(GRAY)$(BOLD)$(ITALIC)$(NAME)$(RESET)"
 
@@ -41,13 +50,16 @@ clean:
 	$(RM) $(OBJ_DIR)
 
 fclean:			clean
-	echo " $(RED)$(BOLD)$(ITALIC)■$(RESET)  deleted	$(GRAY)$(BOLD)$(ITALIC)$(NAME)$(RESET)"
+	@echo " $(RED)$(BOLD)$(ITALIC)■$(RESET)  deleted	$(GRAY)$(BOLD)$(ITALIC)$(NAME)$(RESET)"
 	$(RM) $(NAME)
+
+cleandeps :
+	$(RM) ./include/cjson ./include/cJSON ./include/curl ./include/nopoll ./lib/* ./share ./bin
 
 re:			fclean all
 
-.PHONY:		all clean fclean test re
-.SILENT:	all clean fclean test re
+.PHONY:		all clean fclean test re cleandeps
+.SILENT:	all clean fclean test re cleandeps
 
 #
 # Ansi

@@ -16,13 +16,13 @@ export async function returnCookie(user, res) {
 		const isValid = verifyToken(existingSession.token);
 		if (isValid) {
 			await updateLastSeen(existingSession.token);
-			return res.setCookie('token', existingSession.token, cookieOpts()).status(200).send({ success: true });
+			return res.setCookie('token', existingSession.token, cookieOpts()).status(200).send({success : true});
 		}
 		await deleteSession(existingSession.token);
 	}
 	const token = generateToken({ id: user.user_id });
 	await createSession(user.user_id, token);
-	return res.setCookie('token', token, cookieOpts()).status(200).send({ success: true });
+	return res.setCookie('token', token, cookieOpts()).status(200).send({success : true});
 }
 
 export async function registerUser(req, res) {
