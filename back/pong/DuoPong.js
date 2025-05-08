@@ -1,10 +1,5 @@
+
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
-
-const	userSockets = new Set();
-//Saves all sockets to check if they already have their websocket setup
-
-const	userGames = new Map();
-//Stores games based on sockets
 
 const SPEED_MULTIPLIER = 1.1;
 const MAX_BALL_Y = 10;
@@ -138,11 +133,35 @@ function updateBall(currentGame)
     }
 }
 
-const	SoloPongGame = async (socket) =>
+class	PlayerInfo
 {
-	let currentGame = userGames.get(socket);
+	constructor()
+	{
+		this.roomID = null;
+	}
+}
 
-	console.log('Starting solo pong game');
+class	Room
+{
+	constructor()
+	{
+		this.player1socket = null;
+		this.player2socket = null;
+		this.game = new Game();
+	}
+}
+
+const	userInfos = new Map();
+//Stores socket -> PlayerInfo
+
+const	rooms = new Map();
+
+async function startRoom(roomID)
+{
+	let	room = rooms.get(roomID);
+	let currentGame = room.game;
+
+	console.log('Starting duo pong game');
 	while (!currentGame.shouldStop)
 	{
 		updatePaddlePos(currentGame);
@@ -151,7 +170,17 @@ const	SoloPongGame = async (socket) =>
 
 		if (!currentGame.shouldStop)
 		{
-			socket.send(JSON.stringify({
+			room.player1socket.send(JSON.stringify({
+				player1Y: currentGame.player1.y,
+				player2Y: currentGame.player2.y,
+
+				player1Score: currentGame.player1.score,
+				player2Score: currentGame.player2.score,
+
+				ballX: currentGame.ball.position.x,
+				ballY: currentGame.ball.position.y
+			}))
+			room.player2socket.send(JSON.stringify({
 				player1Y: currentGame.player1.y,
 				player2Y: currentGame.player2.y,
 
@@ -164,45 +193,115 @@ const	SoloPongGame = async (socket) =>
 			await mssleep(16);
 		}
 	}
+	if (room.player1socket)
+		room.player1socket.send(JSON.stringify({ shouldStop: true}));
+	if (room.player2socket)
+		room.player2socket.send(JSON.stringify({ shouldStop: true}));
 	console.log('Stopped game');
+	rooms.delete(roomID);
 }
 
-export function	soloPong(connection, req)
+function	register_user(socket)
 {
-	const socket = connection;
-
-	if (!userSockets.has(socket))
+	if (!userInfos.has(socket))
 	{
-		console.log('Adding new user to set');
-		userSockets.add(socket);
-		userGames.set(socket, new Game());
-		SoloPongGame(socket);
+		console.log('New user, saving socket info');
+		userInfos.set(socket, new PlayerInfo());
 	}
+	else
+		console.log('Old user, doing nothing');	
+}
 
-	const currentGame = userGames.get(socket);
+function addUserToRoom(socket, roomID)
+{
+	let	player = userInfos.get(socket);
+	let	room = rooms.get(roomID);
+
+	player.roomID = roomID;
+	if (room)
+	{
+		if (room.player1socket == null)
+		{
+			room.player1socket = socket;
+		}
+		else if (room.player2socket == null)
+		{
+			console.log('added user2 in the room');
+			room.player2socket = socket;
+			startRoom(roomID);
+		}
+		else
+			console.log('erm, room is full boi');
+	}
+	else
+	{
+		rooms.set(roomID, new Room());
+		room = rooms.get(roomID);
+		console.log('added user1 in the room');
+		room.player1socket = socket;
+	}
+}
+
+export function	duoPong(connection, req)
+{
+	const	socket = connection;
+
+	register_user(socket);
+	
+	let	currentRoom = null;
+	let	currentPlayerInfo = null;
+	const roomID = req.query?.roomID;
+	if (roomID)
+	{
+		console.log(roomID);
+		addUserToRoom(socket, roomID);
+	}
+	currentPlayerInfo = userInfos.get(socket);
+	currentRoom = rooms.get(currentPlayerInfo.roomID);
+	if (!currentRoom)
+	{
+		console.log('User hasn\'t yet give a roomID');
+	}
 
 	socket.on('message', message =>
 	{
 		let packet = parseJSON(message);
-
+		
 		if (packet)
 		{
-			if (packet.key == 'w')
-				currentGame.player1.UpInput = packet.state;
-			if (packet.key == 's')
-				currentGame.player1.DownInput = packet.state;
-			if (packet.key == 'ArrowUp')
-				currentGame.player2.UpInput = packet.state;
-			if (packet.key == 'ArrowDown')
-				currentGame.player2.DownInput = packet.state;
+			currentRoom = rooms.get(currentPlayerInfo.roomID);
+			if (currentRoom && currentRoom.player2socket)
+			{
+				let player = null;
+				if (socket == currentRoom.player1socket)
+					player = currentRoom.game.player1;
+				else
+					player = currentRoom.game.player2;
+				
+				if (packet.key == 'w')
+					player.UpInput = packet.state;
+				if (packet.key == 's')
+					player.DownInput = packet.state;
+			}
+			else if (currentRoom && !currentRoom.player2socket)
+				console.log('You are alone in this room');
+			else
+				console.log('erm... You are not in a room lil bro');
 		}
 	})
 
 	socket.on('close', () =>
 	{
-		currentGame.shouldStop = true;
-		userSockets.delete(socket);
-		userGames.delete(socket);
+		currentRoom = rooms.get(currentPlayerInfo.roomID);
+		if (currentRoom)
+		{
+			if (currentRoom.player1socket == socket)
+				currentRoom.player1socket = null;
+			if (currentRoom.player2socket == socket)
+				currentRoom.player2socket = null;
+			currentRoom.game.shouldStop = true;
+		}
+		userInfos.delete(socket);
 		console.log('goodbye client');
 	})
 }
