@@ -1,0 +1,51 @@
+CONNECTED(00000003)
+---
+Certificate chain
+ 0 s:C = FR, ST = CHARENTE, L = Angouleme, O = ChickenJocky, OU = 42, CN = Trans
+   i:C = FR, ST = CHARENTE, L = Angouleme, O = ChickenJocky, OU = 42, CN = Trans
+   a:PKEY: rsaEncryption, 2048 (bit); sigalg: RSA-SHA256
+   v:NotBefore: Apr 26 16:32:23 2025 GMT; NotAfter: Apr 26 16:32:23 2026 GMT
+---
+Server certificate
+-----BEGIN CERTIFICATE-----
+MIIDsTCCApmgAwIBAgIUDRw7cgY+vS4zpyQJfTqsa52hu2kwDQYJKoZIhvcNAQEL
+BQAwaDELMAkGA1UEBhMCRlIxETAPBgNVBAgMCENIQVJFTlRFMRIwEAYDVQQHDAlB
+bmdvdWxlbWUxFTATBgNVBAoMDENoaWNrZW5Kb2NreTELMAkGA1UECwwCNDIxDjAM
+BgNVBAMMBVRyYW5zMB4XDTI1MDQyNjE2MzIyM1oXDTI2MDQyNjE2MzIyM1owaDEL
+MAkGA1UEBhMCRlIxETAPBgNVBAgMCENIQVJFTlRFMRIwEAYDVQQHDAlBbmdvdWxl
+bWUxFTATBgNVBAoMDENoaWNrZW5Kb2NreTELMAkGA1UECwwCNDIxDjAMBgNVBAMM
+BVRyYW5zMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs2bcea+XWhFj
+GbDCtNonrkOe4b/OIzQWSUSRrB1fbyfmdOdcwaqpmqXjAsoDHTnqqp3lb1uFeO41
+z6C89f2Fd0Z83n5Vd8Tza47xJprMaZP4uuK6Uys0zTdkwLU1+EmdCYBpjHlxwaQ/
+A4VVVDUzV7m3SF7k6R/vJJo+4xgGtRTa4yLspiuGXCLoDhLYINo/1Hx0MnS02NrV
+5cdObswOxy8qFjhuvAs0SDz/NYQ3p9ADiDc7drqYjblkqOFqlLICFvKZai0xk+nk
+pj5SYSSRvEdE0Xgbmm+B+RFx0uPjy89npJE0dpPB+MIVH+CfU0NYC+RojVVfWK/T
+wu2iVzvITQIDAQABo1MwUTAdBgNVHQ4EFgQU0crASvgxghfP6LsRPbHeV+Vhf+ww
+HwYDVR0jBBgwFoAU0crASvgxghfP6LsRPbHeV+Vhf+wwDwYDVR0TAQH/BAUwAwEB
+/zANBgkqhkiG9w0BAQsFAAOCAQEAJb9bWX6l28nmi3JnFTnQRbnfioDyImLNOznp
++VOVHAjgYVpZUQw7ymLmUtcVJ5G9Y8rDo2oLm7fDAaLrEuJyKwzB0wEsFH8+/NqY
+Klew1tnFD2LXya6DuD5aXdYUbK5ltOS8Qe9T7JouHRt9Rry+kpxGQNBXOqwMN7BH
+c5TL6YOkz4nOlVRosgAN8K3NYH+YKMcLEN/CndfvW1xVPzas6ZyNuRjPoMpqd6Mc
+DQlNRpbBouv28LJUim5TyWmegwMmB5NmkOSBvtRnYDO529DsSK7IQnvNmWkVP5sa
+bMu0HLwW8fJ9EtKzW/FjLcZrBPcjBEspVCA0PBIKF53foWX4DA==
+-----END CERTIFICATE-----
+subject=C = FR, ST = CHARENTE, L = Angouleme, O = ChickenJocky, OU = 42, CN = Trans
+issuer=C = FR, ST = CHARENTE, L = Angouleme, O = ChickenJocky, OU = 42, CN = Trans
+---
+No client certificate CA names sent
+Peer signing digest: SHA256
+Peer signature type: RSA-PSS
+Server Temp Key: X25519, 253 bits
+---
+SSL handshake has read 1505 bytes and written 373 bytes
+Verification error: self-signed certificate
+---
+New, TLSv1.3, Cipher is TLS_AES_256_GCM_SHA384
+Server public key is 2048 bit
+Secure Renegotiation IS NOT supported
+Compression: NONE
+Expansion: NONE
+No ALPN negotiated
+Early data was not sent
+Verify return code: 18 (self-signed certificate)
+---

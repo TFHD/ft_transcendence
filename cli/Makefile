@@ -13,7 +13,9 @@ OBJS 		:=	$(addprefix $(OBJ_DIR)/, $(SRCS:%.c=%.o))
 CC			:=	clang
 
 CFLAGS		:=	-Wall -Wextra -g
-IFLAGS		:=	-Iinclude -I/home/rgramati/.local/include/nopoll
+IFLAGS		:=	-Iinclude 								\
+				-I/home/rgramati/.local/include/nopoll	\
+				-I/home/rgramati/.local/include/curl	\
 
 RM			:=	rm -rf
 
@@ -24,7 +26,8 @@ RM			:=	rm -rf
 all:			$(NAME)
 
 $(NAME):	 	$(OBJS)
-	@$(CC) $(CFLAGS) $^ -L/home/rgramati/.local/lib -lnopoll -o $(NAME) $(IFLAGS)
+	@$(CC) $(CFLAGS) $^ -L/home/rgramati/.local/lib -lnopoll -lcurl -o $(NAME) $(IFLAGS) 
+
 	@echo " $(GREEN)$(BOLD)$(ITALIC)■$(RESET)  building	$(GRAY)$(BOLD)$(ITALIC)$(NAME)$(RESET)"
 
 $(OBJ_DIR)/%.o: %.c
