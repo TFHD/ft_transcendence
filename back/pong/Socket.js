@@ -216,7 +216,12 @@ async function startRoom(roomID)
 			await mssleep(16);
 		}
 	}
+	if (room.player1socket)
+		room.player1socket.send(JSON.stringify({ shouldStop: true}));
+	if (room.player2socket)
+		room.player2socket.send(JSON.stringify({ shouldStop: true}));
 	console.log('Stopped game');
+	rooms.delete(roomID);
 }
 
 function	register_user(socket)
@@ -240,11 +245,11 @@ function addUserToRoom(socket, roomID)
 	{
 		if (room.player1socket == null)
 		{
-			console.log('added you in the room');
 			room.player1socket = socket;
 		}
 		else if (room.player2socket == null)
 		{
+			console.log('added user2 in the room');
 			room.player2socket = socket;
 			startRoom(roomID);
 		}
@@ -255,7 +260,20 @@ function addUserToRoom(socket, roomID)
 	{
 		rooms.set(roomID, new Room());
 		room = rooms.get(roomID);
+		console.log('added user1 in the room');
 		room.player1socket = socket;
+	}
+}
+
+function parseJSON(message)
+{
+	try
+	{
+		return (JSON.parse(message));
+	}
+	catch (ex)
+	{
+		return (null);
 	}
 }
 
@@ -267,45 +285,39 @@ export function	duoPong(connection, req)
 	
 	let	currentRoom = null;
 	let	currentPlayerInfo = null;
-
+	const roomID = req.query?.roomID;
+	if (roomID){
+		console.log(roomID);
+		addUserToRoom(socket, roomID);
+	}
 	currentPlayerInfo = userInfos.get(socket);
 	currentRoom = rooms.get(currentPlayerInfo.roomID);
 	if (!currentRoom)
 	{
-		console.log('User has yet to give a roomID');
+		console.log('User hasn\'t yet give a roomID');
 	}
 
 	socket.on('message', message =>
 	{
-		let packet = JSON.parse(message);
-		currentRoom = rooms.get(currentPlayerInfo.roomID);
-
-		if (packet.roomID)
+		let packet = parseJSON(message);
+		
+		if (packet)
 		{
-			if (currentRoom != null)
-				console.log('erm... You are already in a room lil bro');
-			else
-				addUserToRoom(socket, packet.roomID);
-		}
-		else
-		{
-			if (currentRoom != null)
+			currentRoom = rooms.get(currentPlayerInfo.roomID);
+			if (currentRoom && currentRoom.player2socket)
 			{
+				let player = null;
 				if (socket == currentRoom.player1socket)
-				{
-					if (packet.key == 'w')
-						currentRoom.game.player1.UpInput = packet.state;
-					if (packet.key == 's')
-						currentRoom.game.player1.DownInput = packet.state;
-				}
+					player = currentRoom.game.player1;
 				else
-				{
-					if (packet.key == 'w')
-						currentRoom.game.player2.UpInput = packet.state;
-					if (packet.key == 's')
-						currentRoom.game.player2.DownInput = packet.state;
-				}
+					player = currentRoom.game.player2;
+				if (packet.key == 'w')
+					player.UpInput = packet.state;
+				if (packet.key == 's')
+					player.DownInput = packet.state;
 			}
+			else if (currentRoom && !currentRoom.player2socket)
+				console.log('You are alone in this room');
 			else
 				console.log('erm... You are not in a room lil bro');
 		}
@@ -313,6 +325,15 @@ export function	duoPong(connection, req)
 
 	socket.on('close', () =>
 	{
+		currentRoom = rooms.get(currentPlayerInfo.roomID);
+		if (currentRoom)
+		{
+			if (currentRoom.player1socket == socket)
+				currentRoom.player1socket = null;
+			if (currentRoom.player2socket == socket)
+				currentRoom.player2socket = null;
+			currentRoom.game.shouldStop = true;
+		}
 		userInfos.delete(socket);
 		console.log('goodbye client');
 	})

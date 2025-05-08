@@ -14,6 +14,7 @@ const BabylonPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromStartGame = location.state?.fromStartGame;
+  const roomID = location.state?.roomID;
 
   
   useEffect(() => {
@@ -23,8 +24,8 @@ const BabylonPage = () => {
       navigate("/");
     });
 
-    if (!fromStartGame)
-      navigate("/lobby");
+    // if (!fromStartGame)
+    //   navigate("/lobby");
 
     if (!canvasRef.current) return;
 
@@ -134,7 +135,7 @@ const BabylonPage = () => {
     	if (event.key in keyState)
 		  {
         keyState[event.key] = false;
-			  ws?.send(JSON.stringify({ key: event.key, state: false }));
+			  ws?.send(JSON.stringify({ key: event.key, state: false}));
 		  }
     };
 
@@ -255,7 +256,7 @@ const BabylonPage = () => {
 
     if (!ws)
     {
-        ws = new WebSocket(`wss://${host}:8000/api/pong/solo`);
+        ws = new WebSocket(`wss://${host}:8000/api/pong/duo?roomID=${roomID}`);
         wsRef.current = ws;
     }
 
