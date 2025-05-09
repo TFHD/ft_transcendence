@@ -79,6 +79,7 @@ Authorization: Bearer <token>
 ```json
 {
   "qrCode": "string", // image en b64
+  "qrCodeImage": "string" //Image du QrCode en string version Terminal
 }
 ```
 
