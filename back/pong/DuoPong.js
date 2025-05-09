@@ -191,7 +191,10 @@ async function startRoom(roomID)
 				player2Score: currentGame.player2.score,
 
 				ballX: currentGame.ball.position.x,
-				ballY: currentGame.ball.position.y
+				ballY: currentGame.ball.position.y,
+
+				player1Name: userInfos.get(room.player1socket).username,
+				player2Name: userInfos.get(room.player2socket).username
 			}))
 			room.player2socket.send(JSON.stringify({
 				player1Y: currentGame.player1.y,
@@ -201,7 +204,10 @@ async function startRoom(roomID)
 				player2Score: currentGame.player2.score,
 
 				ballX: currentGame.ball.position.x,
-				ballY: currentGame.ball.position.y
+				ballY: currentGame.ball.position.y,
+
+				player1Name: userInfos.get(room.player1socket).username,
+				player2Name: userInfos.get(room.player2socket).username
 			}))
 			await mssleep(16);
 		}
@@ -223,6 +229,7 @@ function	register_user(socket, username)
 		{
 			userInfos.set(socket, new PlayerInfo());
 			userInfos.get(socket).username = username;
+			console.log(`USER USERNAME: ${userInfos.get(socket).username}`);
 		}
 	}
 	else
