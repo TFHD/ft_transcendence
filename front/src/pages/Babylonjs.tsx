@@ -10,22 +10,24 @@ const BabylonPage = () => {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState("default");
 	const host = import.meta.env.VITE_ADDRESS;
   const navigate = useNavigate();
   const location = useLocation();
   const fromStartGame = location.state?.fromStartGame;
   const roomID = location.state?.roomID;
   const gameMode = window.location.pathname.split("/")[2];
-  let   canAcessgame = false
-
-  getUsername().then(res => {
-      
-    setUsername(res);
-  });
+  let   canAcessgame = false;
 
   useEffect(() => {
+    // Récupère le username une fois au chargement
+    getUsername().then(res => {
+      setUsername(res);
+    });
+  }, []);
 
+  useEffect(() => {
+    if (username === "default") return;
     CheckToken().then(res => {
     if (!res)
       navigate("/");
@@ -264,7 +266,6 @@ const BabylonPage = () => {
       //   #######################################################################################################################
       //   ####################################################   WEBSOCKET   ####################################################
       //   #######################################################################################################################
-
       if (!ws)
       {
           ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}`);
@@ -286,6 +287,7 @@ const BabylonPage = () => {
         ball.position.y = server_packet.ballY;
         Player1Score.text = server_packet.player1Score + "";
         Player2Score.text = server_packet.player2Score + "";
+
 
         createExplosion(ball.position, {r1 : 0, g1 : 1, b1 : 0}, {r2 : 0, g2 : 1, b2 : 0}, 0.5, 2, 0.1, 0.2, 200);
         if (ball.position.x >= 19.6 || ball.position.x <= -19.6)
@@ -312,7 +314,7 @@ const BabylonPage = () => {
             wsRef.current.close(1000, "Page quittée");
         };
     }
-  }, []);
+  }, [username]);
 
   return (
     <div className="bg-white flex items-center justify-center min-h-screen pt-[0px]" style={{ overflow: "hidden" }}>
