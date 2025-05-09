@@ -45,3 +45,13 @@ export const checkCode = async (code2FA : string) => {
           return false;
         }
 };
+
+export const getUsername = async () => {
+
+    try {
+        const reponse = await axios.get(`https://${host}:8000/api/users/@me`, {
+            withCredentials: true,
+        });
+        return reponse.data.username;
+    } catch (err) { return false; }
+};

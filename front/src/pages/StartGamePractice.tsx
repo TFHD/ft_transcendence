@@ -31,7 +31,7 @@ const StartGamePractice = () => {
 
   const handleValidate = () => {
     console.log('Options validées:', options);
-    navigate(`/pong/${generateTimeBasedId()}=practice`, { state: { fromStartGame: true } });
+    navigate(`/pong/practice`, { state: { fromStartGame: true, gameMode : "practice" } });
   };
 
   return (

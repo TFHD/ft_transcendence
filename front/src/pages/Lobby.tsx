@@ -69,9 +69,9 @@ const BabylonScene = () => {
 
     var starsEmitter = new BABYLON.SphereParticleEmitter();
     starsEmitter.radius = 10;
-    starsEmitter.radiusRange = 0; // emit only from shape surface
+    starsEmitter.radiusRange = 0;
 
-    starsParticles.emitter = stars; // the starting object, the emitter
+    starsParticles.emitter = stars;
     starsParticles.particleEmitterType = starsEmitter;
     starsParticles.color1 = new BABYLON.Color4(0.898, 0.737, 0.718, 1.0);
     starsParticles.color2 = new BABYLON.Color4(0.584, 0.831, 0.894, 1.0);
@@ -94,7 +94,7 @@ const BabylonScene = () => {
     setActions(fuse1, "/start-game-practice", camera, mainLight, planet_pbr, starsParticles, navigate);
     setActions(fuse2, "/start-game-multiplayer", camera, mainLight, planet_pbr, starsParticles, navigate);
     setActions(fuse3, "/settings", camera, mainLight, planet_pbr, starsParticles, navigate);
-    setActions(fuse4, "/pong/caca", camera, mainLight, planet_pbr, starsParticles, navigate);
+    setActions(fuse4, "/pong/solo", camera, mainLight, planet_pbr, starsParticles, navigate);
     CreateDynamicText(scene, new BABYLON.Vector3(0.45, 1.4, 0), new BABYLON.Vector3(Math.PI / 2, Math.PI, 0), "        Practice      ");
     CreateDynamicText(scene, new BABYLON.Vector3(1.15, 0.98, 0), new BABYLON.Vector3(Math.PI / 2, Math.PI, 0), "        Multi   ");
     CreateDynamicText(scene, new BABYLON.Vector3(-0.45, 1.4, 0), new BABYLON.Vector3(Math.PI / 2, Math.PI, 0), "    Solo     ");
