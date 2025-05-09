@@ -17,6 +17,7 @@ class	Player
 		this.DownInput	= false;
 		this.y			= 0;
 		this.score		= 0;
+		this.username	= null;
 	}
 }
 
@@ -30,6 +31,25 @@ class	Game
 		this.ballVelocity			= Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
 		this.previousBallPosition	= { position: Vector3(0, 0, 0) };
 		this.shouldStop				= false;
+	}
+}
+
+class	PlayerInfo
+{
+	constructor()
+	{
+		this.roomID = null;
+	}
+}
+
+class	Room
+{
+	constructor()
+	{
+		console.log('created a new room');
+		this.player1socket = null;
+		this.player2socket = null;
+		this.game = new Game();
 	}
 }
 
@@ -77,7 +97,7 @@ function updateAnglePosBall(ball, paddle, player, ballVelocity)
     }
 }
 
-function updateBall(currentGame)
+function updateBall(currentGame, room)
 {
 	let previousBallPosition = currentGame.previousBallPosition;
 	let ballVelocity = currentGame.ballVelocity;
@@ -128,27 +148,20 @@ function updateBall(currentGame)
 		else if (ball.position.x < MIN_BALL_X)
             currentGame.player2.score++;
 
+		if (room.player1socket)
+			room.player1socket.send(JSON.stringify({
+				explosionX: currentGame.ball.position.x,
+				explosionY: currentGame.ball.position.y
+			}));
+		if (room.player2socket)
+			room.player2socket.send(JSON.stringify({
+				explosionX: currentGame.ball.position.x,
+				explosionY: currentGame.ball.position.y
+			}));
+
         currentGame.ball.position = Vector3(0, 0, 0);
         currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
     }
-}
-
-class	PlayerInfo
-{
-	constructor()
-	{
-		this.roomID = null;
-	}
-}
-
-class	Room
-{
-	constructor()
-	{
-		this.player1socket = null;
-		this.player2socket = null;
-		this.game = new Game();
-	}
 }
 
 const	userInfos = new Map();
@@ -166,7 +179,7 @@ async function startRoom(roomID)
 	{
 		updatePaddlePos(currentGame);
 
-		updateBall(currentGame);
+		updateBall(currentGame, room);
 
 		if (!currentGame.shouldStop)
 		{
@@ -201,12 +214,16 @@ async function startRoom(roomID)
 	rooms.delete(roomID);
 }
 
-function	register_user(socket)
+function	register_user(socket, username)
 {
 	if (!userInfos.has(socket))
 	{
 		console.log('New user, saving socket info');
-		userInfos.set(socket, new PlayerInfo());
+		if (username)
+		{
+			userInfos.set(socket, new PlayerInfo());
+			userInfos.get(socket).username = username;
+		}
 	}
 	else
 		console.log('Old user, doing nothing');	
@@ -221,9 +238,7 @@ function addUserToRoom(socket, roomID)
 	if (room)
 	{
 		if (room.player1socket == null)
-		{
 			room.player1socket = socket;
-		}
 		else if (room.player2socket == null)
 		{
 			console.log('added user2 in the room');
@@ -245,13 +260,14 @@ function addUserToRoom(socket, roomID)
 export function	duoPong(connection, req)
 {
 	const	socket = connection;
+	const username = req.query?.username;
 
-	register_user(socket);
+	register_user(socket, username);
 	
 	let	currentRoom = null;
 	let	currentPlayerInfo = null;
 	const roomID = req.query?.roomID;
-	if (roomID)
+	if (roomID != "undefined" && roomID != null)
 	{
 		console.log(roomID);
 		addUserToRoom(socket, roomID);
@@ -259,15 +275,13 @@ export function	duoPong(connection, req)
 	currentPlayerInfo = userInfos.get(socket);
 	currentRoom = rooms.get(currentPlayerInfo.roomID);
 	if (!currentRoom)
-	{
-		console.log('User hasn\'t yet give a roomID');
-	}
+		console.log('User hasn\'t given a roomID yet');
 
 	socket.on('message', message =>
 	{
 		let packet = parseJSON(message);
 		
-		if (packet)
+		if (packet && currentPlayerInfo.roomID)
 		{
 			currentRoom = rooms.get(currentPlayerInfo.roomID);
 			if (currentRoom && currentRoom.player2socket)
@@ -288,6 +302,8 @@ export function	duoPong(connection, req)
 			else
 				console.log('erm... You are not in a room lil bro');
 		}
+		else
+			console.log('erm... You are not in a room lil bro');
 	})
 
 	socket.on('close', () =>

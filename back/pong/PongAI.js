@@ -150,14 +150,12 @@ async function UpdateAI(currentGame)
 		currentGame.AITargetY = calcBallHit(currentGame);
 
         if (currentGame.player1.y < 0)
-        {
             currentGame.AITargetY -= 1; 
-        }
         else
             currentGame.AITargetY += 1;
 
         // console.log(currentGame.AITargetY);
-		await mssleep(10);
+		await mssleep(1000);
 	}
 	console.log('Stopped AI ballpos checker');
 }
