@@ -2,3 +2,10 @@
 .sqlite*
 node_modules/
 back/.env
+.vscode
+cli/include/cJSON
+cli/include/share
+cli/include/cjson
+cli/include/curl
+cli/include/nopoll
+cli/bin
