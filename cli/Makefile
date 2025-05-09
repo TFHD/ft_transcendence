@@ -29,13 +29,12 @@ LIB_DIR		:= lib
 all:			check-libs $(NAME)
 
 check-libs:
-	@bash -c '\
-		if [ -z "$$(ls -A lib 2>/dev/null)" ]; then \
-			bash ./commands.sh; \
-		fi'
+	@if [ -z "$$(ls -A lib 2>/dev/null)" ]; then \
+		bash ./commands.sh; \
+	fi
 
-$(NAME):	 	$(OBJS)
-	@$(CC) $(CFLAGS) $^ -L ./lib -lnopoll -lcurl -lcjson -o $(NAME) $(IFLAGS) 
+$(NAME):	 	$(OBJS)	
+	@$(CC) $(CFLAGS) -save-temps $^ -L$(PWD)/lib -lnopoll -lcurl -lcjson -o $(NAME) $(IFLAGS) 
 
 	@echo " $(GREEN)$(BOLD)$(ITALIC)■$(RESET)  building	$(GRAY)$(BOLD)$(ITALIC)$(NAME)$(RESET)"
 

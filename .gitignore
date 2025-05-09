@@ -10,3 +10,4 @@ cli/include/curl
 cli/include/nopoll
 cli/bin
 cli/lib
+cli/build
