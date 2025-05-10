@@ -6,7 +6,7 @@
 /*   By: rgramati <rgramati@42angouleme.fr>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 19:52:06 by rgramati          #+#    #+#             */
-/*   Updated: 2025/05/09 20:30:36 by rgramati         ###   ########.fr       */
+/*   Updated: 2025/05/10 19:37:43 by rgramati         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,23 +26,26 @@
 # include <cJSON.h>
 # include <nopoll.h>
 
+# include <screen.h>
+
 # define	SHIFT(ac, av)	(ac-- ,*av++)
 
 # define	INLINE			static inline
-# define	DESTRUCTOR		__attribute__((destructor))
-# define	CONSTRUCTOR		__attribute__((constructor))
 # define	TCLI_FUNC(X)	tcli_##X
 # define	TCLI_API(T, X)	INLINE T TCLI_FUNC(X)
 
 typedef struct s_cli_ctx
 {
 	uint64_t			status;
+	TCLI_Screen			screen;
+
 	const char			*prog_name;
 	const char			*ip;
 	const char			*url;
 	struct curl_slist	*resolve;
 	struct curl_slist	*cookie;
 	struct curl_slist	*headers;
+	const char			*postfields;
 }	TCLI;
 
 # define	CURL_CTX	__curl_ctx
@@ -52,7 +55,7 @@ typedef struct s_cli_ctx
 static CURL	*CURL_CTX	= NULL;
 static TCLI	*TCLI_CTX	= NULL;
 
-static char	TCLI_TMP[512]	= {0};
+static char	TCLI_TMP[1024]	= {0};
 
 enum
 {
@@ -61,6 +64,8 @@ enum
 
 # define	TCLI_STATUS		TCLI_CTX->status
 # define	TCLI_ACTIVE		(TCLI_CTX->status & TCLI_FLAG_OK)
+
+# define	TCLI_SCREEN		TCLI_CTX->screen
 
 # define	TCLI_EXE		TCLI_CTX->prog_name
 
@@ -77,8 +82,9 @@ enum
 # define	TCLI_COOKIE_FP	".cookiejar"
 
 # define	TCLI_HDRS		TCLI_CTX->headers
-
 # define	TCLI_TOKEN_HDR	"authorization: Bearer "
+
+# define	TCLI_POSTFIELDS	TCLI_CTX->postfields
 
 TCLI_API(void, error)(const char *);
 TCLI_API(void, usage)(int err);
@@ -95,6 +101,10 @@ TCLI_API(void, init)(int argc, char **argv)
 		tcli_error("failed to init TCLI context.");
 	memset(TCLI_CTX, 0, sizeof(TCLI));
 	
+	screen_init(&TCLI_SCREEN);
+	if (!TCLI_SCREEN.data)
+		tcli_error("failed to init TCLI screen.");
+	
 	TCLI_EXE = SHIFT(argc, argv);
 	if (argc != 1)
 		tcli_usage(1);
@@ -104,16 +114,21 @@ TCLI_API(void, init)(int argc, char **argv)
 	if (!CURL_CTX)
 		tcli_error("failed to init CURL context.");
 
+	curl_easy_setopt(CURL_CTX,  CURLOPT_VERBOSE, 1L);
+	curl_easy_setopt(CURL_CTX,  CURLOPT_TIMEOUT, 10L);
 	curl_easy_setopt(CURL_CTX, CURLOPT_CAINFO, TCLI_CERT_PATH);
 	curl_easy_setopt(CURL_CTX, CURLOPT_SSL_VERIFYPEER, 1L);	// Need SSL verification
 	curl_easy_setopt(CURL_CTX, CURLOPT_SSL_VERIFYHOST, 2L);
 
 	tcli_cookieInit();
 	tcli_ipResolve();
+
+	TCLI_STATUS |= TCLI_FLAG_OK;
 }
 
 TCLI_API(void, cleanup)(void)
 {
+	screen_destroy(&TCLI_CTX->screen);
 	if (TCLI_RESOLVE)
 		curl_slist_free_all(TCLI_RESOLVE);
 	if (TCLI_COOKIE)
@@ -140,6 +155,11 @@ TCLI_API(void, usage)(int err)
 	exit(err);
 }
 
+
+
+
+
+
 TCLI_API(void, cookieInit)(void)
 {
 	curl_easy_setopt(CURL_CTX, CURLOPT_COOKIEFILE, "");
@@ -152,7 +172,7 @@ TCLI_API(const char *, cookieGet)(void)
 		curl_easy_getinfo(CURL_CTX, CURLINFO_COOKIELIST, &(TCLI_COOKIE));
 	if (!TCLI_COOKIE)
 		return (NULL);
-	
+
 	char	*cdata	= TCLI_COOKIE->data;
 	char	*end	= cdata + strlen(cdata) - TCLI_COOKIE_LEN;
 	
@@ -206,15 +226,93 @@ TCLI_API(void, makeRequestHeaders)(int c, ...)
 	va_end(hdr);
 }
 
-TCLI_API(void, makeRequest)()
+TCLI_API(void, makePostfields)(cJSON *post)
 {
+	TCLI_POSTFIELDS = cJSON_Print(post);
+	cJSON_Delete(post);
+}
+
+# define	TCLI_JSON_HDR		"Content-Type: application/json"
+
+# define	TCLI_ENDPOINT_LOGIN	"auth/login"
+
+TCLI_API(void, login)(const char *user, const char *pass)
+{
+	tcli_makeUrl(TCLI_ENDPOINT_LOGIN);
+	tcli_makeRequestHeaders(1, TCLI_JSON_HDR);
+
+	cJSON	*log = cJSON_CreateObject();
+	void	*tmp = NULL;
+
+	tmp = cJSON_AddStringToObject(log, "email", user);
+	if (!tmp) goto defer;
+
+	tmp = cJSON_AddStringToObject(log, "username", user);
+	if (!tmp) goto defer;
 	
+	tmp = cJSON_AddStringToObject(log, "password", pass);
+	if (!tmp) goto defer;
+
+	tcli_makePostfields(log);
+	
+	return ;
+
+defer:
+	tcli_error("json creation failed.");
+}
+
+typedef enum
+{
+	TCLI_GET	= 1 << 0,
+	TCLI_POST	= 1 << 1,
+	TCLI_PATCH	= 1 << 2,
+	TCLI_DELETE = 1 << 3,
+}	TCLI_reqtype;
+
+typedef enum
+{
+	TCLI_REQ_LOGIN		= 1 << 4,
+	TCLI_REQ_REGISTER	= 1 << 4,
+}	TCLI_req;
+
+typedef struct
+{
+	char		*data;
+	uint32_t	len;
+}	TCLI_buff;
+
+TCLI_API(void, makeRequest)(uint16_t type)
+{
+	if (type & TCLI_REQ_LOGIN)
+		tcli_login("caca", "12345678");
+
+	if (type & TCLI_POST)
+		curl_easy_setopt(CURL_CTX, CURLOPT_POSTFIELDS, TCLI_POSTFIELDS);
+}
+
+TCLI_API(uint32_t, curlCB)(void *ptr, uint32_t size, uint32_t nmemb, void *ud)
+{
+	uint32_t	total = size * nmemb;
+	TCLI_buff	*cb = ud;
+
+	cb->data = realloc(cb->data, cb->len + total + 1);
+	memcpy(cb->data + cb->len, ptr, total);
+	cb->len += total;
+	cb->data[cb->len] = 0;
+
+	return (total);
 }
 
 # define	TCLI_REQUEST_FAILED	"[%s] Warning: http request failed with error code %d\n"
 
 TCLI_API(int, sendRequest)(void)
 {
+	if (TCLI_POSTFIELDS)
+		printf("postfieds = %s\n", TCLI_POSTFIELDS);
+
+	curl_easy_setopt(CURL_CTX, CURLOPT_HTTPHEADER, TCLI_HDRS);
+	curl_easy_setopt(CURL_CTX, CURLOPT_URL, TCLI_URL);
+
 	CURLcode	res = curl_easy_perform(CURL_CTX);
 
 	if (res != CURLE_OK)

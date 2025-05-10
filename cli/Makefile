@@ -13,10 +13,10 @@ OBJS 		:=	$(addprefix $(OBJ_DIR)/, $(SRCS:%.c=%.o))
 CC			:=	clang
 
 CFLAGS		:=	-Wall -Wextra -g
-IFLAGS		:=	-I include 			\
-				-I ./include/nopoll	\
-				-I ./include/curl	\
-				-I ./include/cJSON	\
+IFLAGS		:=	-I include 						\
+				-I ./include/nopoll				\
+				-I ./include/curl				\
+				-I ./include/cJSON				\
 
 RM			:=	rm -rf
 

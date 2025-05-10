@@ -6,7 +6,7 @@
 /*   By: rgramati <rgramati@42angouleme.fr>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 21:12:12 by rgramati          #+#    #+#             */
-/*   Updated: 2025/05/09 20:30:32 by rgramati         ###   ########.fr       */
+/*   Updated: 2025/05/10 21:08:41 by rgramati         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -158,16 +158,7 @@
 //     size_t len;
 // };
 // 
-// static size_t
-// write_cb(void *ptr, size_t size, size_t nmemb, void *userdata) {
-//     size_t total = size * nmemb;
-//     struct resp_buf *rb = userdata;
-//     rb->data = realloc(rb->data, rb->len + total + 1);
-//     memcpy(rb->data + rb->len, ptr, total);
-//     rb->len += total;
-//     rb->data[rb->len] = '\0';
-//     return total;
-// }
+
 // 
 // int main2(void)
 // {
@@ -182,24 +173,9 @@
 // 		goto defer;
 // 	}
 // 
-// 	curl_easy_setopt(CURL_CTX,  CURLOPT_VERBOSE, 1L);
-// 	curl_easy_setopt(CURL_CTX,  CURLOPT_TIMEOUT, 10L);
 // 
-// // 	strcat(buffer, AUTH_HEADER);
-// // 	strcat(buffer, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjcxMzc4Mjc5MzAwLCJpYXQiOjE3NDY3Mjc3NTcsImV4cCI6MTc0NjczMTM1N30.5zPomWBRuXkUEhIdwmWH0Df82xUaM6erCPdRvvV6Dc8");
-// 
-// 	strcat(buffer, "Content-Type: application/json");
-// 
-// 	struct resp_buf rb = { .data = NULL, .len = 0 };
-//     curl_easy_setopt(CURL_CTX, CURLOPT_WRITEFUNCTION, write_cb);
-//     curl_easy_setopt(CURL_CTX, CURLOPT_WRITEDATA, &rb);
-// 
-// 	cli_request_send(CLI_POST, "auth/login", hdr, "{\"email\":\"sacha\",\"username\":\"sacha\",\"password\":\"12345678\"}");
-// 
-// 	memset(buffer, 0, sizeof(buffer));
-// 	strcat(buffer, AUTH_HEADER);
-// 	strcat(buffer, cli_cookie_get());
-// 
+
+
 // 	cli_request_send(CLI_GET, "users/@me", hdr, NULL);
 // 
 // 	cli_request_send(CLI_GET, "auth/2fa/setup", NULL, NULL);
@@ -210,14 +186,38 @@
 
 #include <transcendence.h>
 
-TCLI_API(void, loop)(void)
+void	TCLI_FUNC(loop)(void)
 {
+	static TCLI_buff	buff_cb = (TCLI_buff)
+	{
+		.data = NULL,
+		.len = 0
+	};
+    curl_easy_setopt(CURL_CTX, CURLOPT_WRITEFUNCTION, tcli_curlCB);
+    curl_easy_setopt(CURL_CTX, CURLOPT_WRITEDATA, &buff_cb);
+
 	while (TCLI_ACTIVE)
 	{
-// 		tcli_makeRequest();
- 		tcli_sendRequest();
+		char	uchar[4] = {0};
+
+		write(STDIN_FILENO, "\033[0;0f", 6);
+		write(STDIN_FILENO, TCLI_SCREEN.data,
+			TCLI_SCREEN.width * TCLI_SCREEN.height * SCREEN_CHAR_SIZE);
+
+		int r = read(STDIN_FILENO, uchar, 4);
+		if (!r)
+			continue ;
+		if (uchar[0] == 27 && uchar[1] == 0)
+			break ;
+
+//  		tcli_makeRequest(TCLI_POST | TCLI_REQ_LOGIN);
+//  		tcli_sendRequest();
 // 		tcli_handleAnswer();
+//
+// 		TCLI_STATUS &= ~TCLI_FLAG_OK;
 	}
+
+	free(buff_cb.data);
 }
 
 int main(int argc, char **argv)
