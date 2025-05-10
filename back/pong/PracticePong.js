@@ -1,4 +1,5 @@
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
+import { findUserByUsername, updateUser } from "../models/userModel.js";
 
 const	userSockets = new Set();
 //Saves all sockets to check if they already have their websocket setup
@@ -146,7 +147,7 @@ const	SoloPongGame = async (socket) =>
 {
 	let currentGame = userGames.get(socket);
 
-	console.log('Starting solo pong game');
+	console.log('Starting practice pong game');
 	AILogic(currentGame); //Starts AI in an async function
 	while (!currentGame.shouldStop)
 	{
@@ -171,6 +172,26 @@ const	SoloPongGame = async (socket) =>
 	}
 	console.log('Stopped game');
 }
+
+async function setWinner(room)
+{
+	let currentGame = room.game;
+
+	if (currentGame.player1.score > currentGame.player2.score)
+	{
+		currentGame.winner = currentGame.player1.username;
+		currentGame.looser = currentGame.player2.username;
+	}
+	else
+	{
+		currentGame.winner = currentGame.player2.username;
+		currentGame.looser = currentGame.player1.username;
+	}
+	const user_win = await findUserByUsername(currentGame.winner);
+	const user_loose = await findUserByUsername(currentGame.looser);
+	await updateUser(user_win.user_id, {multiplayer_win : user_win.multiplayer_win + 1, last_opponent: user_loose.username});
+	await updateUser(user_loose.user_id, {multiplayer_loose : user_loose.multiplayer_loose + 1, last_opponent: user_win.username});
+};
 
 export function	practicePong(connection, req)
 {

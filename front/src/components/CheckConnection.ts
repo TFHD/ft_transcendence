@@ -55,3 +55,16 @@ export const getUsername = async () => {
         return reponse.data.username;
     } catch (err) { return false; }
 };
+
+
+export const getAllInfosOfUser = async () => {
+
+    try {
+        const reponse = await axios.get(`https://${host}:8000/api/users/@me`, {
+            withCredentials: true,
+        });
+        return {
+            username : reponse.data.username
+        };
+    } catch (err) { return false; }
+};

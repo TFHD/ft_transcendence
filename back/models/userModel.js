@@ -74,3 +74,22 @@ export const updateUser = async (id, fields) => {
 		throw error;
 	}
 };
+
+export async function updateMultiplayerStats(username) {
+	const winResult = await db.get(
+		'SELECT COUNT(*) AS winCount FROM history WHERE winner_username = ?',
+		username
+	);
+
+	const loseResult = await db.get(
+		'SELECT COUNT(*) AS loseCount FROM history WHERE looser_username = ?',
+		username
+	);
+
+	await db.run(
+		`UPDATE users
+		 SET multiplayer_win = ?, multiplayer_loose = ?
+		 WHERE username = ?`,
+		winResult.winCount, loseResult.loseCount, username
+	);
+}

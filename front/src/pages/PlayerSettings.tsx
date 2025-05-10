@@ -64,7 +64,6 @@ const PlayerSettingsPage = () => {
           withCredentials: true
         });
         if (response.data?.qrCode) {
-          console.log(response.data.qrCode);
           setQrCodeImage(response.data.qrCode);
         }
       } catch(err) {}

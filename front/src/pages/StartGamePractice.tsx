@@ -1,20 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
+import axios from 'axios';
+
+const host = import.meta.env.VITE_ADDRESS;
 
 interface IAOption {
   name: string;
   isActive: boolean;
 }
 
+
 const StartGamePractice = () => {
   const navigate = useNavigate();
+    const [userData, setUserData] = useState({
+      username: "",
+      win: 0,
+      losses: 0,
+      lastGameOpponent: "IA"
+    });
 
     useEffect(() => {
       CheckToken().then(res => {
         if (!res)
           navigate("/");
         });
+
+    const getInfos = async () => {
+      const reponse = await axios.get(`https://${host}:8000/api/users/@me`, {
+        withCredentials: true,
+      });
+      setUserData({ ...userData,
+        username: reponse.data.username, 
+        win: reponse.data.practice_win,
+        losses: reponse.data.practice_loose,
+      });
+    }
+    getInfos();
     }, []);
 
   const [options, setOptions] = useState<IAOption[]>([
@@ -30,7 +52,6 @@ const StartGamePractice = () => {
   };
 
   const handleValidate = () => {
-    console.log('Options validées:', options);
     navigate(`/pong/practice`, { state: { fromStartGame: true, gameMode : "practice" } });
   };
 
@@ -43,10 +64,10 @@ const StartGamePractice = () => {
         > ⬅️ Retour </button>
         <div>
           <h2 className="text-[#f7c80e] text-xl mb-4">Stats</h2>
-          <p className="text-lg">👨 Pseudo: Player1</p>
-          <p className="text-lg">🏆 Wins: 12</p>
-          <p className="text-lg">💀 Losses: 5</p>
-          <p className="text-lg">🎮 Last Game: asd</p>
+          <p className="text-lg">👨 Pseudo: {userData!.username}</p>
+          <p className="text-lg">🏆 Wins: {userData!.win}</p>
+          <p className="text-lg">💀 Losses: {userData!.losses}</p>
+          <p className="text-lg">🎮 Last Game: vs. {userData!.lastGameOpponent}</p>
         </div>
 
         <div>

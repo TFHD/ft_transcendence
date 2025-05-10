@@ -18,15 +18,20 @@ const BabylonPage = () => {
   const roomID = location.state?.roomID;
   const gameMode = window.location.pathname.split("/")[2];
   let   canAcessgame = false;
+  let   explosionX = undefined;
+  let   explosionY = undefined;
+  let   endGame = undefined;
 
   useEffect(() => {
-    // Récupère le username une fois au chargement
     getUsername().then(res => {
       setUsername(res);
     });
   }, []);
 
   useEffect(() => {
+    getUsername().then(res => {
+      setUsername(res);
+    });
     if (username === "default") return;
     CheckToken().then(res => {
     if (!res)
@@ -50,7 +55,7 @@ const BabylonPage = () => {
         InGame : "InGame"
       }
 
-      var Status = ENUM_STATUS.InGame;
+      var Status = ENUM_STATUS.pause;
 
       const keyState = {
         ArrowUp: false,
@@ -63,7 +68,6 @@ const BabylonPage = () => {
       //   ####################################################   FONCTIONS   ####################################################
       //   #######################################################################################################################
 
-      //Fonction qui permet de creer les murs prcq la flm d'ecrire 10x la mm chose :)
       const createWall = (name: string, size: {width: number, height : number, depth: number}, position: BABYLON.Vector3, color : BABYLON.Color3) => {
         const wall = BABYLON.MeshBuilder.CreateBox(name, size, scene);
         wall.position = position;
@@ -96,7 +100,6 @@ const BabylonPage = () => {
         return rect;
       };
 
-      //Fonction qui permet de creer des TextBoxs (meme utilité que createWall)
       const createTextBox = (
         name: string,
         fontSize: number,
@@ -119,25 +122,19 @@ const BabylonPage = () => {
           gui.addControl(label);
         return label;
       };
-
+      const changeGameVisual = () => {
+        Status = ENUM_STATUS.InGame;
+        updateGameElementsVisibility(true);
+        gui.removeControl(PauseBackgroundBox);
+        gui.removeControl(PauseTextBox);
+        camera.setPosition(new BABYLON.Vector3(0, 25, -25));
+        camera.setTarget(BABYLON.Vector3.Zero());
+        camera.attachControl(canvasRef.current, true);
+        camera.beta = Math.PI / 2;
+      };
       const handleKeyDown = (event: KeyboardEvent) =>
       {
-        if (event.key === "Escape")
-        {
-          if (Status == ENUM_STATUS.InGame)
-          {
-              Status = ENUM_STATUS.pause;
-              gui.addControl(PauseBackgroundBox);
-              gui.addControl(PauseTextBox);
-          }
-          else
-          {
-            Status = ENUM_STATUS.InGame;
-            gui.removeControl(PauseBackgroundBox);
-            gui.removeControl(PauseTextBox);
-          }
-        }
-        else if (event.key in keyState)
+        if (event.key in keyState)
         {
           ws?.send(JSON.stringify({ key: event.key, state: true }));
           keyState[event.key] = true;
@@ -190,32 +187,39 @@ const BabylonPage = () => {
         }, time);
       };
 
+      const updateGameElementsVisibility = (isVisible: boolean) => {
+        leftPaddle.setEnabled(isVisible);
+        rightPaddle.setEnabled(isVisible);
+        ball.setEnabled(isVisible);
+        topWall.setEnabled(isVisible);
+        bottomWall.setEnabled(isVisible);
+      };
+
       //   #######################################################################################################################
       //   ###################################################   SETUP SCÈNE   ###################################################
       //   #######################################################################################################################
 
       const engine = new BABYLON.Engine(canvasRef.current, true);
       const scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
 
       const camera = new BABYLON.ArcRotateCamera(
         "camera",
-        Math.PI / 2, Math.PI / 2, 500,
+        Math.PI / 2, Math.PI / 2, 30,
         new BABYLON.Vector3(0, 0, 0), scene
       );
       camera.setPosition(new BABYLON.Vector3(0, 25, -25));
-      camera.setTarget(new BABYLON.Vector3(0, 0, 0));
+      camera.setTarget(BABYLON.Vector3.Zero());
       camera.attachControl(canvasRef.current, true);
       camera.beta = Math.PI / 2;
 
       const gui = GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
-      createTextBox("Player1", 32, 25, 25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
-      createTextBox("Player2", 32, 25, -25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
+      const Player1Name = createTextBox("Player1", 32, 25, 25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
+      const Player2Name = createTextBox("Player2", 32, 25, -25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
       const Player1Score = createTextBox("0", 29, 55, 25, "red", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
       const Player2Score = createTextBox("0", 29, 55, -25, "red", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
-      const PauseTextBox = createTextBox("Pause", 70, 0, 0, "white", GUI.Control.HORIZONTAL_ALIGNMENT_CENTER, GUI.Control.VERTICAL_ALIGNMENT_CENTER, false);
-      const PauseBackgroundBox = createBackgroundBox("300px", "120px", "gray", 2, 20, false);
+      const PauseTextBox = createTextBox("En attente", 70, 0, 0, "white", GUI.Control.HORIZONTAL_ALIGNMENT_CENTER, GUI.Control.VERTICAL_ALIGNMENT_CENTER, false);
+      const PauseBackgroundBox = createBackgroundBox("400px", "120px", "gray", 2, 20, false);
 
       camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
       const customKeyboardInput = new BABYLON.ArcRotateCameraKeyboardMoveInput();
@@ -234,7 +238,16 @@ const BabylonPage = () => {
       });
 
       const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 1), scene);
-      light.intensity = 4;
+      light.intensity = 3;
+
+      var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size:1000.0}, scene);
+      var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+      skyboxMaterial.backFaceCulling = false;
+      skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("/assets/skybox/skybox", scene);
+      skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+      skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+      skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+      skybox.material = skyboxMaterial;	
 
       const paddleMaterial = new BABYLON.StandardMaterial("paddleMat", scene);
       paddleMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
@@ -254,14 +267,17 @@ const BabylonPage = () => {
       ball.position = new BABYLON.Vector3(0, 0, 0);
       ball.material = ballMaterial;
 
-      createWall("topWall", {width: 45, height : WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, 11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
-      createWall("bottomWall", {width: 45, height: WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, -11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
+      const topWall = createWall("topWall", {width: 45, height : WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, 11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
+      const bottomWall = createWall("bottomWall", {width: 45, height: WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, -11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
 
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
       engine.runRenderLoop(() => { scene.render(); });
       const handleResize = () => { engine.resize(); };
       window.addEventListener("resize", handleResize);
+      updateGameElementsVisibility(false);
+      gui.addControl(PauseBackgroundBox);
+      gui.addControl(PauseTextBox);
 
       //   #######################################################################################################################
       //   ####################################################   WEBSOCKET   ####################################################
@@ -287,11 +303,21 @@ const BabylonPage = () => {
         ball.position.y = server_packet.ballY;
         Player1Score.text = server_packet.player1Score + "";
         Player2Score.text = server_packet.player2Score + "";
+        Player1Name.text = server_packet.player1Name + "";
+        Player2Name.text = server_packet.player2Name + "";
+        explosionX = server_packet.explosionX;
+        explosionY = server_packet.explosionY;
+        endGame = server_packet.shouldStop;
 
+        if (Status = ENUM_STATUS.pause)
+          changeGameVisual();
+
+        if (endGame)
+          navigate("/lobby");
 
         createExplosion(ball.position, {r1 : 0, g1 : 1, b1 : 0}, {r2 : 0, g2 : 1, b2 : 0}, 0.5, 2, 0.1, 0.2, 200);
-        if (ball.position.x >= 19.6 || ball.position.x <= -19.6)
-          createExplosion(ball.position, {r1 : 1, g1 : 0, b1 : 0}, {r2 : 1, g2 : 0.1, b2 : 0.1}, 10, 20, 1, 5, 700);
+        if (explosionX  != undefined && explosionY != undefined)
+          createExplosion(new BABYLON.Vector3(explosionX, explosionY, 0), {r1 : 1, g1 : 0, b1 : 0}, {r2 : 1, g2 : 0.1, b2 : 0.1}, 10, 20, 1, 5, 700);
       };
 
       ws.onclose = (event) =>
