@@ -229,6 +229,7 @@ async function startRoom(roomID)
 				player1Name: userInfos.get(room.player1socket).username,
 				player2Name: userInfos.get(room.player2socket).username
 			}))
+			
 			room.player2socket.send(JSON.stringify({
 				player1Y: currentGame.player1.y,
 				player2Y: currentGame.player2.y,
@@ -240,8 +241,7 @@ async function startRoom(roomID)
 				ballY: currentGame.ball.position.y,
 
 				player1Name: userInfos.get(room.player1socket).username,
-				player2Name: userInfos.get(room.player2socket).username,
-				status: "InGame"
+				player2Name: userInfos.get(room.player2socket).username
 			}))
 			await mssleep(16);
 		}

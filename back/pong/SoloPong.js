@@ -82,7 +82,7 @@ function updateAnglePosBall(ball, paddle, player, ballVelocity)
     }
 }
 
-function updateBall(currentGame)
+function updateBall(currentGame, socket)
 {
 	let previousBallPosition = currentGame.previousBallPosition;
 	let ballVelocity = currentGame.ballVelocity;
@@ -133,12 +133,17 @@ function updateBall(currentGame)
 		else if (ball.position.x < MIN_BALL_X)
             currentGame.player2.score++;
 
+		socket.send(JSON.stringify({
+			explosionX: currentGame.ball.position.x,
+			explosionY: currentGame.ball.position.y
+		}));
+
         currentGame.ball.position = Vector3(0, 0, 0);
         currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
     }
 }
 
-const	SoloPongGame = async (socket) =>
+const	SoloPongGame = async (socket, username) =>
 {
 	let currentGame = userGames.get(socket);
 
@@ -147,7 +152,7 @@ const	SoloPongGame = async (socket) =>
 	{
 		updatePaddlePos(currentGame);
 
-		updateBall(currentGame);
+		updateBall(currentGame, socket);
 
 		if (!currentGame.shouldStop)
 		{
@@ -159,7 +164,10 @@ const	SoloPongGame = async (socket) =>
 				player2Score: currentGame.player2.score,
 
 				ballX: currentGame.ball.position.x,
-				ballY: currentGame.ball.position.y
+				ballY: currentGame.ball.position.y,
+
+				player1Name: username,
+				player2Name: username + "1"
 			}))
 			await mssleep(16);
 		}
@@ -170,13 +178,14 @@ const	SoloPongGame = async (socket) =>
 export function	soloPong(connection, req)
 {
 	const socket = connection;
+	const username = req.query?.username;
 
 	if (!userSockets.has(socket))
 	{
 		console.log('Adding new user to set');
 		userSockets.add(socket);
 		userGames.set(socket, new Game());
-		SoloPongGame(socket);
+		SoloPongGame(socket, username);
 	}
 
 	const currentGame = userGames.get(socket);

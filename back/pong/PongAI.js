@@ -154,31 +154,10 @@ async function UpdateAI(currentGame)
         else
             currentGame.AITargetY += 1;
 
-        // console.log(currentGame.AITargetY);
 		await mssleep(1000);
 	}
 	console.log('Stopped AI ballpos checker');
 }
-
-//Function to calculate the ball's direction and where it is gonna hit so the AI's paddle can adjust
-// function	calcBallDir()
-// {
-
-// }
-
-/**
- * The AI should be able to guess the direction the ball is going to take in the next 1 second before it gets
- * its positions updated. This way it adapts every second to the current scene.
- * 
- * For example if it sees the ball is going to bounce on the player it is gonna go in front of where it should go
- * even if the player mooves because it might be during its blindness of 1 second
- * 
- * Basically the AI blinks for 1 second every second with a tick of being able to see
- * So it has to guess everything
- * 
- * To make it difficult to fight against the AI we could make it so if the player is above the AI the AI
- * tries to bounce the ball towards the bottom of the thingy I dont have the word.
- */
 
 export async function AILogic(currentGame)
 {
@@ -186,13 +165,10 @@ export async function AILogic(currentGame)
 
 	while (!currentGame.shouldStop)
 	{
-		//Handle movement
-		//Should calculate ball's theorical position
-        // console.log(Math.abs(currentGame.player2.y - currentGame.AITargetY));
         currentGame.player2.UpInput = false;
         currentGame.player2.DownInput = false;
         if (Math.abs(currentGame.player2.y - currentGame.AITargetY) > .1)
-        {   
+        {
             if (currentGame.player2.y < currentGame.AITargetY)
             {
                 currentGame.player2.DownInput = false;
