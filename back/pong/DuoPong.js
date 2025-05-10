@@ -106,7 +106,7 @@ async function setWinner(room)
 	const user_loose = await findUserByUsername(currentGame.looser);
 	await updateUser(user_win.user_id, {last_opponent: user_loose.username});
 	await updateUser(user_loose.user_id, {last_opponent: user_win.username});
-	await createHistory(user_win.username, user_loose.username, winner.score, looser.score, "duo", 0);
+	await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, "duo", 0);
 	await updateMultiplayerStats(user_win.username);
 	await updateMultiplayerStats(user_loose.username);
 };
@@ -241,7 +241,7 @@ async function startRoom(roomID)
 				ballY: currentGame.ball.position.y,
 
 				player1Name: userInfos.get(room.player1socket).username,
-				player2Name: userInfos.get(room.player2socket).username
+				player2Name: userInfos.get(room.player2socket).username,
 			}))
 			await mssleep(16);
 		}

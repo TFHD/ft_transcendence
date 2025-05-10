@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { useEffect, useRef } from "react";
 import axios from 'axios';
 import { createObjectClickable, setActions, CreateDynamicText } from '../components/LobbyAssets';
@@ -10,8 +10,12 @@ const host = import.meta.env.VITE_ADDRESS;
 
 const BabylonScene = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
+  const handleSearch = () => {
+    navigate(`/search/${search}`);
+  };
   
   useEffect(() => {
 
@@ -122,8 +126,8 @@ const BabylonScene = () => {
 
     let pulseTime = 0;
     const baseIntensity = 0.1;
-    const pulseAmplitude = 0.09;  // Original: 0.05
-    const rotationSpeed = 0.003;  // Original: 0.002
+    const pulseAmplitude = 0.09;
+    const rotationSpeed = 0.003;
 
     let id = 0;
 
@@ -133,29 +137,25 @@ const BabylonScene = () => {
      * @param maxDist  Maximum radial distance for placement (default: 50)
      */
     const generate_planet = (d: number, maxDist: number = 50) => {
-      // 1. Pick a random radius r in [minR, maxDist]
       const minR = 6 + d / 2; 
       const r = minR + Math.random() * (maxDist - minR);
     
-      // 2. Uniform direction on sphere
       const u = Math.random();
       const v = Math.random();
-      const theta = 2 * Math.PI * u;             // azimuth
-      const phi   = Math.acos(2 * v - 1);         // inclination
+      const theta = 2 * Math.PI * u;
+      const phi   = Math.acos(2 * v - 1);
     
-      // 3. Convert spherical → Cartesian
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.sin(phi) * Math.sin(theta);
       const z = r * Math.cos(phi);
     
-      // 4. Create and position the sphere
       const name = `planet_${id++}`;
       const p = BABYLON.MeshBuilder.CreateSphere(name, { diameter: d, segments: 128 }, scene);
       p.position = new BABYLON.Vector3(x, y, z);
       p.rotation = new BABYLON.Vector3(
-        Math.random() * Math.PI * 2,   // random yaw
-        Math.random() * Math.PI * 2,   // random pitch
-        Math.random() * Math.PI * 2    // random roll
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2
       );
 
       p.material = planet_pbr;
@@ -164,18 +164,14 @@ const BabylonScene = () => {
     };
 
     // for (let i = 0; i < 100; i++) {
-    //   const diameter = 0.5 + Math.random() * 0.5; // between 0.5 and 2.5
+    //   const diameter = 0.5 + Math.random() * 0.5;
     //   generate_planet(diameter);
     // }
 
     scene.onBeforeRenderObservable.add(() => {
-      // Calculate pulse using sine wave
       pulseTime += (engine.getDeltaTime() ) / 1000;
       const pulse = Math.sin(pulseTime * 1.8) * pulseAmplitude;
-      
-      // Apply to both emissive intensity and bloom
       glow.intensity = baseIntensity + pulse + 0.3;
-      // pipeline.bloomWeight = 0.2 + (pulse * 2);
 
     });
 
@@ -194,7 +190,35 @@ const BabylonScene = () => {
   }, []);
 
   return (
-    <div className="bg-black flex items-center justify-center min-h-screen pt-[0px]">
+    <div className="bg-black flex items-center justify-center min-h-screen pt-[0px] relative">
+      <div className="absolute top-5 right-5 z-10">
+        <div className="absolute top-1 right-5 z-10">
+          <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
+            <svg
+              className="w-5 h-5 text-white mr-2"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m1.48-4.48A7 7 0 1110 3a7 7 0 018.13 9.17z" />
+            </svg>
+            <input
+              type="text"
+              maxLength={42}
+              placeholder="Rechercher un profil..."
+              className="bg-transparent outline-none text-white placeholder-white w-40 sm:w-64"
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && search != "") {
+                  handleSearch();
+                }
+              }}
+            />
+          </div>
+        </div>
+      </div>
+  
       <canvas
         ref={canvasRef}
         style={{ width: "100%", height: "100vh", outline: "none"}}

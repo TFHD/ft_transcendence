@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
 import { useNavigate } from 'react-router-dom';
+import Modal2FA from '../components/Model2FA'
 
 const host = import.meta.env.VITE_ADDRESS;
 
@@ -15,6 +16,8 @@ const PlayerSettingsPage = () => {
   const [changeMail, setChangeMail] = useState({ email: "", password: "" });
   const [changePassword, setNewPassword] = useState({ password: "", new_password: "" });
   const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [on2FASubmit, setOn2FASubmit] = useState<(code: string) => void>(() => () => {});
   const [statusMessage, setStatusMessage] = useState({
       text : "",
       type : ""
@@ -44,19 +47,28 @@ const PlayerSettingsPage = () => {
     });
   }, []);
 
+  const askFor2FACode = (): Promise<string> => {
+    return new Promise((resolve) => {
+      setOn2FASubmit(() => (code: string) => {
+        setShow2FAModal(false);
+        resolve(code);
+      });
+      setShow2FAModal(true);
+    });
+  };
 
   const toggleTwoFA = async (e) => {
     if (twoFA) {
       setShowQRCode(false);
       setVerificationCode('');
-      const code2FA = prompt("Entrez votre code 2FA :");
+      const code2FA = await askFor2FACode();
       const returnCheck = await checkCode(code2FA!);
       if (!returnCheck) {
         alert('Le code est mauvais ❌');
         return;
       }
         alert('2FA désactivé avec succès ✅');
-        setTwoFA(true);
+        setTwoFA(false);
     } else {
       setShowQRCode(true);
       try {
@@ -81,7 +93,7 @@ const PlayerSettingsPage = () => {
     let code2FA = "";
     const is2FA = await getIsAuthA2F();
     if (is2FA) {
-      code2FA = prompt("Entrez votre code 2FA :")!;
+      code2FA = await askFor2FACode()!;
     }
     try {
       const reponse = await axios.patch(`https://${host}:8000/api/users/@me`, {
@@ -114,7 +126,7 @@ const PlayerSettingsPage = () => {
     let code2FA = "";
     const is2FA = await getIsAuthA2F();
     if (is2FA)
-      code2FA = prompt("Entrez votre code 2FA :")!;
+      code2FA = await askFor2FACode()!;
     try {
       await axios.patch(`https://${host}:8000/api/users/@me`, {
         password: changePassword.password,
@@ -146,7 +158,7 @@ const PlayerSettingsPage = () => {
     let code2FA = "";
     const is2FA = await getIsAuthA2F();
     if (is2FA)
-      code2FA = prompt("Entrez votre code 2FA :")!;
+      code2FA = await askFor2FACode()!;
   
     try {
       await axios.delete(`https://${host}:8000/api/users/@me`, {
@@ -172,7 +184,7 @@ const PlayerSettingsPage = () => {
         withCredentials: true
       });
 
-        setTwoFA(false);
+        setTwoFA(true);
         setShowQRCode(false);
         alert('2FA activé avec succès ✅');
 
@@ -185,7 +197,7 @@ const PlayerSettingsPage = () => {
     let code2FA = "";
     const is2FA = await getIsAuthA2F();
     if (is2FA) {
-      code2FA = prompt("Entrez votre code 2FA :")!;
+      code2FA = await askFor2FACode()!;
     }
   
     const formData = new FormData();
@@ -218,6 +230,13 @@ const PlayerSettingsPage = () => {
   return (
     <div className="min-h-screen bg-[#0b0c10] text-white p-8">
       <div className="max-w-3xl mx-auto space-y-8">
+      {show2FAModal && (
+        <Modal2FA
+          message="Entrez votre code 2FA"
+          onSubmit={on2FASubmit}
+          onClose={() => setShow2FAModal(false)}
+        />
+      )}
         <h1 className="text-3xl font-bold text-[#f7c80e]">Paramètres du joueur</h1>
 
         <section className="bg-[#1e2933] p-6 rounded-lg shadow space-y-4">

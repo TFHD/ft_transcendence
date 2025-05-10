@@ -1,6 +1,6 @@
-import { deleteUser, findUserByEmail, findUserByUsername, updateUser } from "../models/userModel.js";
+import { deleteUser, findUserByEmail, findUserByUsername, updateUser, findUsersByPartialUsername, findUserByUserId } from "../models/userModel.js";
 import { errorCodes } from "../utils/errorCodes.js";
-import { deleteSession } from "../models/sessionModel.js";
+import { deleteSession, getSessionByUserId } from "../models/sessionModel.js";
 import { getHistoryByUsername } from "../models/historyModel.js";
 import { isValidUsername, isValidEmail, isValidPassword } from "../utils/validators.js";
 import bcrypt from "bcrypt";
@@ -47,7 +47,7 @@ export async function getHistoryFromId(req, res) {
 	}
 };
 
-export async function getUsersFromId(req, res) {
+export async function getUsersByUsername(req, res) {
 	if (!req.params)
 		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 	const { id } = req.params;
@@ -82,10 +82,57 @@ export async function getUsersFromId(req, res) {
 				last_seen: sesssion.last_seen
 			});
 		} else {
+			const users = await findUsersByPartialUsername(id);
+			if (!users)
+				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
+			const sesssion = req.session
+			if (!sesssion)
+				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+			return res.status(200).send({users : users});
+		};
+	} catch (error) {
+		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
+	}
+};
+
+export async function getUserFromId(req, res) {
+	if (!req.params)
+		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+	const { id } = req.params;
+	try {
+		if (!id)
+			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
+		if (id === '@me' || id == req.user.user_id) {
+			if (!req.user.user_id)
+				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 			const user = req.user;
 			if (!user)
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-			const sesssion = req.session
+			const sesssion = req.session;
+			if (!sesssion)
+				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+			return res.status(200).send({
+				id: user.user_id,
+				username: user.username,
+				email: user.email,
+				created_at: user.created_at,
+				updated_at: user.updated_at,
+				multiplayer_win: user.multiplayer_win,
+				multiplayer_loose: user.multiplayer_loose,
+				practice_win: user.practice_win,
+				practice_loose: user.practice_loose,
+				singleplayer_win: user.singleplayer_win,
+				singleplayer_loose: user.singleplayer_loose,
+				last_opponent: user.last_opponent,
+				twofa_enabled: user.twofa_enabled,
+				avatar_url : user.avatar_url,
+				last_seen: sesssion.last_seen
+			});
+		} else {
+			const user = await findUserByUserId(id);
+			if (!user)
+				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
+			const sesssion = await getSessionByUserId(id);
 			if (!sesssion)
 				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 			return res.status(200).send({

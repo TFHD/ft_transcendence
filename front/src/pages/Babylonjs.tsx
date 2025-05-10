@@ -49,9 +49,10 @@ const BabylonPage = () => {
 
       const WALL_HEIGHT = 1;
       const WALL_DEPTH = 40;
+      const isTerminal = false;
 
       const ENUM_STATUS = {
-        pause : "pause",
+        pause : "En attente",
         InGame : "InGame"
       }
 
@@ -152,7 +153,7 @@ const BabylonPage = () => {
       const createExplosion = (position: BABYLON.Vector3, {r1, g1, b1}, {r2, g2, b2}, minEmitPower : number, maxEmitPower : number, minSize : number, maxSize : number, time : number) => {
         const particleSystem = new BABYLON.ParticleSystem("particles", 200, scene);
         particleSystem.particleTexture = new BABYLON.Texture("https://playground.babylonjs.com/textures/flare.png", scene);
-        
+
         particleSystem.emitter = position.clone();
         particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5); 
         particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5); 
@@ -201,6 +202,7 @@ const BabylonPage = () => {
 
       const engine = new BABYLON.Engine(canvasRef.current, true);
       const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
 
       const camera = new BABYLON.ArcRotateCamera(
         "camera",
@@ -218,7 +220,7 @@ const BabylonPage = () => {
       const Player2Name = createTextBox("Player2", 32, 25, -25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
       const Player1Score = createTextBox("0", 29, 55, 25, "red", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
       const Player2Score = createTextBox("0", 29, 55, -25, "red", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
-      const PauseTextBox = createTextBox("En attente", 70, 0, 0, "white", GUI.Control.HORIZONTAL_ALIGNMENT_CENTER, GUI.Control.VERTICAL_ALIGNMENT_CENTER, false);
+      const PauseTextBox = createTextBox(ENUM_STATUS.pause, 70, 0, 0, "white", GUI.Control.HORIZONTAL_ALIGNMENT_CENTER, GUI.Control.VERTICAL_ALIGNMENT_CENTER, false);
       const PauseBackgroundBox = createBackgroundBox("400px", "120px", "gray", 2, 20, false);
 
       camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
@@ -240,14 +242,34 @@ const BabylonPage = () => {
       const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 1), scene);
       light.intensity = 3;
 
-      var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size:1000.0}, scene);
-      var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
-      skyboxMaterial.backFaceCulling = false;
-      skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("/assets/skybox/skybox", scene);
-      skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
-      skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
-      skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
-      skybox.material = skyboxMaterial;	
+      var starsParticles = new BABYLON.ParticleSystem("starsParticles", 500, scene);
+      starsParticles.particleTexture = new BABYLON.Texture("https://raw.githubusercontent.com/PatrickRyanMS/BabylonJStextures/master/ParticleSystems/Sun/T_Star.png", scene);
+
+      var stars = BABYLON.MeshBuilder.CreateBox("emitter", {size : 0.01, width : 0.01, height: 0.01}, scene);
+
+      var starsEmitter = new BABYLON.SphereParticleEmitter();
+      starsEmitter.radius = 150;
+      starsEmitter.radiusRange = 0;
+
+      starsParticles.emitter = stars;
+      starsParticles.particleEmitterType = starsEmitter;
+      starsParticles.color1 = new BABYLON.Color4(0.898, 0.737, 0.718, 1.0);
+      starsParticles.color2 = new BABYLON.Color4(0.584, 0.831, 0.894, 1.0);
+      starsParticles.minSize = 5;
+      starsParticles.maxSize = 12;
+      starsParticles.minLifeTime = 99999;
+      starsParticles.maxLifeTime = 99999;
+      starsParticles.manualEmitCount = 500;
+      starsParticles.maxEmitPower = 0.0;
+      starsParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
+      starsParticles.gravity = new BABYLON.Vector3(0, 0, 0);
+      starsParticles.minAngularSpeed = 0.0;
+      starsParticles.maxAngularSpeed = 0.0;
+      starsParticles.minEmitPower = 0.0;
+      starsParticles.maxAngularSpeed = 0.0;
+      starsParticles.isBillboardBased = true;
+      starsParticles.renderingGroupId = 0;
+      starsParticles.start();
 
       const paddleMaterial = new BABYLON.StandardMaterial("paddleMat", scene);
       paddleMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
@@ -267,8 +289,8 @@ const BabylonPage = () => {
       ball.position = new BABYLON.Vector3(0, 0, 0);
       ball.material = ballMaterial;
 
-      const topWall = createWall("topWall", {width: 45, height : WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, 11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
-      const bottomWall = createWall("bottomWall", {width: 45, height: WALL_HEIGHT, depth: WALL_DEPTH}, new BABYLON.Vector3(0, -11, 0), new BABYLON.Color3(0.5, 0.5, 0.5));
+      const topWall = createWall("topWall", {width: 45, height : WALL_HEIGHT, depth: 5}, new BABYLON.Vector3(0, 11, 0), new BABYLON.Color3(0.25, 0.25, 0.25));
+      const bottomWall = createWall("bottomWall", {width: 45, height: WALL_HEIGHT, depth: 5}, new BABYLON.Vector3(0, -11, 0), new BABYLON.Color3(0.25, 0.25, 0.25));
 
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
@@ -284,7 +306,7 @@ const BabylonPage = () => {
       //   #######################################################################################################################
       if (!ws)
       {
-          ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}`);
+          ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}`);
           wsRef.current = ws;
       }
 
@@ -303,8 +325,10 @@ const BabylonPage = () => {
         ball.position.y = server_packet.ballY;
         Player1Score.text = server_packet.player1Score + "";
         Player2Score.text = server_packet.player2Score + "";
-        Player1Name.text = server_packet.player1Name + "";
-        Player2Name.text = server_packet.player2Name + "";
+        if (Player1Name.text == "Player1")
+          Player1Name.text = server_packet.player1Name + "";
+        if (Player2Name.text == "Player2")
+          Player2Name.text = server_packet.player2Name + "";
         explosionX = server_packet.explosionX;
         explosionY = server_packet.explosionY;
         endGame = server_packet.shouldStop;

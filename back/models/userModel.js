@@ -93,3 +93,7 @@ export async function updateMultiplayerStats(username) {
 		winResult.winCount, loseResult.loseCount, username
 	);
 }
+
+export const findUsersByPartialUsername = async (partial) => {
+	return await db.all('SELECT user_id, last_opponent, multiplayer_loose, multiplayer_win, username, avatar_url FROM users WHERE username LIKE ?', "%" + partial + "%");
+  };

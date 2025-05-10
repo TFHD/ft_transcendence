@@ -7,6 +7,8 @@ import RegisterPage from "./pages/RegisterPage";
 import StartGamePratice from "./pages/StartGamePractice"
 import StartGameMultiplayer from "./pages/StartGameMultiplayer"
 import PlayerSettings from "./pages/PlayerSettings"
+import SearchPage from "./pages/SearchPage"
+import ProfilPage from "./pages/ProfilPage"
 
 const App = () => {
   return (
@@ -19,6 +21,8 @@ const App = () => {
           <Route path="/start-game-practice" element={<StartGamePratice/>}/>
           <Route path="/start-game-multiplayer" element={<StartGameMultiplayer/>}/>
           <Route path="/settings" element={<PlayerSettings/>}/>
+          <Route path="/search/:param" element={<SearchPage/>}/>
+          <Route path="/profil/:user" element={<ProfilPage/>}/>
         </Routes>
       </Router>
   );

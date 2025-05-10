@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { CheckToken, generateTimeBasedId, getAllInfosOfUser } from "../components/CheckConnection";
 import '../styles/globals.css';
 import axios from 'axios';
@@ -8,6 +8,8 @@ const host = import.meta.env.VITE_ADDRESS;
 
 type Match = {
   id: number;
+  winner_id: number;
+  looser_id: string;
   winner_username: string;
   looser_username: string;
   winner_score: number;
@@ -59,8 +61,6 @@ const StartGameMultiplayer = () => {
   const [isTournamentMode, setIsTournamentMode] = useState(false);
 
   const handlePlay = () => {
-    console.log('Room ID:', roomId);
-    console.log('Mode tournoi:', isTournamentMode);
     if (isTournamentMode)
       navigate(`/pong/duo`, { state: { fromStartGame: true, roomID: roomId } });
     else
@@ -127,10 +127,22 @@ const StartGameMultiplayer = () => {
                 <li key={match.id} className="bg-[#1f2a38] rounded-md p-4 shadow-md flex justify-between items-center">
                   <div>
                     <p className={`font-semibold ${isWin ? 'text-green-400' : 'text-red-400'}`}>
-                      {isWin ? '✅ Victoire' : '❌ Défaite'}
+                    {(() => {
+                      const isDraw = match.winner_score === match.looser_score;
+                      const isWin = match.winner_username === userData.username;
+                      return (
+                        <p className={`font-semibold ${
+                          isDraw ? 'text-yellow-400'
+                          : isWin ? 'text-green-400'
+                          : 'text-red-400'
+                        }`}>
+                          {isDraw ? '⚖️ Égalité' : isWin ? '✅ Victoire' : '❌ Défaite'}
+                        </p>
+                      );
+                    })()}
                     </p>
                     <p>
-                      {match.winner_username} 🆚 {match.looser_username}
+                      <Link to={`/profil/${match.winner_id}`}>{match.winner_username}</Link> 🆚 <Link to={`/profil/${match.looser_id}`}>{match.looser_username}</Link>
                     </p>
                   </div>
                   <span className="text-sm text-gray-400 text-right">

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
+import Modal2FA from '../components/Model2FA'
 
 const host = import.meta.env.VITE_ADDRESS;
 
@@ -14,7 +15,19 @@ const HomePage = () => {
       });
   }, []);
   
+  const askFor2FACode = (): Promise<string> => {
+    return new Promise((resolve) => {
+      setOn2FASubmit(() => (code: string) => {
+        setShow2FAModal(false);
+        resolve(code);
+      });
+      setShow2FAModal(true);
+    });
+  };
+
   const navigate = useNavigate();
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [on2FASubmit, setOn2FASubmit] = useState<(code: string) => void>(() => () => {});
   const [formData, setFormData] = useState({
     identifier: "",
     password: "",
@@ -44,7 +57,7 @@ const HomePage = () => {
       });
       const is2FA = await getIsAuthA2F();
       if (is2FA) {
-        code2FA = prompt("Entrez votre code 2FA :")!;
+        code2FA = await askFor2FACode();
         try {
           await axios.post(`https://${host}:8000/api/auth/2fa/verify`, {
             token: code2FA,
@@ -86,6 +99,13 @@ const HomePage = () => {
   return (
     <div className="min-h-screen bg-[#0b0c10] flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-[#1e2933] text-white rounded-lg shadow-lg p-8">
+      {show2FAModal && (
+        <Modal2FA
+          message="Entrez votre code 2FA"
+          onSubmit={on2FASubmit}
+          onClose={() => setShow2FAModal(false)}
+        />
+      )}
       <h2 className="text-2xl font-semibold text-center mb-6">Connexion</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">

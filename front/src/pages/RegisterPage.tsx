@@ -4,7 +4,6 @@ import axios from 'axios';
 import { CheckToken } from "../components/CheckConnection";
 
 const host = import.meta.env.VITE_ADDRESS;
-let CheckLogin = true;
 
 const RegisterPage = () => {
 
