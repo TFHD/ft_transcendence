@@ -1,4 +1,5 @@
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
+import { findUserByUsername, updateUser } from "../models/userModel.js";
 
 const	userSockets = new Set();
 //Saves all sockets to check if they already have their websocket setup
@@ -139,9 +140,33 @@ function updateBall(currentGame, socket)
 		}));
 
         currentGame.ball.position = Vector3(0, 0, 0);
-        currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+		
+		if (Math.floor(Math.random() * 2) === 1)
+        	currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+		else
+			currentGame.ballVelocity = Vector3(-INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
     }
 }
+
+async function setWinner(currentGame, username)
+{
+	if (currentGame.player1.score > currentGame.player2.score)
+	{
+		currentGame.winner = username;
+		currentGame.looser = username + "1";
+	}
+	else
+	{
+		currentGame.winner = username + "1";
+		currentGame.looser = username;
+	}
+	const user = await findUserByUsername(username);
+	
+	if (currentGame.winner === username)
+		await updateUser(user.user_id, {singleplayer_win : user.singleplayer_win + 1, last_opponent: username + "1"});
+	else
+		await updateUser(user.user_id, {singleplayer_loose : user.singleplayer_loose + 1, last_opponent: username + "1"});
+};
 
 const	SoloPongGame = async (socket, username) =>
 {
@@ -172,6 +197,7 @@ const	SoloPongGame = async (socket, username) =>
 			await mssleep(16);
 		}
 	}
+	setWinner(currentGame, username);
 	console.log('Stopped game');
 }
 
@@ -185,7 +211,10 @@ export function	soloPong(connection, req)
 		console.log('Adding new user to set');
 		userSockets.add(socket);
 		userGames.set(socket, new Game());
-		SoloPongGame(socket, username);
+		if (username)
+			SoloPongGame(socket, username);
+		else
+			console.log('No username given');
 	}
 
 	const currentGame = userGames.get(socket);

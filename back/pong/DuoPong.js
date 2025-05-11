@@ -192,8 +192,13 @@ function updateBall(currentGame, room)
 				explosionY: currentGame.ball.position.y
 			}));
 
-        currentGame.ball.position = Vector3(0, 0, 0);
-        currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+		currentGame.ball.position = Vector3(0, 0, 0);
+		
+		if (Math.floor(Math.random() * 2) === 1)
+			currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+		else
+			currentGame.ballVelocity = Vector3(-INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+
     }
 }
 

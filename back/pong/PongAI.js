@@ -105,9 +105,6 @@ function updateBall(currentGame, hit)
             hit.state = true;
             return ;
         }
-
-        currentGame.ball.position = Vector3(0, 0, 0);
-        currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
     }
 }
 
@@ -150,7 +147,7 @@ async function UpdateAI(currentGame)
 		currentGame.AITargetY = calcBallHit(currentGame);
 
         if (currentGame.player1.y < 0)
-            currentGame.AITargetY -= 1; 
+            currentGame.AITargetY -= 1;
         else
             currentGame.AITargetY += 1;
 
@@ -174,7 +171,7 @@ export async function AILogic(currentGame)
                 currentGame.player2.DownInput = false;
                 currentGame.player2.UpInput = true;
             }
-    
+
             if (currentGame.player2.y >= currentGame.AITargetY)
             {
                 currentGame.player2.UpInput = false;

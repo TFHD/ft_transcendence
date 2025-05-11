@@ -143,7 +143,11 @@ function updateBall(currentGame, socket)
 		}));
 
         currentGame.ball.position = Vector3(0, 0, 0);
-        currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+		
+        if (Math.floor(Math.random() * 2) === 1)
+			currentGame.ballVelocity = Vector3(INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
+		else
+			currentGame.ballVelocity = Vector3(-INIT_SPEED_BALL_X, INIT_SPEED_BALL_Y, 0);
     }
 }
 
@@ -155,6 +159,7 @@ const	SoloPongGame = async (socket) =>
 
 	console.log('Starting practice pong game');
 	AILogic(currentGame); //Starts AI in an async function
+	currentGame.player1.score = 10;
 	while (!currentGame.shouldStop)
 	{
 		updatePaddlePos(currentGame);
@@ -179,27 +184,29 @@ const	SoloPongGame = async (socket) =>
 			await mssleep(16);
 		}
 	}
+	setWinner(currentGame);
 	console.log('Stopped game');
 }
 
-async function setWinner(room)
+async function setWinner(currentGame)
 {
-	let currentGame = room.game;
-
 	if (currentGame.player1.score > currentGame.player2.score)
 	{
 		currentGame.winner = currentGame.player1.username;
-		currentGame.looser = currentGame.player2.username;
+		currentGame.looser = "AI";
 	}
 	else
 	{
-		currentGame.winner = currentGame.player2.username;
+		currentGame.winner = "AI";
 		currentGame.looser = currentGame.player1.username;
 	}
-	const user_win = await findUserByUsername(currentGame.winner);
-	const user_loose = await findUserByUsername(currentGame.looser);
-	await updateUser(user_win.user_id, {multiplayer_win : user_win.multiplayer_win + 1, last_opponent: user_loose.username});
-	await updateUser(user_loose.user_id, {multiplayer_loose : user_loose.multiplayer_loose + 1, last_opponent: user_win.username});
+	const user = await findUserByUsername(currentGame.player1.name);
+	
+	if (currentGame.winner != "AI")
+		await updateUser(user.user_id, {practice_win : user.practice_win + 1, last_opponent: "AI"});
+	else
+		await updateUser(user.user_id, {practice_loose : user.practice_loose + 1, last_opponent: "AI"});
+
 };
 
 export function	practicePong(connection, req)
