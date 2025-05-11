@@ -13,6 +13,20 @@ const BabylonScene = () => {
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
+  const handleLogout = async () => {
+    try {
+      await axios.post(`https://${host}:8000/api/auth/logout`, undefined, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': ''
+        }
+      });
+      navigate("/");
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion :", error);
+    }
+  };
+
   const handleSearch = () => {
     navigate(`/search/${search}`);
   };
@@ -191,6 +205,23 @@ const BabylonScene = () => {
 
   return (
     <div className="bg-black flex items-center justify-center min-h-screen pt-[0px] relative">
+    <div className="absolute top-5 left-5 z-10">
+      <button
+        onClick={handleLogout}
+        className="flex items-center bg-red-600 text-white px-4 py-2 rounded-full hover:bg-red-700 transition"
+      >
+        <svg
+          className="w-5 h-5 mr-2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1" />
+        </svg>
+        Log Out
+      </button>
+    </div>
       <div className="absolute top-5 right-5 z-10">
         <div className="absolute top-1 right-5 z-10">
           <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
