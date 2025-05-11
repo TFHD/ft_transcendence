@@ -1,3 +1,5 @@
+import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
+
 /*
 
 TOURNAMENT
@@ -35,3 +37,84 @@ Si un joueur est seul, il est considere gagnant
 Si le nombre de paires est impair, le tournoi ne peut pas commencer
 
 */
+
+class   PlayerInfo
+{
+    constructor(username, tournamentID)
+    {
+        this.valid = true;
+        if (!username || !tournamentID)
+            this.valid = false;
+        this.username = username;
+        this.tournamentID = tournamentID;
+        this.isOP = false;
+    }
+}
+
+class   TournamentRoom
+{
+    constructor()
+    {
+        console.log('created new tournament room')
+        this.users = new Map();
+    }
+}
+
+const   tournamentRooms = new Map();
+
+const	userInfos = new Map();
+
+function joinTournament(socket)
+{
+    const   currentUser = userInfos.get(socket);
+    let     currentTournament = tournamentRooms.get(currentUser.tournamentID);
+
+    if (currentTournament)
+    {
+        currentTournament.users.set(socket, currentUser);
+    }
+    else if (currentUser.tournamentID) //Create tournament room
+    {
+        tournamentRooms.set(currentUser.tournamentID, new TournamentRoom());
+
+        currentTournament = tournamentRooms.get(currentUser.tournamentID);
+        currentUser.isOP = true;
+        currentTournament.users.set(socket, currentUser);
+    }
+    else
+        console.log('What happened there bro');
+}
+
+export function	tournament(connection, req)
+{
+    const socket = connection;
+    const username = req.query?.username;
+    const tournamentID = req.query?.tournamentID;
+
+    if (!userInfos.has(socket))
+    {
+        console.log('Adding new user to set');
+        userInfos.set(socket, new PlayerInfo(username, tournamentID));
+        joinTournament(socket);
+    }
+
+    socket.on('message', message =>
+    {
+        let packet = parseJSON(message);
+        let currentUser = userInfos.get(socket);
+        let currentTournament = tournamentRooms.get(currentUser.tournamentID);
+
+        if (!currentUser.valid)
+            console.log("Invalid user");
+        else if (packet)
+        {
+            console.log(packet);
+        }
+    })
+
+    socket.on('close', () =>
+    {
+        userInfos.delete(socket);
+        console.log('goodbye client');
+    })
+}

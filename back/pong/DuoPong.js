@@ -286,7 +286,7 @@ function addUserToRoom(socket, roomID, username)
 	{
 		if (room.player1socket == null)
 			room.player1socket = socket;
-		else if (room.player2socket == null)
+		else if (room.player2socket == null && userInfos.get(room.player1socket).username != username)
 		{
 			console.log('added user2 in the room');
 			room.player2socket = socket;

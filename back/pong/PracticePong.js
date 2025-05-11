@@ -159,7 +159,6 @@ const	SoloPongGame = async (socket) =>
 
 	console.log('Starting practice pong game');
 	AILogic(currentGame); //Starts AI in an async function
-	currentGame.player1.score = 10;
 	while (!currentGame.shouldStop)
 	{
 		updatePaddlePos(currentGame);
