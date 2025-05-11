@@ -12,6 +12,7 @@ import { cloudinaryConfig } from "./config/cloudinary.config.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import twofaRoutes from "./routes/2faRoutes.js";
+import gameRoutes from './routes/gameRoutes.js';
 import { cookieSecret } from "./config/cookie.config.js";
 
 dotenv.config();
@@ -70,6 +71,7 @@ app.register(multipart, {
 cloudinary.config(cloudinaryConfig);
 
 await app.register(authRoutes);
+await app.register(gameRoutes);
 await app.register(userRoutes);
 await app.register(twofaRoutes);
 

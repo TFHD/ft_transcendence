@@ -9,6 +9,7 @@ import StartGameMultiplayer from "./pages/StartGameMultiplayer"
 import PlayerSettings from "./pages/PlayerSettings"
 import SearchPage from "./pages/SearchPage"
 import ProfilPage from "./pages/ProfilPage"
+import TournamentPage from "./pages/TournamentPage"
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
           <Route path="/settings" element={<PlayerSettings/>}/>
           <Route path="/search/:param" element={<SearchPage/>}/>
           <Route path="/profil/:user" element={<ProfilPage/>}/>
+          <Route path="/tournament/:id" element={<TournamentPage/>}/>
         </Routes>
       </Router>
   );

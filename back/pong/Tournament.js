@@ -1,4 +1,5 @@
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
+import { createGame, getGameByGameId, updateGame, deleteGame } from "../models/gameModels.js"
 
 /*
 
@@ -64,7 +65,7 @@ const   tournamentRooms = new Map();
 
 const	userInfos = new Map();
 
-function joinTournament(socket)
+async function joinTournament(socket, tournamentID)
 {
     const   currentUser = userInfos.get(socket);
     let     currentTournament = tournamentRooms.get(currentUser.tournamentID);
@@ -72,17 +73,38 @@ function joinTournament(socket)
     if (currentTournament)
     {
         currentTournament.users.set(socket, currentUser);
+        try
+        {
+            updatePlayer(tournamentID, 1);
+        }
+        catch (e)
+        {
+            console.log(e);
+        }
     }
-    else if (currentUser.tournamentID) //Create tournament room
+    else if (currentUser.tournamentID)
     {
         tournamentRooms.set(currentUser.tournamentID, new TournamentRoom());
-
+        await createGame(tournamentID, "tournament", 1, 4);
         currentTournament = tournamentRooms.get(currentUser.tournamentID);
         currentUser.isOP = true;
         currentTournament.users.set(socket, currentUser);
     }
     else
         console.log('What happened there bro');
+    console.log("--------------------------")
+}
+
+async function deleteTournament(tournamentID) 
+{
+    await deleteGame(tournamentID);
+}
+
+async function updatePlayer(tournamentID, number)
+{
+    const game = await getGameByGameId(tournamentID);
+    if (game)
+        await updateGame(game.game_id, game.game_mode, game.players + number);
 }
 
 export function	tournament(connection, req)
@@ -90,12 +112,13 @@ export function	tournament(connection, req)
     const socket = connection;
     const username = req.query?.username;
     const tournamentID = req.query?.tournamentID;
-
+    const typeJoin = req.query?.typeJoin;
+    console.log("--------------------------\n" + typeJoin);
     if (!userInfos.has(socket))
     {
         console.log('Adding new user to set');
         userInfos.set(socket, new PlayerInfo(username, tournamentID));
-        joinTournament(socket);
+        joinTournament(socket, tournamentID);
     }
 
     socket.on('message', message =>
@@ -114,7 +137,23 @@ export function	tournament(connection, req)
 
     socket.on('close', () =>
     {
+        let currentUser = userInfos.get(socket);
+        let currentTournament = tournamentRooms.get(currentUser.tournamentID);
+        console.log("--------------------------");
+        if (currentTournament)
+        {
+            currentTournament.users.delete(socket);
+            updatePlayer(currentUser.tournamentID, -1);
+            console.log('client leave the room');
+        }
+        if (currentTournament.users.size === 0)
+        {
+            tournamentRooms.delete(currentUser.tournamentID);
+            deleteTournament(currentUser.tournamentID);
+            console.log('Plus personne dans la room, elle est détruite');
+        }
         userInfos.delete(socket);
         console.log('goodbye client');
+        console.log("--------------------------");
     })
 }

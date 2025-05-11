@@ -85,6 +85,7 @@ export async function getUsersByUsername(req, res) {
 			const users = await findUsersByPartialUsername(id);
 			if (!users)
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
+			//console.log(users);
 			const sesssion = req.session
 			if (!sesssion)
 				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);

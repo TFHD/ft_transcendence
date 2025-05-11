@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CheckToken, generateTimeBasedId, getAllInfosOfUser } from "../components/CheckConnection";
+import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
 import '../styles/globals.css';
 import axios from 'axios';
 
@@ -21,6 +21,7 @@ type Match = {
 const StartGameMultiplayer = () => {
   const navigate = useNavigate();
   const [history, setHistory] = useState<Match[]>([]);
+  const [tournamentUsername, setTournamentUsername] = useState('');
   const [userData, setUserData] = useState({
     username: "",
     win: 0,
@@ -60,14 +61,26 @@ const StartGameMultiplayer = () => {
   const [roomId, setRoomId] = useState('');
   const [isTournamentMode, setIsTournamentMode] = useState(false);
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
     if (isTournamentMode)
-      navigate(`/pong/duo`, { state: { fromStartGame: true, roomID: roomId } });
+    {
+      try {
+        const game = await axios.get(`https://${host}:8000/api/games/${roomId}`, {
+          withCredentials: true,
+        });
+        console.log(game.data)
+        if (!game.data) {
+          navigate(`/tournament/${roomId}`, { state: { fromStartGame: true, roomID: roomId, join: "new", username: tournamentUsername } });
+        }
+        else if (game.data && game.data.players + 1 <= game.data.limit)
+          navigate(`/tournament/${roomId}`, { state: { fromStartGame: true, roomID: roomId, join: "exist", username: tournamentUsername } });
+      } catch (e) { console.log(e); }
+    }
     else
       navigate(`/pong/duo`, { state: { fromStartGame: true, roomID: roomId } });
   };
 
-  const isValidRoomId = roomId.length === 6;
+  const isValid = isTournamentMode ? (roomId.length === 6 && tournamentUsername.trim().length > 0) : (roomId.length === 6);
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#0b0c10] text-white font-sans overflow-hidden">
@@ -95,11 +108,25 @@ const StartGameMultiplayer = () => {
           className="w-full px-4 py-2 mb-4 text-black rounded-md"
           maxLength={6}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && isValidRoomId) {
+            if (e.key === 'Enter' && isValid) {
               handlePlay();
             }
           }}
         />
+        {isTournamentMode && (
+          <input
+            type="text"
+            value={tournamentUsername}
+            onChange={(e) => setTournamentUsername(e.target.value)}
+            placeholder="Votre pseudo pour le tournoi"
+            className="w-full px-4 py-2 mb-4 text-black rounded-md"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && isValid) {
+                handlePlay();
+              }
+            }}
+          />
+        )}
         <div className="flex justify-between items-center mb-4">
           <span className="text-white text-md pr-4">Mode Tournoi</span>
           <button
@@ -156,17 +183,17 @@ const StartGameMultiplayer = () => {
         )}
       </div>
       <div className="flex justify-center mt-6">
-        <button
-          onClick={handlePlay}
-          disabled={!isValidRoomId}
-          className={`text-white text-xl py-3 px-8 rounded-lg transition ${
-            isValidRoomId
-              ? 'bg-[#21A51D] hover:bg-[#1C8918]'
-              : 'bg-gray-500 cursor-not-allowed'
-          }`}
-        >
-          ▶️ Lancer la partie
-        </button>
+      <button
+        onClick={handlePlay}
+        disabled={!isValid}
+        className={`text-white text-xl py-3 px-8 rounded-lg transition ${
+          isValid
+            ? 'bg-[#21A51D] hover:bg-[#1C8918]'
+            : 'bg-gray-500 cursor-not-allowed'
+        }`}
+      >
+        ▶️ Lancer la partie
+      </button>
       </div>
     </div>
   </div>

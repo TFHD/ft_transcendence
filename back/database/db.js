@@ -43,6 +43,31 @@ await db.exec(`
 	);
 `);
 
+
+await db.exec(`
+	CREATE TABLE IF NOT EXISTS tournament (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		game_id TEXT NOT NULL,
+		player1_id INTEGER NOT NULL,
+		player2_id INTEGER NOT NULL,
+		match INTEGER NOT NULL,
+		round INTEGER NOT NULL,
+		winner_id INTEGER NOT NULL,
+		next_match INTEGER NOT NULL,
+		next_round INTEGER NOT NULL
+	);
+`);
+
+	await db.exec(`
+		CREATE TABLE IF NOT EXISTS games (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			game_id TEXT NOT NULL UNIQUE,
+			game_mode TEXT NOT NULL,
+			players INTEGER NOT NULL,
+			players_limit NOT NULL
+		);
+	`);
+
 await db.exec(`
 	CREATE TABLE IF NOT EXISTS sessions (
 		user_id INTEGER PRIMARY KEY NOT NULL UNIQUE,
