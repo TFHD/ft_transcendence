@@ -135,7 +135,7 @@ const BabylonPage = () => {
       };
       const handleKeyDown = (event: KeyboardEvent) =>
       {
-        if (event.key in keyState)
+        if (event.key in keyState && Status == ENUM_STATUS.InGame)
         {
           ws?.send(JSON.stringify({ key: event.key, state: true }));
           keyState[event.key] = true;
@@ -143,7 +143,7 @@ const BabylonPage = () => {
       };
       const handleKeyUp = (event: KeyboardEvent) =>
       {
-        if (event.key in keyState)
+        if (event.key in keyState && Status == ENUM_STATUS.InGame)
         {
           keyState[event.key] = false;
           ws?.send(JSON.stringify({ key: event.key, state: false}));
