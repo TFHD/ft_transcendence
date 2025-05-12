@@ -49,6 +49,7 @@ class   PlayerInfo
         this.username = username;
         this.tournamentID = tournamentID;
         this.isOP = false;
+        this.gameID = -1;
     }
 }
 
@@ -58,6 +59,7 @@ class   TournamentRoom
     {
         console.log('created new tournament room')
         this.users = new Map();
+        this.games = new Map();
     }
 }
 
@@ -158,6 +160,98 @@ async function updatePlayer(tournamentID, number)
     }
 }
 
+function IsPowerOfTwo(x)
+{
+    return (x != 0) && ((x & (x - 1)) == 0);
+}
+
+function calcTournamentRounds(currentTournament)
+{
+	currentTournament.playerCount = currentTournament.users.size;
+	currentTournament.roomCount = currentTournament.playerCount / 2;
+
+	if (!IsPowerOfTwo(currentTournament.roomCount))
+	{
+		console.log('Invalid amount of player, needs to be a power of 2');
+		return (0);
+	}
+
+	let tempRoomCount = currentTournament.roomCount;
+	while (Math.floor(tempRoomCount) > 0)
+	{
+		tempRoomCount /= 2;
+		if (Math.floor(tempRoomCount) > 0)
+			currentTournament.rounds++;
+	}
+	console.log(currentTournament.rounds);
+	
+	return (1);
+}
+
+function generateMatches(currentTournament)
+{
+    /*
+    
+    Dans l'idee il faut generer tous les matchs, les premiers sont generes avec les joueurs repartis au hasard
+    et les matchs d'apres ont leur joueurs set a null.
+    Comme ca, le front peut tout recuperer et afficher l'arbre en entier pour pouvoir afficher les fights a venir (le sujet qui demande)
+    Seul truc c'est que jsp comment m'y prendre pour generer tt les matchs.
+
+    d'abord il faut generer la premier ligne et diviser par 2 a chaque fois
+
+    */
+}
+
+function finishMatch(game)
+{
+    /*
+    
+    Ici il faut update la db pour dire que le match est fini et mettre le joueur gagnant dans son prochain match.
+    
+    Le perdant doit recevoir un packet pour lui dire qu'il a perd et donc il peut seulement voir l'arbre des matchs
+    dans l'idee il peut meme se faire free du tournoi. il faut juste garder le socket ouvert pour qu'il recoive + d'info sauf si
+    on le fait juste regarder la DB en boucle?
+    
+    Aussi supprimer le match du tournoi car inutile meme si en sois osef.
+
+    */
+}
+
+/* CHECKS A FAIRE QUAND UN JOUEUR PARS
+
+    Ici une liste de checks a faire quand un joueur pars comme ca on a pas de problemes
+
+    - Si il est dans un tournoi pas lance juste le sortir du tournoi.
+
+    - Si le tournoi est lance, check si
+
+       Il est dans une game -> sortir de la game -> sortir du tournoi
+
+       Il est en attente d'un autre game -> mettre en avance qu'il a perdu la game pour laquelle il attendait -> sortir du tournoi
+
+    - Si il est a l'ecran de fin (winner affiche) juste le degager car logiquement tournoi fini.
+
+*/
+
+function handleKeyInput(packet, currentUser, currentTournament)
+{
+    const currentGame = getGame(currentUser, currentTournament);
+
+    if (currentGame && currentGame.started)
+    {
+        let player = null;
+        if (currentUser == currentGame.player1)
+            player = currentGame.player1;
+        else
+            player = currentGame.player2;
+
+        if (packet.key == 'w')
+            player.UpInput = packet.state;
+        if (packet.key == 's')
+            player.DownInput = packet.state;
+    }
+}
+
 export function	tournament(connection, req)
 {
     const socket = connection;
@@ -182,6 +276,14 @@ export function	tournament(connection, req)
             console.log("Invalid user");
         else if (packet)
         {
+            if (packet.start && getOperator(tournamentID) == socket)
+                console.log('Start game');
+            else
+                console.log('User is not operator');
+
+            if (packet.key)
+                handleKeyInput(packet, currentUser, currentTournament);
+
             console.log(packet);
         }
     })
