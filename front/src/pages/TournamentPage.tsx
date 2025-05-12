@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckToken } from '../components/CheckConnection';
+import axios from 'axios';
 
 let ws:WebSocket | null = null;
 const host = import.meta.env.VITE_ADDRESS;
@@ -8,6 +9,13 @@ const host = import.meta.env.VITE_ADDRESS;
 const TournamentPage = () => {
 
   const wsRef = useRef<WebSocket | null>(null);
+  const [canStart, setCanStart] = useState<boolean>(false);
+  const [gameInfos, setGameInfos] = useState({
+    id: "",
+    mode: "",
+    players: 0,
+    limit: 0,
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const fromStartGame = location.state?.fromStartGame;
@@ -20,6 +28,7 @@ const TournamentPage = () => {
     CheckToken().then(res => {
       if (!res) navigate("/");
     });
+
     if (!fromStartGame)
       navigate("/start-game-multiplayer");
 
@@ -34,7 +43,20 @@ const TournamentPage = () => {
       console.log('Successfully connected to server');
     };
 
-    ws.onmessage = (message) => {};
+    ws.onmessage = (message) =>
+    {
+      const server_packet = JSON.parse(message.data);
+      if (server_packet.canStart != undefined)
+        setCanStart(server_packet.canStart);
+      if (server_packet.id) {
+        setGameInfos({...gameInfos, 
+          id: server_packet.id,
+          mode: server_packet.mode,
+          players: server_packet.players,
+          limit: server_packet.limit,
+        });
+      }
+    };
 
     ws.onclose = (event) =>
     {
@@ -46,7 +68,6 @@ const TournamentPage = () => {
     {
       console.log('Connection error', e);
     };
-
     return () =>
     {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN)
@@ -69,10 +90,10 @@ const TournamentPage = () => {
             ⬅️ Retour
           </button>
           <h2 className="text-[#f7c80e] text-xl mb-4">🏆 Informations Tournoi</h2>
-          <p className="text-lg">👤 Pseudo: <span className="font-semibold">[Username]</span></p>
-          <p className="text-lg">🎮 Jeu: Pong</p>
+          <p className="text-lg">👤 Pseudo: <span className="font-semibold">[{username}]</span></p>
+          <p className="text-lg">🎮 Jeu: Pong {gameInfos.mode}</p>
           <p className="text-lg">📅 Date: [Date du tournoi]</p>
-          <p className="text-lg">👥 Joueurs inscrits: 8</p>
+          <p className="text-lg">👥 Joueurs inscrits: {gameInfos.players} / 8</p>
         </div>
         <div>
           <h3 className="text-[#f7c80e] text-lg mb-4">📌 Statut</h3>
@@ -114,6 +135,14 @@ const TournamentPage = () => {
             </div>
           </div>
         </div>
+        {canStart && (
+          <div className="flex justify-center mt-6">
+            <button
+              className="bg-[#f7c80e] text-[#0b0c10] px-6 py-3 rounded-md shadow-lg text-center font-semibold">
+              Lancer la partie
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

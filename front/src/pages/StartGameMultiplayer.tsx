@@ -68,7 +68,6 @@ const StartGameMultiplayer = () => {
         const game = await axios.get(`https://${host}:8000/api/games/${roomId}`, {
           withCredentials: true,
         });
-        console.log(game.data)
         if (!game.data) {
           navigate(`/tournament/${roomId}`, { state: { fromStartGame: true, roomID: roomId, join: "new", username: tournamentUsername } });
         }
@@ -153,7 +152,7 @@ const StartGameMultiplayer = () => {
               return (
                 <li key={match.id} className="bg-[#1f2a38] rounded-md p-4 shadow-md flex justify-between items-center">
                   <div>
-                    <p className={`font-semibold ${isWin ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`font-semibold ${isWin ? 'text-green-400' : 'text-red-400'}`}>
                     {(() => {
                       const isDraw = match.winner_score === match.looser_score;
                       const isWin = match.winner_username === userData.username;
@@ -167,7 +166,7 @@ const StartGameMultiplayer = () => {
                         </p>
                       );
                     })()}
-                    </p>
+                    </div>
                     <p>
                       <Link to={`/profil/${match.winner_id}`}>{match.winner_username}</Link> 🆚 <Link to={`/profil/${match.looser_id}`}>{match.looser_username}</Link>
                     </p>

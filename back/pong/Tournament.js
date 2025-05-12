@@ -1,4 +1,4 @@
-import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
+import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom, isPowerOfTwo } from "./Utils.js"
 import { createGame, getGameByGameId, updateGame, deleteGame } from "../models/gameModels.js"
 
 /*
@@ -75,7 +75,7 @@ async function joinTournament(socket, tournamentID)
         currentTournament.users.set(socket, currentUser);
         try
         {
-            updatePlayer(tournamentID, 1);
+            updatePlayer(tournamentID, 1);         
         }
         catch (e)
         {
@@ -85,9 +85,9 @@ async function joinTournament(socket, tournamentID)
     else if (currentUser.tournamentID)
     {
         tournamentRooms.set(currentUser.tournamentID, new TournamentRoom());
-        await createGame(tournamentID, "tournament", 1, 4);
         currentTournament = tournamentRooms.get(currentUser.tournamentID);
         currentUser.isOP = true;
+        updatePlayer(tournamentID, 0);
         currentTournament.users.set(socket, currentUser);
     }
     else
@@ -100,11 +100,62 @@ async function deleteTournament(tournamentID)
     await deleteGame(tournamentID);
 }
 
+function getOperator(tournamentID)
+{
+    let     currentTournament = tournamentRooms.get(tournamentID);
+    if (currentTournament)
+    {
+        for (const [socket, user] of currentTournament.users)
+        {
+            if (user.isOP === true)
+                return socket;
+        }
+    }
+    return null;
+}
+
+function sendAll(tournamentID, data)
+{
+    let     currentTournament = tournamentRooms.get(tournamentID);
+
+    if (currentTournament)
+    {
+        for (const [socket, value] of currentTournament.users)
+        {
+            socket.send(JSON.stringify(data));
+        }
+    }
+}
+
 async function updatePlayer(tournamentID, number)
 {
-    const game = await getGameByGameId(tournamentID);
-    if (game)
-        await updateGame(game.game_id, game.game_mode, game.players + number);
+    try
+    {
+        let game = await getGameByGameId(tournamentID);
+        if (game)
+        {
+            await updateGame(game.game_id, game.game_mode, game.players + number);
+            const operator = getOperator(tournamentID);
+            const canStart = isPowerOfTwo(game.players + number);
+            if (operator)
+                operator.send(JSON.stringify({canStart : canStart}));
+        }
+        else
+        {
+            await createGame(tournamentID, "tournament", 1, 4);
+            game = await getGameByGameId(tournamentID);
+        }
+        sendAll(tournamentID, {
+            id: tournamentID,
+            mode: "tournament",
+            players : game.players + number,
+            limit : game.players_limit
+        });
+    }
+    catch (e)
+    {
+        console.log(e);
+    }
 }
 
 export function	tournament(connection, req)

@@ -48,8 +48,8 @@ await db.exec(`
 	CREATE TABLE IF NOT EXISTS tournament (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		game_id TEXT NOT NULL,
-		player1_id INTEGER NOT NULL,
-		player2_id INTEGER NOT NULL,
+		p1_displayname TEXT NOT NULL,
+		p2_displayname TEXT NOT NULL,
 		match INTEGER NOT NULL,
 		round INTEGER NOT NULL,
 		winner_id INTEGER NOT NULL,
