@@ -58,8 +58,6 @@ app.register(cors, {
 // 	methods: ['GET', 'POST', 'PATCH', 'DELETE']
 // });
 
-
-
 app.register(websocket);
 app.register(multipart, {
 	attachFieldsToBody: true,

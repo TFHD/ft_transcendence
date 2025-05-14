@@ -10,12 +10,18 @@ const BabylonPage = () => {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const [username, setUsername] = useState("default");
+  let [username, setUsername] = useState("default");
 	const host = import.meta.env.VITE_ADDRESS;
   const navigate = useNavigate();
   const location = useLocation();
   const fromStartGame = location.state?.fromStartGame;
   const roomID = location.state?.roomID;
+  const dataTournament = {
+		username : location.state?.username,
+		match : location.state?.match,
+		round : location.state?.round,
+		game_id : location.state?.game_id
+	}
   const gameMode = window.location.pathname.split("/")[2];
   let   canAcessgame = false;
   let   explosionX = undefined;
@@ -29,15 +35,15 @@ const BabylonPage = () => {
   }, []);
 
   useEffect(() => {
-    getUsername().then(res => {
-      setUsername(res);
-    });
     if (username === "default") return;
     CheckToken().then(res => {
     if (!res)
       navigate("/");
     });
-    if (gameMode != "solo" && gameMode != "duo" && gameMode != "practice")
+
+    if (gameMode == "tournament")
+      setUsername(dataTournament.username);
+    if (gameMode != "solo" && gameMode != "duo" && gameMode != "practice" && gameMode != "tournament")
       navigate("/lobby");
     else if (gameMode != "solo" && !fromStartGame)
       navigate("/lobby");
@@ -306,7 +312,7 @@ const BabylonPage = () => {
       //   #######################################################################################################################
       if (!ws)
       {
-          ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}`);
+          ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&gameMode=${gameMode}`);
           wsRef.current = ws;
       }
 

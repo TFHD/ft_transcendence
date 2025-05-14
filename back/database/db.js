@@ -32,8 +32,8 @@ await db.exec(`
 await db.exec(`
 	CREATE TABLE IF NOT EXISTS history (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		winner_id INTEGER NOT NULL UNIQUE,
-		looser_id INTEGER NOT NULL UNIQUE,
+		winner_id INTEGER NOT NULL,
+		looser_id INTEGER NOT NULL,
 		winner_username TEXT NOT NULL,
 		looser_username TEXT NOT NULL,
 		winner_score INTEGER DEFAULT 0,
@@ -50,6 +50,8 @@ await db.exec(`
 		game_id TEXT NOT NULL,
 		p1_displayname TEXT NOT NULL,
 		p2_displayname TEXT NOT NULL,
+		p1_score INTEGER DEFAULT 0,
+		p2_score INTEGER DEFAULT 0,
 		match INTEGER NOT NULL,
 		round INTEGER NOT NULL,
 		winner_id INTEGER NOT NULL,

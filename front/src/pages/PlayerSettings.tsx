@@ -243,7 +243,7 @@ const PlayerSettingsPage = () => {
           <h2 className="text-xl font-semibold">Changer l'avatar</h2>
           <div className="flex items-center justify-between space-x-6">
             <img
-              src={avatarPreview || 'url-default-avatar'} 
+              src={avatarPreview || '/assets/no_profile.jpg'}
               alt="Avatar actuel"
               className="w-32 h-32 rounded-full object-cover border-4 border-[#44a29f]"
             />

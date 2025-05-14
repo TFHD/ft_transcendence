@@ -2,6 +2,7 @@
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
 import { findUserByUsername, updateUser, updateMultiplayerStats } from "../models/userModel.js";
 import { createHistory } from "../models/historyModel.js";
+import { setMatchWinner, getMatchByMatchRound, setScoreByMatchRound } from "../models/tournamentModel.js"
 
 const SPEED_MULTIPLIER = 1.1;
 const MAX_BALL_Y = 10;
@@ -82,33 +83,53 @@ const	updatePaddlePos = (currentGame) =>
 let leftPaddle = { position: Vector3(-20, 0, 0) };
 let rightPaddle = { position: Vector3(20, 0, 0) };
 
-async function setWinner(room)
+async function setWinner(room, dataTournament)
 {
-	let currentGame = room.game;
-	let winner = null;
-	let looser = null;
+	try
+	{
+		let currentGame = room.game;
+		let winner = null;
+		let looser = null;
 
-	if (currentGame.player1.score > currentGame.player2.score)
-	{
-		currentGame.winner = currentGame.player1.username;
-		currentGame.looser = currentGame.player2.username;
-		winner = currentGame.player1;
-		looser = currentGame.player2;
+		if (currentGame.player1.score > currentGame.player2.score)
+		{
+			currentGame.winner = currentGame.player1.username;
+			currentGame.looser = currentGame.player2.username;
+			winner = currentGame.player1;
+			looser = currentGame.player2;
+		}
+		else
+		{
+			currentGame.winner = currentGame.player2.username;
+			currentGame.looser = currentGame.player1.username;
+			winner = currentGame.player2;
+			looser = currentGame.player1;
+		}
+		const user_win = await findUserByUsername(currentGame.winner);
+		const user_loose = await findUserByUsername(currentGame.looser);
+		if (currentGame.player1.score === currentGame.player2.score)
+		{
+			user_win.username = "";
+		}
+		await updateUser(user_win.user_id, {last_opponent: user_loose.username});
+		await updateUser(user_loose.user_id, {last_opponent: user_win.username});
+		await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, "duo", 0);
+		await updateMultiplayerStats(user_win.username);
+		await updateMultiplayerStats(user_loose.username);
+		if (dataTournament.gameMode === "tournamement")
+		{
+			const match = await getMatchByMatchRound(dataTournament.game_id, dataTournament.match, dataTournament.round);
+			if (match)
+			{
+				await setMatchWinner(match.game_id, match.match, match.round, currentGame.winner);
+				await setScoreByMatchRound(match.game_id, match.match, match.round, currentGame.player1.score, currentGame.player2.score);
+			}
+		}
 	}
-	else
+	catch (e)
 	{
-		currentGame.winner = currentGame.player2.username;
-		currentGame.looser = currentGame.player1.username;
-		winner = currentGame.player2;
-		looser = currentGame.player1;
+		console.log(e);
 	}
-	const user_win = await findUserByUsername(currentGame.winner);
-	const user_loose = await findUserByUsername(currentGame.looser);
-	await updateUser(user_win.user_id, {last_opponent: user_loose.username});
-	await updateUser(user_loose.user_id, {last_opponent: user_win.username});
-	await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, "duo", 0);
-	await updateMultiplayerStats(user_win.username);
-	await updateMultiplayerStats(user_loose.username);
 };
 
 function updateAnglePosBall(ball, paddle, player, ballVelocity)
@@ -207,7 +228,7 @@ const	userInfos = new Map();
 
 const	rooms = new Map();
 
-async function startRoom(roomID)
+async function startRoom(roomID, dataTournament)
 {
 	let	room = rooms.get(roomID);
 	let currentGame = room.game;
@@ -251,7 +272,7 @@ async function startRoom(roomID)
 			await mssleep(16);
 		}
 	}
-	setWinner(room);
+	setWinner(room, dataTournament);
 	if (room.player1socket)
 		room.player1socket.send(JSON.stringify({ shouldStop: true}));
 	if (room.player2socket)
@@ -276,7 +297,7 @@ function	register_user(socket, username)
 		console.log('Old user, doing nothing');	
 }
 
-function addUserToRoom(socket, roomID, username)
+function addUserToRoom(socket, roomID, username, dataTournament)
 {
 	let	player = userInfos.get(socket);
 	let	room = rooms.get(roomID);
@@ -291,7 +312,7 @@ function addUserToRoom(socket, roomID, username)
 			console.log('added user2 in the room');
 			room.player2socket = socket;
 			room.game.player2.username = username;
-			startRoom(roomID);
+			startRoom(roomID, dataTournament);
 		}
 		else
 			console.log('erm, room is full boi');
@@ -310,6 +331,12 @@ export function	duoPong(connection, req)
 {
 	const	socket = connection;
 	const username = req.query?.username;
+	const dataTournament = {
+		gameMode : req.query?.gameMode,
+		match : req.query?.match,
+		round : req.query?.round,
+		game_id : req.query?.game_id
+	}
 
 	register_user(socket, username);
 	
@@ -319,7 +346,7 @@ export function	duoPong(connection, req)
 	if (roomID != "undefined" && roomID != null)
 	{
 		console.log(roomID);
-		addUserToRoom(socket, roomID, username);
+		addUserToRoom(socket, roomID, username, dataTournament);
 	}
 	currentPlayerInfo = userInfos.get(socket);
 	currentRoom = rooms.get(currentPlayerInfo.roomID);
