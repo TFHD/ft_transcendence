@@ -13,7 +13,7 @@ export async function getAllGames() {
 }
 
 export async function updateGame(game_id, game_mode, players) {
-    await db.run( `UPDATE games SET game_mode = ?, players = ? WHERE game_id = ?`, game_mode, players, game_id);
+    await db.run(`UPDATE games SET game_mode = ?, players = ? WHERE game_id = ?`, game_mode, players, game_id);
 }
 
 export async function deleteGame(game_id) {

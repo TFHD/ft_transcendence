@@ -105,25 +105,30 @@ async function setWinner(room, dataTournament)
 			winner = currentGame.player2;
 			looser = currentGame.player1;
 		}
-		const user_win = await findUserByUsername(currentGame.winner);
-		const user_loose = await findUserByUsername(currentGame.looser);
-		if (currentGame.player1.score === currentGame.player2.score)
+		if (dataTournament.isTournament != undefined)
 		{
-			user_win.username = "";
-		}
-		await updateUser(user_win.user_id, {last_opponent: user_loose.username});
-		await updateUser(user_loose.user_id, {last_opponent: user_win.username});
-		await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, "duo", 0);
-		await updateMultiplayerStats(user_win.username);
-		await updateMultiplayerStats(user_loose.username);
-		if (dataTournament.gameMode === "tournamement")
-		{
+			console.log("================> ici");
 			const match = await getMatchByMatchRound(dataTournament.game_id, dataTournament.match, dataTournament.round);
 			if (match)
 			{
 				await setMatchWinner(match.game_id, match.match, match.round, currentGame.winner);
-				await setScoreByMatchRound(match.game_id, match.match, match.round, currentGame.player1.score, currentGame.player2.score);
+				if (match.p1_displayname == currentGame.player1.username)
+					await setScoreByMatchRound(match.game_id, match.match, match.round, currentGame.player1.score, currentGame.player2.score);
+				else
+					await setScoreByMatchRound(match.game_id, match.match, match.round, currentGame.player2.score, currentGame.player1.score);
 			}
+		}
+		else
+		{
+			const user_win = await findUserByUsername(currentGame.winner);
+			const user_loose = await findUserByUsername(currentGame.looser);
+			if (currentGame.player1.score === currentGame.player2.score)
+				user_win.username = "";
+			await updateUser(user_win.user_id, {last_opponent: user_loose.username});
+			await updateUser(user_loose.user_id, {last_opponent: user_win.username});
+			await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, "duo", 0);
+			await updateMultiplayerStats(user_win.username);
+			await updateMultiplayerStats(user_loose.username);
 		}
 	}
 	catch (e)
@@ -239,7 +244,8 @@ async function startRoom(roomID, dataTournament)
 		updatePaddlePos(currentGame);
 
 		updateBall(currentGame, room);
-
+		if (currentGame.player1.score >= 5 || currentGame.player2.score >= 5)
+			currentGame.shouldStop = true;
 		if (!currentGame.shouldStop)
 		{
 			room.player1socket.send(JSON.stringify({
@@ -332,10 +338,10 @@ export function	duoPong(connection, req)
 	const	socket = connection;
 	const username = req.query?.username;
 	const dataTournament = {
-		gameMode : req.query?.gameMode,
 		match : req.query?.match,
 		round : req.query?.round,
-		game_id : req.query?.game_id
+		game_id : req.query?.game_id,
+		isTournament : req.query?.isTournament
 	}
 
 	register_user(socket, username);

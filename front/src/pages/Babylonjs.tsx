@@ -16,11 +16,12 @@ const BabylonPage = () => {
   const location = useLocation();
   const fromStartGame = location.state?.fromStartGame;
   const roomID = location.state?.roomID;
+  const isTournament = location.state?.isTournament;
   const dataTournament = {
 		username : location.state?.username,
 		match : location.state?.match,
 		round : location.state?.round,
-		game_id : location.state?.game_id
+    game_id :location.state?.game_id
 	}
   const gameMode = window.location.pathname.split("/")[2];
   let   canAcessgame = false;
@@ -29,9 +30,15 @@ const BabylonPage = () => {
   let   endGame = undefined;
 
   useEffect(() => {
-    getUsername().then(res => {
-      setUsername(res);
-    });
+    if (dataTournament.username != undefined) {
+      console.log("pseudo : " + dataTournament.username);
+      setUsername(dataTournament.username);
+    }
+    else{
+      getUsername().then(res => {
+        setUsername(res);
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -41,9 +48,7 @@ const BabylonPage = () => {
       navigate("/");
     });
 
-    if (gameMode == "tournament")
-      setUsername(dataTournament.username);
-    if (gameMode != "solo" && gameMode != "duo" && gameMode != "practice" && gameMode != "tournament")
+    if (gameMode != "solo" && gameMode != "duo" && gameMode != "practice")
       navigate("/lobby");
     else if (gameMode != "solo" && !fromStartGame)
       navigate("/lobby");
@@ -312,7 +317,7 @@ const BabylonPage = () => {
       //   #######################################################################################################################
       if (!ws)
       {
-          ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&gameMode=${gameMode}`);
+          ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&isTournament=${isTournament}`);
           wsRef.current = ws;
       }
 
@@ -343,7 +348,12 @@ const BabylonPage = () => {
           changeGameVisual();
 
         if (endGame)
-          navigate("/lobby");
+        {
+          if (dataTournament.username != undefined)
+            navigate(`/tournament/${dataTournament.game_id}`, { state : {fromStartGame : true, finish : true, roomID : dataTournament.game_id, username : username}});
+          else
+            navigate(-1);
+        }
 
         createExplosion(ball.position, {r1 : 0, g1 : 1, b1 : 0}, {r2 : 0, g2 : 1, b2 : 0}, 0.5, 2, 0.1, 0.2, 200);
         if (explosionX  != undefined && explosionY != undefined)

@@ -1,6 +1,6 @@
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom, isPowerOfTwo } from "./Utils.js"
 import { createGame, getGameByGameId, updateGame, deleteGame } from "../models/gameModels.js"
-import { createMatch, setMatchWinner, getMatchByMatchRound, changeNextvalue } from "../models/tournamentModel.js"
+import { createMatch, setMatchWinner, getMatchByMatchRound, changeNextvalue, getMatchByNextMatchRound } from "../models/tournamentModel.js"
 
 /*
 
@@ -61,6 +61,11 @@ class   TournamentRoom
         console.log('created new tournament room')
         this.users = new Map();
         this.games = new Map();
+        this.round = 1;
+        this.finish_match = false;
+        this.ready_to_play = null;
+        this.match = 1;
+        this.state = "En attente";
     }
 }
 
@@ -76,14 +81,7 @@ async function joinTournament(socket, tournamentID)
     if (currentTournament)
     {
         currentTournament.users.set(socket, currentUser);
-        try
-        {
-            updatePlayer(tournamentID, 1);         
-        }
-        catch (e)
-        {
-            console.log(e);
-        }
+        updatePlayer(tournamentID, 1);         
     }
     else if (currentUser.tournamentID)
     {
@@ -166,6 +164,25 @@ function IsPowerOfTwo(x)
     return (x != 0) && ((x & (x - 1)) == 0);
 }
 
+function getSocketByUserName(tournamentID, username)
+{
+
+    let currentTournament = tournamentRooms.get(tournamentID);
+
+    if (currentTournament)
+    {
+        for (const [socket, user] of currentTournament.users)
+        {
+            if (user.username === username)
+            {
+                console.log("socket find !");
+                return socket;
+            }
+        }
+    }
+    return null;
+}
+
 function calcTournamentRounds(currentTournament)
 {
 	currentTournament.playerCount = currentTournament.users.size;
@@ -207,7 +224,7 @@ async function setNextMatch(tournamentID, match, round)
         const match_search = await getMatchByMatchRound(tournamentID, match, round);
         if (match_search)
         {
-            const nextMatch = Math.ciel(match_search.match / 2);
+            const nextMatch = Math.ceil(match_search.match / 2);
             const nextRound = match_search.round + 1;
             await setNextInfosIntoDB(tournamentID, match, round, nextMatch, nextRound)
         }
@@ -219,7 +236,7 @@ async function setNextMatch(tournamentID, match, round)
 }
 
 
-function generateMatches(currentTournament)
+async function generateMatches(tournamentID)
 {
     /*
 
@@ -241,15 +258,15 @@ function generateMatches(currentTournament)
     
     Donc, a chaque round tu vas generer nombre_match, mais comment ? :
 
-    Dans la db tu as des infos : { id_game | p1_displayname | p2_displayname | id_match | id_round | id_winner | id_next_match | id_next_round }
+    Dans la db tu as des infos : { id_game | p1_displayname | p2_displayname | p1_score | p2_score | id_match | id_round | id_winner | id_next_match | id_next_round }
     Lors du premier round bah t'as pas de vainqueur donc tu vas générer aleatoirement les premiers nombre_matchs.
 
     Lors des tours suivants dans la db il y aura un truc du style :
 
-    { id_game | p1_displayname | p2_displayname | id_match | id_round | id_winner | id_next_match | id_next_round }
-    {-------------------------------------------------------------------------------------------------------------}
-    { caca    |     joueur1    |     joueur2    |     1    |     1    |  joueur1  |       1       |        2      }
-    { caca    |     joueur3    |     joueur4    |     2    |     1    |  joueur4  |       1       |        2      }
+    { id_game | p1_displayname | p2_displayname | p1_score | p2_score | id_match | id_round | id_winner | id_next_match | id_next_round }
+    {-----------------------------------------------------------------------------------------------------------------------------------}
+    { caca    |     joueur1    |     joueur2    |    5     |     3    |     1    |     1    |  joueur1  |       1       |        2      }
+    { caca    |     joueur3    |     joueur4    |    2     |     5    |     2    |     1    |  joueur4  |       1       |        2      }
 
     bon en gros ce qui est interéssant ce sont : id_match , id_round, id_winner, id_next_match, id_next_round
 
@@ -259,11 +276,11 @@ function generateMatches(currentTournament)
     Donc on genere le match 1 du round 2, tu regardes qui a id_next_round = 1 et id_next_round = 2 et tu les fout dans le meme match.
     (boucle for qui va jusqu'a nombre_matchs, donc tu génère match 1, match 2, match 3 ..... du round X)
 
-    { id_game | p1_displayname | p2_displayname | id_match | id_round | id_winner | id_next_match | id_next_round }
-    {-------------------------------------------------------------------------------------------------------------}
-    { caca    |     joueur1    |     joueur2    |     1    |     1    |  joueur1  |       1       |        2      }
-    { caca    |     joueur3    |     joueur4    |     2    |     1    |  joueur4  |       1       |        2      }
-    { caca    |     joueur1    |     joueur4    |     1    |     2    |  .......  |       .       |        .      } <-- match généré
+    { id_game | p1_displayname | p2_displayname | p1_score | p2_score | id_match | id_round | id_winner | id_next_match | id_next_round }
+    {-----------------------------------------------------------------------------------------------------------------------------------}
+    { caca    |     joueur1    |     joueur2    |     5    |     3    |     1    |     1    |  joueur1  |       1       |        2      }
+    { caca    |     joueur3    |     joueur4    |     2    |     5    |     2    |     1    |  joueur4  |       1       |        2      }
+    { caca    |     joueur1    |     joueur4    |     0    |     0    |     1    |     2    |     0     |       0       |        0      } <-- match généré
 
     alors petit truc en plus sur comment tu sais que le joueur 1 va dans le id_next_match 1 et le joueurs 4 aussi
 
@@ -282,9 +299,47 @@ function generateMatches(currentTournament)
     Round3 (finale)
     id_match 1 -> id_next_match = math.ciel(1 / 2) = 1 (VICTOIRE)
     */
+    const currentTournament = tournamentRooms.get(tournamentID);
+    try
+    {
+        let j = 1;
+        if (currentTournament.round === 1)
+        {
+            const entriesArray = Array.from(currentTournament.users.entries());
+            for (let i = 0; i < entriesArray.length; i += 2)
+            {
+                const [socket1, user1] = entriesArray[i];
+                const [socket2, user2] = entriesArray[i + 1] || [];
+                if (user1 && user2) { await addMatchIntoDB(tournamentID, user1.username, user2.username, 0, 0, j, 1, 0, 0, 0); }
+                j++;
+            }
+        }
+        else
+        {
+            let match_number = currentTournament.users.size / (2 ** currentTournament.round);
+            for (let i = 1; i <= match_number; i += 1)
+            {
+                const matchs = await getMatchByNextMatchRound(tournamentID, i, currentTournament.round);
+                console.log(matchs);
+                let user1 = null;
+                let user2 = null;
+                for (const match of matchs)
+                {
+                    if (!user1) user1 = match.winner_id;
+                    else user2 = match.winner_id;
+                }
+                if (user1 && user2)
+                    await addMatchIntoDB(tournamentID, user1, user2, 0, 0, i, currentTournament.round, 0, 0, 0);
+            }
+        }
+    }
+    catch (e) 
+    {
+        console.log(e);
+    }
 }
 
-function finishMatch(game)
+async function finishMatch(tournamentID)
 {
     /*
     
@@ -297,6 +352,28 @@ function finishMatch(game)
     Aussi supprimer le match du tournoi car inutile meme si en sois osef.
 
     */
+    const currentTournament = tournamentRooms.get(tournamentID);
+
+    currentTournament.finish_match = false;
+    let nextMatchCanPlay = true;
+    const match_number = currentTournament.users.size / (currentTournament.round * 2);
+    await setNextMatch(tournamentID, currentTournament.match, currentTournament.round);
+    currentTournament.match++;
+    if (currentTournament.match > match_number)
+    {
+        currentTournament.round++;
+        currentTournament.match = 1;
+        if (currentTournament.round > Math.sqrt(currentTournament.users.size))
+        {
+            console.log("Finish !");
+            nextMatchCanPlay = false;
+            currentTournament.state = "Finish";
+        }
+        else
+            await generateMatches(tournamentID);
+    }
+    if (nextMatchCanPlay)
+        LetsPlay(tournamentID);
 }
 
 /* CHECKS A FAIRE QUAND UN JOUEUR PARS
@@ -314,6 +391,32 @@ function finishMatch(game)
     - Si il est a l'ecran de fin (winner affiche) juste le degager car logiquement tournoi fini.
 
 */
+
+async function LetsPlay(tournamentID)
+{
+    const currentTournament = tournamentRooms.get(tournamentID);
+    let match = null;
+    let user1 = null;
+    let user2 = null;
+    if (currentTournament.round === 1)
+    {
+        match = await getMatchByMatchRound(tournamentID, currentTournament.match, currentTournament.round);
+        user1 = match.p1_displayname;
+        user2 = match.p2_displayname;
+    }
+    else
+    {
+        match = await getMatchByNextMatchRound(tournamentID, currentTournament.match, currentTournament.round);
+        for (const the_match of match)
+        {
+            if (!user1) user1 = the_match.winner_id;
+            else user2 = the_match.winner_id;
+        }
+    }
+    sendAll(tournamentID, {canPlay : false});
+    getSocketByUserName(tournamentID, user1).send(JSON.stringify({canPlay : true}));
+    getSocketByUserName(tournamentID, user2).send(JSON.stringify({canPlay : true}));
+}
 
 function handleKeyInput(packet, currentUser, currentTournament)
 {
@@ -340,7 +443,8 @@ export function	tournament(connection, req)
     const username = req.query?.username;
     const tournamentID = req.query?.tournamentID;
     const typeJoin = req.query?.typeJoin;
-    console.log("--------------------------\n" + typeJoin);
+    console.log("--------------------------\n");
+    console.log("socket =>>>>>>> " + socket);
     if (!userInfos.has(socket))
     {
         console.log('Adding new user to set');
@@ -359,13 +463,39 @@ export function	tournament(connection, req)
         else if (packet)
         {
             if (packet.start && getOperator(tournamentID) == socket)
+            {
                 console.log('Start game');
-            else
-                console.log('User is not operator');
-
+                currentTournament.state = "En cours";
+                generateMatches(tournamentID);
+                LetsPlay(tournamentID);
+            }
             if (packet.key)
                 handleKeyInput(packet, currentUser, currentTournament);
-
+            if (packet.finish)
+            {
+                if (!currentTournament.finish_match)
+                    currentTournament.finish_match = true;
+                else
+                    finishMatch(tournamentID);
+            }
+            if (packet.canPlay)
+            {
+                if (!currentTournament.ready_to_play)
+                    currentTournament.ready_to_play = socket;
+                else if (currentTournament.ready_to_play && socket != currentTournament.ready_to_play)
+                {
+                    const data = {
+                        goPlay : true,
+                        match : currentTournament.match,
+                        round : currentTournament.round,
+                        game_id : tournamentID,
+                        roomID : tournamentID + currentTournament.match + currentTournament.round
+                    }
+                    currentTournament.ready_to_play.send(JSON.stringify(data));
+                    socket.send(JSON.stringify(data));
+                    currentTournament.ready_to_play = null;
+                }
+            }
             console.log(packet);
         }
     })
@@ -374,21 +504,24 @@ export function	tournament(connection, req)
     {
         let currentUser = userInfos.get(socket);
         let currentTournament = tournamentRooms.get(currentUser.tournamentID);
-        console.log("--------------------------");
-        if (currentTournament)
+        if (currentTournament.state != "En cours")
         {
-            currentTournament.users.delete(socket);
-            updatePlayer(currentUser.tournamentID, -1);
-            console.log('client leave the room');
+            console.log("--------------------------");
+            if (currentTournament)
+            {
+                currentTournament.users.delete(socket);
+                updatePlayer(currentUser.tournamentID, -1);
+                console.log('client leave the room');
+            }
+            if (currentTournament.users.size === 0)
+            {
+                tournamentRooms.delete(currentUser.tournamentID);
+                deleteTournament(currentUser.tournamentID);
+                console.log('Plus personne dans la room, elle est détruite');
+            }
+            userInfos.delete(socket);
+            console.log('goodbye client');
+            console.log("--------------------------");
         }
-        if (currentTournament.users.size === 0)
-        {
-            tournamentRooms.delete(currentUser.tournamentID);
-            deleteTournament(currentUser.tournamentID);
-            console.log('Plus personne dans la room, elle est détruite');
-        }
-        userInfos.delete(socket);
-        console.log('goodbye client');
-        console.log("--------------------------");
     })
 }
