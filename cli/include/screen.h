@@ -6,7 +6,7 @@
 /*   By: rgramati <rgramati@42angouleme.fr>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/10 19:14:41 by rgramati          #+#    #+#             */
-/*   Updated: 2025/05/10 21:02:22 by rgramati         ###   ########.fr       */
+/*   Updated: 2025/05/15 20:42:02 by rgramati         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,11 +50,16 @@
 	"240\000241\000242\000243\000244\000245\000246\000247\000"\
 	"248\000249\000250\000251\000252\000253\000254\000255\000"
 
+static const int	TCLI_FONT[] =
+{
+	0b000000000000000, 0b010000010010010, 0b000000000101101, 0b101111101111101, 0b011110011111010, 0b101001010100101, 0b110101010101010, 0b000000000010010, 0b010001001001010, 0b010100100100010, 0b000000101010101, 0b000010111010000, 0b001010000000000, 0b000000111000000, 0b010000000000000, 0b001010010100100, 0b111101101101111, 0b111010010011010, 0b111001010100011, 0b011100010100011, 0b100100111101101, 0b111100111001111, 0b111101111001111, 0b010010010100111, 0b111101111101111, 0b111100111101111, 0b000010000010000, 0b010010000010000, 0b000010001010000, 0b000111000111000, 0b000010100010000, 0b010000010100111, 0b111001101111000, 0b101101111101010, 0b011101011101011, 0b110001001001110, 0b011101101101011, 0b111001011001111, 0b001001011001111, 0b111101101001111, 0b101101111101101, 0b111010010010111, 0b111101100100100, 0b101101011101101, 0b111001001001001, 0b101101101111101, 0b101101101101011, 0b010101101101010, 0b001001011101011, 0b100011101101111, 0b101101011101011, 0b011100010001110, 0b010010010010111, 0b111101101101101, 0b010101101101101, 0b101111101101101, 0b101101010101101, 0b010010010101101, 0b111001010100111, 0b011001001001011, 0b100010010001001, 0b110100100100110, 0b000000000101010, 0b111000000000000, 0b000000000010001, 0b110101101110000, 0b011101011001001, 0b110001001110000, 0b110101110100100, 0b110011101110000, 0b010010111010110, 0b011100110101110, 0b101101011001001, 0b010010010000010, 0b001010010000010, 0b101011101001001, 0b100010010010010, 0b101101111101000, 0b101101101011000, 0b010101101010000, 0b001011101011000, 0b100110101110000, 0b001001011101000, 0b011100011110000, 0b110010010111010, 0b110101101101000, 0b010101101101000, 0b101111101101000, 0b101101010101000, 0b001010101101000, 0b111010100111000, 0b110010001010110, 0b010010010010010, 0b011010100010011, 0b000000000011110
+};
+
 typedef struct
 {
-	char		*data;
-	uint32_t	width;
-	uint32_t	height;
+	char	*data;
+	int32_t	width;
+	int32_t	height;
 }	TCLI_Screen;
 
 static inline uint32_t	screen_mode(uint32_t mode)
@@ -72,12 +77,12 @@ static inline uint32_t	screen_mode(uint32_t mode)
 		attr.c_cc[VMIN] = 0;
 		attr.c_cc[VTIME] = 0;
 		tcsetattr(STDIN_FILENO, TCSAFLUSH, &attr);
-		write(STDIN_FILENO, "\033[?25l", 6);
+		write(STDOUT_FILENO, "\033[?25l", 6);
 	}
 	else
 	{
 		tcsetattr(STDIN_FILENO, TCSANOW, &back);
-		write(STDIN_FILENO, "\033[?25h", 6);
+		write(STDOUT_FILENO, "\033[?25h", 6);
 	}
 	return (0);
 }
@@ -128,7 +133,7 @@ static void	screen_strcpy(char *dst, char *src)
 		*dst++ = *src++;
 }
 
-static inline void	screen_put_color(uint32_t color, char *ptr)
+static inline void	screen_putColor(uint32_t color, char *ptr)
 {
 	uint32_t	comp;
 
@@ -139,20 +144,6 @@ static inline void	screen_put_color(uint32_t color, char *ptr)
 	screen_strcpy(&ptr[11], &COLOR_TABLE[comp]);
 	comp = (color & 0xFF) << 2;
 	screen_strcpy(&ptr[15], &COLOR_TABLE[comp]);
-}
-
-static inline void	screen_set_pixel(TCLI_Screen *screen, uint32_t x, uint32_t y, uint32_t color)
-{
-	uint32_t	cx;
-	uint32_t	cy;
-	uint32_t	index;
-
-	if (x < 0 || y < 0 || x >= screen->width || (y & ~1) >= screen->height * 2)
-		return ;
-	cx = (SCREEN_CHAR_SIZE * x) + (19 * !(y & 1));
-	cy = (y >> 1);
-	index = ((SCREEN_CHAR_SIZE * screen->width) * cy) + cx;
-	screen_put_color(color, &screen->data[index]);
 }
 
 typedef struct
@@ -167,14 +158,72 @@ typedef struct
 	float	y;
 }	fvec2;
 
-int my_abs(int n)
+static inline void	screen_setPixel(TCLI_Screen *screen, vec2 pos, uint32_t color)
+{
+	uint32_t	cx;
+	uint32_t	cy;
+	uint32_t	index;
+
+	if (pos.x < 0 || pos.y < 0 || pos.x >= screen->width || (pos.y & ~1) >= screen->height * 2)
+		return ;
+	cx = (SCREEN_CHAR_SIZE * pos.x) + (19 * !(pos.y & 1));
+	cy = (pos.y >> 1);
+	index = ((SCREEN_CHAR_SIZE * screen->width) * cy) + cx;
+	screen_putColor(color, &screen->data[index]);
+}
+
+static inline void	screen_clear(TCLI_Screen *screen)
+{
+	for (int32_t j = 0; j < screen->height * 2; ++j)
+	{
+		for (int32_t i = 0; i < screen->width; ++i)
+		{
+			screen_setPixel(screen, (vec2){i, j}, 0);
+		}
+	}
+}
+
+static inline int my_abs(int n)
 {
 	if (n < 0)
 		return (-n);
 	return (n);
 }
 
-void	screen_draw_line(TCLI_Screen *screen, vec2 start, vec2 end, uint32_t color)
+static inline void	screen_drawText(TCLI_Screen *screen, const char *text, vec2 start, uint32_t color)
+{
+	vec2	offset = {0};
+	vec2	charpos = {0};
+
+	while (*text)
+	{
+		if (*text < 32)
+		{
+			text++;
+			continue ;
+		}
+
+		const int rep = TCLI_FONT[(int)(*text - 32)];
+		for (uint32_t i = 0; i < 5; ++i)
+		{
+			for (uint32_t j = 0; j < 3; ++j)
+			{
+				if (!(rep & (1 << (3 * i + j))))
+					continue ;
+				charpos = (vec2)
+				{
+					start.x + j + (4 * offset.x),
+					start.y + i + (6 * offset.y)
+				};
+				screen_setPixel(screen, charpos, color);
+			}
+		}
+		offset.x++;
+		text++;
+	}
+}
+
+static inline void	screen_drawLine(TCLI_Screen *screen, vec2 start, vec2 end, uint32_t color)
 {
 	vec2		diff;
 	fvec2		deltas;
@@ -190,21 +239,35 @@ void	screen_draw_line(TCLI_Screen *screen, vec2 start, vec2 end, uint32_t color)
 
 	while (test--)
 	{
-		screen_set_pixel(screen, (int)inc.x, (int)inc.y, color);
+		vec2	pos = {inc.x, inc.y};
+		screen_setPixel(screen, pos, color);
 		inc.x += deltas.x;
 		inc.y += deltas.y;
 	}
 }
 
-void	screen_draw_square(TCLI_Screen *screen, vec2 start, vec2 size, uint32_t color)
+static inline void	screen_drawSquare(TCLI_Screen *screen, vec2 start, vec2 size, uint32_t color, uint8_t rounded)
 {
 	const vec2	end = (vec2){start.x + size.x - 1, start.y + size.y - 1};
 
-	screen_draw_line(screen, start, (vec2){end.x, start.y}, color);
-	screen_draw_line(screen, (vec2){end.x, start.y}, end, color);
-	screen_draw_line(screen, end, (vec2){start.x, end.y}, color);
-	screen_draw_line(screen, (vec2){start.x, end.y}, (vec2)start, color);
+	rounded = !!rounded;
+	screen_drawLine(screen, (vec2){start.x + rounded, start.y}, (vec2){end.x, start.y}, color);
+	screen_drawLine(screen, (vec2){end.x, start.y + rounded}, end, color);
+	screen_drawLine(screen, (vec2){end.x - rounded, end.y}, (vec2){start.x, end.y}, color);
+	screen_drawLine(screen, (vec2){start.x, end.y - rounded}, (vec2)start, color);
 }
 
+static inline void	screen_drawImg(TCLI_Screen *screen, vec2 start, vec2 size, uint32_t *img)
+{
+	for (int32_t j = 0; j < size.y; ++j)
+	{
+		for (int32_t i = 0; i < size.x; ++i)
+		{
+			int32_t	index = j * size.y + i;
+
+			screen_setPixel(screen, (vec2){start.x + i, start.y + j}, img[index]);
+		}
+	}
+}
 
 #endif

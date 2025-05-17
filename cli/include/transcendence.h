@@ -6,7 +6,7 @@
 /*   By: rgramati <rgramati@42angouleme.fr>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 19:52:06 by rgramati          #+#    #+#             */
-/*   Updated: 2025/05/10 19:37:43 by rgramati         ###   ########.fr       */
+/*   Updated: 2025/05/17 20:30:25 by rgramati         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,13 +31,92 @@
 # define	SHIFT(ac, av)	(ac-- ,*av++)
 
 # define	INLINE			static inline
-# define	TCLI_FUNC(X)	tcli_##X
+# define	TCLI_FUNC(X)	TCLI_##X
 # define	TCLI_API(T, X)	INLINE T TCLI_FUNC(X)
+
+enum
+{
+	TCLI_ELEM_TEXT = 0,
+	TCLI_ELEM_TEXTBOX = 1,
+	TCLI_ELEM_BUTTON = 2,
+	TCLI_ELEM_IMAGE = 3,
+};
+
+# define	TCLI_ELEM_LAST ((void *)-1UL)
+
+enum
+{
+	TCLI_ARROW_UP = 0,
+	TCLI_ARROW_DOWN = 1,
+	TCLI_ARROW_RIGHT = 2,
+	TCLI_ARROW_LEFT = 3,
+};
+
+typedef struct
+{
+	uint32_t	type;
+	uint32_t	flags;
+}	TCLI_ElemHdr;
+
+enum
+{
+	TCLI_IDX_BOX = 0,
+	TCLI_IDX_TEXT = 1,
+	TCLI_IDX_INPUT = 2,
+
+	TCLI_IDX_LAST = 4
+};
+
+typedef void	(*TCLI_Action)(TCLI_ElemHdr *elem);
+
+typedef struct s_tcli_elem
+{
+	TCLI_ElemHdr		h;
+	struct s_tcli_elem	*nexts[4];
+	char				txt[16];
+	char				input[16];
+	uint32_t			colors[4];
+	vec2				pos[4];
+	vec2				size;
+	void				*slink;
+	TCLI_Action			onSelect;
+	TCLI_Action			onDeselect;
+}	TCLI_Elem;
+
+typedef struct
+{
+	TCLI_Elem	elems[16];
+	TCLI_Elem	*select;
+	TCLI_Elem	*last;
+	uint32_t	count;
+}	TCLI_SceneCtx;
+
+typedef TCLI_SceneCtx	*(*TCLI_Scene)(void);
+
+# define	TCLI_MENU_BTN_W		55
+
+void	TCLI_FUNC(rootElem)(TCLI_SceneCtx *ctx);
+
+TCLI_Elem	*TCLI_FUNC(newButton)
+(TCLI_SceneCtx *ctx, const char *txt, vec2 pos, vec2 size, uint32_t txtColor, uint32_t boxColor);
+
+TCLI_Elem	*TCLI_FUNC(newText)
+(TCLI_SceneCtx *ctx, const char *txt, vec2 pos, uint32_t txtColor);
+
+TCLI_Elem	*TCLI_FUNC(newTextbox)
+(TCLI_SceneCtx *ctx, const char *txt, vec2 pos, uint32_t txtColor);
+
+TCLI_Elem	*TCLI_FUNC(findElem)(TCLI_SceneCtx *ctx, const char *name);
+
+void	TCLI_FUNC(setColor)(TCLI_Elem *elem, uint8_t idx, uint32_t color);
+void	TCLI_FUNC(setNext)(TCLI_Elem *elem, uint8_t idx, TCLI_Elem *next);
+void	TCLI_FUNC(setLink)(TCLI_Elem *elem, void *s);
 
 typedef struct s_cli_ctx
 {
 	uint64_t			status;
 	TCLI_Screen			screen;
+	TCLI_Scene			scene;
 
 	const char			*prog_name;
 	const char			*ip;
@@ -49,23 +128,28 @@ typedef struct s_cli_ctx
 }	TCLI;
 
 # define	CURL_CTX	__curl_ctx
-# define	TCLI_CTX	__tcli_ctx
-# define	TCLI_TMP	__tcli_tmp
+# define	TCLI_CTX	__TCLI_ctx
+# define	TCLI_TMP	__TCLI_tmp
 
-static CURL	*CURL_CTX	= NULL;
-static TCLI	*TCLI_CTX	= NULL;
-
-static char	TCLI_TMP[1024]	= {0};
+extern	CURL		*CURL_CTX;
+extern	TCLI		*TCLI_CTX;
+extern	char		TCLI_TMP[1024];
 
 enum
 {
 	TCLI_FLAG_OK	= 1 << 0,
+	TCLI_SCENE_SWAP	= 1 << 1
 };
 
 # define	TCLI_STATUS		TCLI_CTX->status
 # define	TCLI_ACTIVE		(TCLI_CTX->status & TCLI_FLAG_OK)
 
 # define	TCLI_SCREEN		TCLI_CTX->screen
+# define	TCLI_WIDTH		TCLI_CTX->screen.width
+# define	TCLI_HEIGHT		(TCLI_CTX->screen.height * 2)
+
+# define	TCLI_SCENE			TCLI_CTX->scene
+# define	TCLI_SCENE_FUNC(X)	TCLI_SceneCtx	*TCLI_FUNC(X)(void)
 
 # define	TCLI_EXE		TCLI_CTX->prog_name
 
@@ -86,6 +170,16 @@ enum
 
 # define	TCLI_POSTFIELDS	TCLI_CTX->postfields
 
+TCLI_SCENE_FUNC(mainMenu);
+TCLI_SCENE_FUNC(loginPage);
+TCLI_SCENE_FUNC(registerPage);
+TCLI_SCENE_FUNC(settingsPage);
+TCLI_SCENE_FUNC(lobbyPage);
+TCLI_SCENE_FUNC(gamePage);
+TCLI_SCENE_FUNC(quit);
+
+TCLI_SCENE_FUNC(debugPage);
+
 TCLI_API(void, error)(const char *);
 TCLI_API(void, usage)(int err);
 TCLI_API(void, ipResolve)(void);
@@ -98,21 +192,21 @@ TCLI_API(void, init)(int argc, char **argv)
 
 	TCLI_CTX = malloc(sizeof(TCLI));
 	if (!TCLI_CTX)
-		tcli_error("failed to init TCLI context.");
+		TCLI_error("failed to init TCLI context.");
 	memset(TCLI_CTX, 0, sizeof(TCLI));
 	
 	screen_init(&TCLI_SCREEN);
 	if (!TCLI_SCREEN.data)
-		tcli_error("failed to init TCLI screen.");
+		TCLI_error("failed to init TCLI screen.");
 	
 	TCLI_EXE = SHIFT(argc, argv);
 	if (argc != 1)
-		tcli_usage(1);
+		TCLI_usage(1);
 	TCLI_IP = SHIFT(argc, argv);
 
 	CURL_CTX = curl_easy_init();
 	if (!CURL_CTX)
-		tcli_error("failed to init CURL context.");
+		TCLI_error("failed to init CURL context.");
 
 	curl_easy_setopt(CURL_CTX,  CURLOPT_VERBOSE, 1L);
 	curl_easy_setopt(CURL_CTX,  CURLOPT_TIMEOUT, 10L);
@@ -120,8 +214,8 @@ TCLI_API(void, init)(int argc, char **argv)
 	curl_easy_setopt(CURL_CTX, CURLOPT_SSL_VERIFYPEER, 1L);	// Need SSL verification
 	curl_easy_setopt(CURL_CTX, CURLOPT_SSL_VERIFYHOST, 2L);
 
-	tcli_cookieInit();
-	tcli_ipResolve();
+	TCLI_cookieInit();
+	TCLI_ipResolve();
 
 	TCLI_STATUS |= TCLI_FLAG_OK;
 }
@@ -154,11 +248,6 @@ TCLI_API(void, usage)(int err)
 	printf(TCLI_USAGE, TCLI_EXE, TCLI_EXE);
 	exit(err);
 }
-
-
-
-
-
 
 TCLI_API(void, cookieInit)(void)
 {
@@ -203,7 +292,7 @@ TCLI_API(void, makeUrl)(const char *endpoint)
 	const uint32_t	endl = strlen(endpoint);
 
 	if (hdrl + endl >= 128)
-		tcli_error("request too long.");
+		TCLI_error("request too long.");
 
 	memcpy(url,			TCLI_URL_HDR,	hdrl);
 	memcpy(url + hdrl,	endpoint,		endl);
@@ -238,8 +327,8 @@ TCLI_API(void, makePostfields)(cJSON *post)
 
 TCLI_API(void, login)(const char *user, const char *pass)
 {
-	tcli_makeUrl(TCLI_ENDPOINT_LOGIN);
-	tcli_makeRequestHeaders(1, TCLI_JSON_HDR);
+	TCLI_makeUrl(TCLI_ENDPOINT_LOGIN);
+	TCLI_makeRequestHeaders(1, TCLI_JSON_HDR);
 
 	cJSON	*log = cJSON_CreateObject();
 	void	*tmp = NULL;
@@ -253,12 +342,12 @@ TCLI_API(void, login)(const char *user, const char *pass)
 	tmp = cJSON_AddStringToObject(log, "password", pass);
 	if (!tmp) goto defer;
 
-	tcli_makePostfields(log);
+	TCLI_makePostfields(log);
 	
 	return ;
 
 defer:
-	tcli_error("json creation failed.");
+	TCLI_error("json creation failed.");
 }
 
 typedef enum
@@ -284,7 +373,7 @@ typedef struct
 TCLI_API(void, makeRequest)(uint16_t type)
 {
 	if (type & TCLI_REQ_LOGIN)
-		tcli_login("caca", "12345678");
+		TCLI_login("caca", "12345678");
 
 	if (type & TCLI_POST)
 		curl_easy_setopt(CURL_CTX, CURLOPT_POSTFIELDS, TCLI_POSTFIELDS);

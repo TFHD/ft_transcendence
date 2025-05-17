@@ -1,18 +1,14 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: rgramati <rgramati@42angouleme.fr>         +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/05 21:12:12 by rgramati          #+#    #+#             */
-/*   Updated: 2025/05/10 21:08:41 by rgramati         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 /*
  *	CLI Transcendence application.
  */
+
+
+#include <transcendence.h>
+
+CURL	*__curl_ctx	= NULL;
+TCLI	*__TCLI_ctx	= NULL;
+
+char	__TCLI_tmp[1024]	= {0};
 
 // #include <stdio.h>
 // #include <nopoll.h>
@@ -184,7 +180,74 @@
 // 	return (err);
 // }
 
-#include <transcendence.h>
+void	TCLI_FUNC(changeScene)(TCLI_SceneCtx *ctx)
+{
+	TCLI_Elem	*current = ctx->select;
+	TCLI_Scene	new = current->slink;
+
+	if (new)
+	{
+		TCLI_SCENE = new;
+		TCLI_STATUS |= TCLI_SCENE_SWAP;
+	}
+}
+
+void	TCLI_FUNC(handleJump)(TCLI_SceneCtx *ctx, char key)
+{
+	TCLI_Elem	*current = ctx->select;
+	TCLI_Elem	*next = current->nexts[(int)key];
+
+	if (!next)
+		return ;
+
+	current->onDeselect(&current->h);
+
+	if (next == (void *)TCLI_ELEM_LAST)
+	{
+		if (!ctx->last)
+			return ;
+		ctx->select = ctx->last;
+		next = ctx->select;
+	}
+	else
+		ctx->select = next;
+	ctx->last = current;
+
+	next->onSelect(&next->h);
+}
+
+void	TCLI_FUNC(handleInput)(TCLI_SceneCtx *ctx, char key)
+{
+	(void) ctx;
+	(void) key;
+
+	TCLI_Elem	*current = ctx->select;
+
+	if (current->h.type == TCLI_ELEM_TEXTBOX)
+	{
+		uint32_t	len = strlen(current->input);
+		if (len >= 15)
+			return ;
+		current->input[len] = key;
+	}
+}
+
+void	TCLI_FUNC(handleKey)(TCLI_SceneCtx *ctx, char key)
+{
+	if (key < 4)
+		TCLI_handleJump(ctx, key);
+	else if (key == '\n')
+		TCLI_changeScene(ctx);
+	else
+		TCLI_handleInput(ctx, key);
+}
+
+void	TCLI_FUNC(render)(TCLI_SceneCtx *);
+
+# define	UP_ARROW_SCAN		0x415b1b
+# define	DOWN_ARROW_SCAN		0x425b1b
+# define	RIGHT_ARROW_SCAN	0x435b1b
+# define	LEFT_ARROW_SCAN		0x445b1b
 
 void	TCLI_FUNC(loop)(void)
 {
@@ -193,26 +256,61 @@ void	TCLI_FUNC(loop)(void)
 		.data = NULL,
 		.len = 0
 	};
-    curl_easy_setopt(CURL_CTX, CURLOPT_WRITEFUNCTION, tcli_curlCB);
+    curl_easy_setopt(CURL_CTX, CURLOPT_WRITEFUNCTION, TCLI_curlCB);
     curl_easy_setopt(CURL_CTX, CURLOPT_WRITEDATA, &buff_cb);
+
+	TCLI_SceneCtx	*ctx	= NULL;
+	TCLI_SCENE				= &TCLI_debugPage;
+	TCLI_STATUS				|= TCLI_SCENE_SWAP;
+
+	printf("width = %u, height = %u\n", TCLI_WIDTH, TCLI_HEIGHT);
 
 	while (TCLI_ACTIVE)
 	{
+		if (TCLI_SCENE)
+			ctx = TCLI_SCENE();
+		if (TCLI_STATUS & TCLI_SCENE_SWAP)
+		{
+			screen_clear(&TCLI_SCREEN);
+			TCLI_render(ctx);
+			TCLI_STATUS &= ~TCLI_SCENE_SWAP;
+		}
+
 		char	uchar[4] = {0};
 
-		write(STDIN_FILENO, "\033[0;0f", 6);
-		write(STDIN_FILENO, TCLI_SCREEN.data,
+#if 1
+		write(STDOUT_FILENO, "\033[0;0f", 6);
+		write(STDOUT_FILENO, TCLI_SCREEN.data,
 			TCLI_SCREEN.width * TCLI_SCREEN.height * SCREEN_CHAR_SIZE);
+	
+#endif
 
 		int r = read(STDIN_FILENO, uchar, 4);
-		if (!r)
+		if (r == 0)
 			continue ;
-		if (uchar[0] == 27 && uchar[1] == 0)
-			break ;
+		if (uchar[0] == 27)
+		{
+			if (uchar[1] == 0)
+				break ;
+			int	chars = *(int *)uchar;
+			if (chars == UP_ARROW_SCAN)
+				uchar[0] = TCLI_ARROW_UP;
+			if (chars == DOWN_ARROW_SCAN)
+				uchar[0] = TCLI_ARROW_DOWN;
+			if (chars == RIGHT_ARROW_SCAN)
+				uchar[0] = TCLI_ARROW_RIGHT;
+			if (chars == LEFT_ARROW_SCAN)
+				uchar[0] = TCLI_ARROW_LEFT;
+		}
 
-//  		tcli_makeRequest(TCLI_POST | TCLI_REQ_LOGIN);
-//  		tcli_sendRequest();
-// 		tcli_handleAnswer();
+#if 1
+		TCLI_handleKey(ctx, uchar[0]);
+		TCLI_render(ctx);
+#endif
+
+//  		TCLI_makeRequest(TCLI_POST | TCLI_REQ_LOGIN);
+//  		TCLI_sendRequest();
+// 		TCLI_handleAnswer();
 //
 // 		TCLI_STATUS &= ~TCLI_FLAG_OK;
 	}
@@ -222,7 +320,7 @@ void	TCLI_FUNC(loop)(void)
 
 int main(int argc, char **argv)
 {
-	tcli_init(argc, argv);
-	tcli_loop();
-	tcli_cleanup();
+	TCLI_init(argc, argv);
+	TCLI_loop();
+	TCLI_cleanup();
 }
