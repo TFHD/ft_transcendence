@@ -8,26 +8,26 @@ let ws:WebSocket | null = null;
 
 const BabylonPage = () => {
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const canvasRef             = useRef<HTMLCanvasElement | null>(null);
+  const wsRef                 = useRef<WebSocket | null>(null);
   let [username, setUsername] = useState("default");
-	const host = import.meta.env.VITE_ADDRESS;
-  const navigate = useNavigate();
-  const location = useLocation();
-  const fromStartGame = location.state?.fromStartGame;
-  const roomID = location.state?.roomID;
-  const isTournament = location.state?.isTournament;
-  const dataTournament = {
+	const host                  = import.meta.env.VITE_ADDRESS;
+  const navigate              = useNavigate();
+  const location              = useLocation();
+  const fromStartGame         = location.state?.fromStartGame;
+  const roomID                = location.state?.roomID;
+  const isTournament          = location.state?.isTournament;
+  const gameMode              = window.location.pathname.split("/")[2];
+  let   canAcessgame          = false;
+  let   explosionX            = undefined;
+  let   explosionY            = undefined;
+  let   endGame               = undefined;
+  const dataTournament        = {
 		username : location.state?.username,
 		match : location.state?.match,
 		round : location.state?.round,
     game_id :location.state?.game_id
 	}
-  const gameMode = window.location.pathname.split("/")[2];
-  let   canAcessgame = false;
-  let   explosionX = undefined;
-  let   explosionY = undefined;
-  let   endGame = undefined;
 
   useEffect(() => {
     if (dataTournament.username != undefined)
@@ -313,6 +313,7 @@ const BabylonPage = () => {
       //   #######################################################################################################################
       //   ####################################################   WEBSOCKET   ####################################################
       //   #######################################################################################################################
+
       if (!ws)
       {
           ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&isTournament=${isTournament}`);

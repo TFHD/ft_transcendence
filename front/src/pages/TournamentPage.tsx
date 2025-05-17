@@ -8,8 +8,19 @@ const host = import.meta.env.VITE_ADDRESS;
 
 const TournamentPage = () => {
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const [canStart, setCanStart] = useState<boolean>(false);
+  const wsRef                     = useRef<WebSocket | null>(null);
+  const navigate                  = useNavigate();
+  const location                  = useLocation();
+  const fromStartGame             = location.state?.fromStartGame;
+  const finish                    = location.state?.finish;
+  const roomID                    = location.state?.roomID;
+  const roundPlayed               = location.state?.roundPlayed;
+  const matchPlayed               = location.state?.matchPlayed;
+  const username                  = location.state?.username;
+  let matchToPlay                 = 0;
+  let roundToPlay                 = 0;
+  const [canStart, setCanStart]   = useState<boolean>(false);
+  const [canPlay, setcanPlay]     = useState<boolean>(false);
   const [gameInfos, setGameInfos] = useState({
     id: "",
     mode: "",
@@ -17,24 +28,9 @@ const TournamentPage = () => {
     limit: 0,
     state : "default",
   });
-  const navigate = useNavigate();
-  const location = useLocation();
-  const fromStartGame = location.state?.fromStartGame;
-  const finish = location.state?.finish;
-  const roomID = location.state?.roomID;
-  const roundPlayed = location.state?.roundPlayed;
-  const matchPlayed = location.state?.matchPlayed;
-  const username = location.state?.username;
-  const typeJoin = location.state?.join;
-  const isTerminal = false;
-  let matchToPlay = 0;
-  let roundToPlay = 0;
-  const [canPlay, setcanPlay] = useState<boolean>(false);
 
   useEffect(() => {
-    CheckToken().then(res => {
-      if (!res) navigate("/");
-    });
+    CheckToken().then(res => { if (!res) navigate("/"); });
 
     if (!fromStartGame)
       navigate("/start-game-multiplayer");
@@ -44,13 +40,8 @@ const TournamentPage = () => {
           wsRef.current.send(JSON.stringify({ finish: true, matchPlayed : matchPlayed, roundPlayed : roundPlayed }));
   }
 
-    const ws = connectSocket(`wss://${host}:8000/api/pong/tournament?tournamentID=${roomID}&username=${username}&terminal=${isTerminal}&typeJoin=${typeJoin}`);
+    const ws = connectSocket(`wss://${host}:8000/api/pong/tournament?tournamentID=${roomID}&username=${username}`);
     wsRef.current = ws;
-
-    ws.onopen = () =>
-    {
-      console.log('Successfully connected to server');
-    };
 
     ws.onmessage = (message) =>
     {
@@ -58,52 +49,29 @@ const TournamentPage = () => {
       if (server_packet.canStart != undefined)
         setCanStart(server_packet.canStart);
       if (server_packet.id) {
-        setGameInfos(prev => ({...prev, 
-          id: server_packet.id,
-          mode: server_packet.mode,
-          players: server_packet.players,
-          limit: server_packet.limit,
-          state: server_packet.state
-        }));
+        setGameInfos(prev => ({...prev, id: server_packet.id, mode: server_packet.mode, players: server_packet.players,
+                                        limit: server_packet.limit, state: server_packet.state }));
       }
       if (server_packet.canPlay != undefined && server_packet.matchToPlay != undefined && server_packet.roundToPlay != undefined) {
         setcanPlay(server_packet.canPlay);
         matchToPlay = server_packet.matchToPlay;
         roundToPlay = server_packet.roundToPlay;
       }
-      if (server_packet.goPlay)
-      {
-        navigate("/pong/duo", { state: {
-          fromStartGame: true,
-          username : username,
-          match : matchToPlay,
-          round: roundToPlay,
-          roomID : server_packet.roomID,
-          game_id : server_packet.game_id,
-          isTournament : true
-        }});
+      if (server_packet.goPlay) {
+        navigate("/pong/duo", { state: { fromStartGame: true, username : username, match : matchToPlay, round: roundToPlay,
+                                roomID : server_packet.roomID, game_id : server_packet.game_id, isTournament : true }});
       }
     };
 
-    ws.onclose = (event) =>
-    {
-      console.log('Disconnected from server', event.code, event.reason);
-    };
-
-    ws.onerror = (e) =>
-    {
-      console.log('Connection error', e);
-    };
+    ws.onopen = () => { console.log('Successfully connected to server'); };
+    ws.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); };
+    ws.onerror = (e) => { console.log('Connection error', e); };
     return () => {}
 
   }, [navigate, finish, matchPlayed, roundPlayed]);
-  const handleStart = () => {
-    wsRef.current?.send(JSON.stringify({ start: true }));
-  }
 
-  const handlecanPlay = () => {
-    wsRef.current?.send(JSON.stringify({ canPlay: true }));
-  }
+  const handleStart = () => { wsRef.current?.send(JSON.stringify({ start: true })); };
+  const handlecanPlay = () => { wsRef.current?.send(JSON.stringify({ canPlay: true })); };
 
   const generateTournamentTree = (numPlayers: number) => {
     const rounds: number[][] = [];
@@ -180,11 +148,6 @@ const TournamentPage = () => {
               })}
             </div>
           ))}
-          {/* <div className="flex justify-center mt-6">
-            <div className="bg-[#475569] px-6 py-3 rounded-md shadow-lg text-center font-semibold text-[#f7c80e]">
-              🏆 Finale : Winner SF1 vs Winner SF2
-            </div>
-          </div> */}
         </div>
         {canStart && (
           <div className="flex justify-center mt-6">
