@@ -119,6 +119,7 @@ const StartGameMultiplayer = () => {
             onChange={(e) => setTournamentUsername(e.target.value)}
             placeholder="Votre pseudo pour le tournoi"
             className="w-full px-4 py-2 mb-4 text-black rounded-md"
+            maxLength={15}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && isValid) {
                 handlePlay();

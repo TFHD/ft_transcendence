@@ -30,11 +30,9 @@ const BabylonPage = () => {
   let   endGame = undefined;
 
   useEffect(() => {
-    if (dataTournament.username != undefined) {
-      console.log("pseudo : " + dataTournament.username);
+    if (dataTournament.username != undefined)
       setUsername(dataTournament.username);
-    }
-    else{
+    else {
       getUsername().then(res => {
         setUsername(res);
       });
@@ -350,7 +348,7 @@ const BabylonPage = () => {
         if (endGame)
         {
           if (dataTournament.username != undefined)
-            navigate(`/tournament/${dataTournament.game_id}`, { state : {fromStartGame : true, finish : true, roomID : dataTournament.game_id, username : username}});
+            navigate(`/tournament/${dataTournament.game_id}`, { state : {fromStartGame : true, finish : true, roomID : dataTournament.game_id, username : username, matchPlayed : dataTournament.match , roundPlayed : dataTournament.round}});
           else
             navigate(-1);
         }

@@ -15,15 +15,20 @@ const TournamentPage = () => {
     mode: "",
     players: 0,
     limit: 0,
+    state : "default",
   });
   const navigate = useNavigate();
   const location = useLocation();
   const fromStartGame = location.state?.fromStartGame;
   const finish = location.state?.finish;
   const roomID = location.state?.roomID;
+  const roundPlayed = location.state?.roundPlayed;
+  const matchPlayed = location.state?.matchPlayed;
   const username = location.state?.username;
   const typeJoin = location.state?.join;
   const isTerminal = false;
+  let matchToPlay = 0;
+  let roundToPlay = 0;
   const [canPlay, setcanPlay] = useState<boolean>(false);
 
   useEffect(() => {
@@ -35,12 +40,8 @@ const TournamentPage = () => {
       navigate("/start-game-multiplayer");
 
     if (finish) {
-      console.log("Envoi de { finish: true } via WebSocket");
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ finish: true }));
-      } else {
-          console.warn("WebSocket non prêt pour envoyer { finish: true }");
-      }
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN)
+          wsRef.current.send(JSON.stringify({ finish: true, matchPlayed : matchPlayed, roundPlayed : roundPlayed }));
   }
 
     const ws = connectSocket(`wss://${host}:8000/api/pong/tournament?tournamentID=${roomID}&username=${username}&terminal=${isTerminal}&typeJoin=${typeJoin}`);
@@ -57,25 +58,31 @@ const TournamentPage = () => {
       if (server_packet.canStart != undefined)
         setCanStart(server_packet.canStart);
       if (server_packet.id) {
-        setGameInfos({...gameInfos, 
+        setGameInfos(prev => ({...prev, 
           id: server_packet.id,
           mode: server_packet.mode,
           players: server_packet.players,
           limit: server_packet.limit,
-        });
+          state: server_packet.state
+        }));
       }
-      if (server_packet.canPlay != undefined)
+      if (server_packet.canPlay != undefined && server_packet.matchToPlay != undefined && server_packet.roundToPlay != undefined) {
         setcanPlay(server_packet.canPlay);
+        matchToPlay = server_packet.matchToPlay;
+        roundToPlay = server_packet.roundToPlay;
+      }
       if (server_packet.goPlay)
+      {
         navigate("/pong/duo", { state: {
           fromStartGame: true,
           username : username,
-          match : server_packet.match,
-          round: server_packet.round,
+          match : matchToPlay,
+          round: roundToPlay,
           roomID : server_packet.roomID,
           game_id : server_packet.game_id,
           isTournament : true
         }});
+      }
     };
 
     ws.onclose = (event) =>
@@ -89,7 +96,7 @@ const TournamentPage = () => {
     };
     return () => {}
 
-  }, [navigate, finish]);
+  }, [navigate, finish, matchPlayed, roundPlayed]);
   const handleStart = () => {
     wsRef.current?.send(JSON.stringify({ start: true }));
   }
@@ -97,6 +104,16 @@ const TournamentPage = () => {
   const handlecanPlay = () => {
     wsRef.current?.send(JSON.stringify({ canPlay: true }));
   }
+
+  const generateTournamentTree = (numPlayers: number) => {
+    const rounds: number[][] = [];
+    let matches = Math.floor(numPlayers / 2);
+    while (matches >= 1) {
+      rounds.push(new Array(matches).fill(0));
+      matches = Math.floor(matches / 2);
+    }
+    return rounds;
+  };
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#0b0c10] text-white font-sans overflow-hidden">
@@ -116,43 +133,58 @@ const TournamentPage = () => {
         </div>
         <div>
           <h3 className="text-[#f7c80e] text-lg mb-4">📌 Statut</h3>
-          <p className="text-md text-green-400">🟢 En cours</p>
+          {(() => 
+          {
+            const waiting = gameInfos.state === "En attente";
+            return (
+              <p className={`font-semibold ${waiting ? 'text-yellow-400' : 'text-green-400'}`}>
+                {waiting ? '🟡 ' : '🟢 '} {gameInfos.state}
+              </p>
+            );
+          }
+          )()}
         </div>
       </div>
 
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
         <h2 className="text-2xl font-bold mb-6 text-center text-[#f7c80e]">🏁 Arbre du tournoi</h2>
         
+
         <div className="flex flex-col gap-8 items-center overflow-auto max-h-full scrollbar-custom">
-          <div className="flex justify-center items-center gap-8">
-            <div className="bg-[#1f2a38] px-4 py-2 rounded-lg shadow text-center">
-              Player 1<br/>vs<br/>Player 2
-            </div>
-            <div className="bg-[#1f2a38] px-4 py-2 rounded-lg shadow text-center">
-              Player 3<br/>vs<br/>Player 4
-            </div>
-            <div className="bg-[#1f2a38] px-4 py-2 rounded-lg shadow text-center">
-              Player 5<br/>vs<br/>Player 6
-            </div>
-            <div className="bg-[#1f2a38] px-4 py-2 rounded-lg shadow text-center">
-              Player 7<br/>vs<br/>Player 8
-            </div>
-          </div>
+          {generateTournamentTree(gameInfos.players).map((round, roundIndex) => (
+            <div key={roundIndex} className="flex justify-center items-center gap-8 mt-6">
+              {round.map((_, matchIndex) => {
+                const label =
+                  roundIndex === 0 ? `Player ${matchIndex * 2 + 1} vs Player ${matchIndex * 2 + 2}` : roundIndex === generateTournamentTree(gameInfos.players).length - 1
+                      ? `🏆 Finale : Winner SF${matchIndex * 2 + 1} vs Winner SF${matchIndex * 2 + 2}` : `Winner M${matchIndex * 2 + 1} vs Winner M${matchIndex * 2 + 2}`;
 
-          <div className="flex justify-center gap-24 mt-6">
-            <div className="bg-[#334155] px-4 py-2 rounded-md shadow text-center">
-              Winner M1<br/>vs<br/>Winner M2
-            </div>
-            <div className="bg-[#334155] px-4 py-2 rounded-md shadow text-center">
-              Winner M3<br/>vs<br/>Winner M4
-            </div>
-          </div>
+                const bgColor =
+                  roundIndex === 0
+                    ? 'bg-[#1f2a38]'
+                    : roundIndex === generateTournamentTree(gameInfos.players).length - 1
+                      ? 'bg-[#475569] text-[#f7c80e] font-semibold'
+                      : 'bg-[#334155]';
 
-          <div className="flex justify-center mt-6">
+                return (
+                  <div key={matchIndex} className={`${bgColor} px-4 py-2 rounded-md shadow text-center`}>
+                    {label.split(' vs ').map((line, i) => (
+                      <React.Fragment key={i}>
+                        {line}
+                        {i === 0 && <br />}
+                        {i === 0 && 'vs'}
+                        {i === 0 && <br />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {/* <div className="flex justify-center mt-6">
             <div className="bg-[#475569] px-6 py-3 rounded-md shadow-lg text-center font-semibold text-[#f7c80e]">
               🏆 Finale : Winner SF1 vs Winner SF2
             </div>
-          </div>
+          </div> */}
         </div>
         {canStart && (
           <div className="flex justify-center mt-6">
