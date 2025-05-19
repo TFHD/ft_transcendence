@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckToken } from '../components/CheckConnection';
 import {BABYLON, GUI, LOADERS} from '../components/babylonImports'
 
-const host = import.meta.env.VITE_ADDRESS;
+const host = window.location.hostname;
 
 const BabylonScene = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

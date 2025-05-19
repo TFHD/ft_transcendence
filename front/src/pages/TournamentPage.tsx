@@ -4,7 +4,7 @@ import { CheckToken } from '../components/CheckConnection';
 import axios from 'axios';
 import { connectSocket, closeSocket } from '../components/SocketTournamentManager';
 
-const host = import.meta.env.VITE_ADDRESS;
+const host = window.location.hostname;
 
 const TournamentPage = () => {
 

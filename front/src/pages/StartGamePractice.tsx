@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
 import axios from 'axios';
 
-const host = import.meta.env.VITE_ADDRESS;
+const host = window.location.hostname;
 
 interface IAOption {
   name: string;

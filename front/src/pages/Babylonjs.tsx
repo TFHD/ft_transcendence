@@ -11,11 +11,11 @@ const BabylonPage = () => {
   const canvasRef             = useRef<HTMLCanvasElement | null>(null);
   const wsRef                 = useRef<WebSocket | null>(null);
   let [username, setUsername] = useState("default");
-	const host                  = import.meta.env.VITE_ADDRESS;
+	const host                  = window.location.hostname;
   const navigate              = useNavigate();
   const location              = useLocation();
-  const fromStartGame         = location.state?.fromStartGame;
-  const roomID                = location.state?.roomID;
+  let fromStartGame         = location.state?.fromStartGame;
+  let roomID                = location.state?.roomID;
   const isTournament          = location.state?.isTournament;
   const gameMode              = window.location.pathname.split("/")[2];
   let   canAcessgame          = false;
@@ -316,14 +316,12 @@ const BabylonPage = () => {
 
       if (!ws)
       {
+        console.log(isTournament);
           ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&isTournament=${isTournament}`);
           wsRef.current = ws;
       }
 
-      ws.onopen = () =>
-      {
-          console.log('Successfully connected to server');
-      };
+      ws.onopen = () => { console.log('Successfully connected to server'); };
 
       ws.onmessage = (message) =>
       {
@@ -377,7 +375,9 @@ const BabylonPage = () => {
           window.removeEventListener("keyup", handleKeyUp);
           if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN)
             wsRef.current.close(1000, "Page quittée");
-        };
+          roomID = undefined;
+          fromStartGame = undefined;
+      };
     }
   }, [username]);
 

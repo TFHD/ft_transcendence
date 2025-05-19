@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckToken } from "../components/CheckConnection";
 
-const host = import.meta.env.VITE_ADDRESS;
+const host = window.location.hostname;
 
 type User = {
   user_id: string;

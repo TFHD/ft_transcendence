@@ -4,7 +4,7 @@ import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnecti
 import { useNavigate } from 'react-router-dom';
 import Modal2FA from '../components/Model2FA'
 
-const host = import.meta.env.VITE_ADDRESS;
+const host = window.location.hostname;
 
 const PlayerSettingsPage = () => {
 

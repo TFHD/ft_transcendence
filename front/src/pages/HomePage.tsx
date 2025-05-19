@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
 import Modal2FA from '../components/Model2FA'
+import GoogleLoginButton from "../components/GoogleButton.tsx";
 
-const host = import.meta.env.VITE_ADDRESS;
+const host = window.location.hostname;
 
 const HomePage = () => {
 
@@ -150,6 +151,7 @@ const HomePage = () => {
         >
           Se connecter
         </button>
+      <GoogleLoginButton/>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-300">
