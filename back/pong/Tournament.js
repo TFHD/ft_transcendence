@@ -28,6 +28,7 @@ class   TournamentRoom
         this.match = 1;
         this.round = 1;
         this.state = "En attente";
+        this.nuked = false;
     }
 }
 
@@ -112,7 +113,7 @@ async function sendInformations(tournamentID)
 {
     let currentTournament   = tournamentRooms.get(tournamentID);
     let game                = await getGameByGameId(tournamentID);
-    while (currentTournament.state != "Finish" && game && currentTournament)
+    while (game && currentTournament && currentTournament.state != "Finish")
     {
         sendAll(tournamentID, {
             id : tournamentID,
@@ -194,11 +195,12 @@ async function finishMatch(tournamentID, matchPlayed)
             currentTournament.match = 1;
             if (currentTournament.round > Math.sqrt(currentTournament.users.size))
             {
-                console.log("Finish !");
+                console.log("Finished tournament!");
                 currentTournament.state = "Finish";
             }
             else
             {
+                console.log("Finished game");
                 await generateMatches(tournamentID);
                 LetsPlay(tournamentID);
             }
@@ -274,15 +276,16 @@ async function checkCanPlay(tournamentID, socket)
 async function canFinish(tournamentID, matchPlayed, round, socket)
 {
     const currentTournament = tournamentRooms.get(tournamentID);
+    const currentMatch = await getMatchByMatchRound(tournamentID, matchPlayed, round);
 
-    if (!currentTournament.finish_match.has("" + matchPlayed + round))
+    console.log(`${userInfos.get(socket).username} SAID THEY FINISHED PLAYING`)
+    if (currentMatch.winner_id != 0)
     {
-        currentTournament.finish_match.set("" + matchPlayed + round, socket);
-        return false;
+        console.log('YAY CAN FINISH THE MATCH, SPIT ON THAT THING')
+        return (true)
     }
-    else if (currentTournament.finish_match.has("" + matchPlayed + round) && currentTournament.finish_match.get("" + matchPlayed + round) != socket)
-        return true;
-    return false;
+    console.log('CANT FINISH MATCH GROS CACA PUTE TA MERE')
+    return (false)
 }
 
 async function joinTournament(socket, tournamentID)
@@ -290,8 +293,22 @@ async function joinTournament(socket, tournamentID)
     const   currentUser         = userInfos.get(socket);
     let     currentTournament   = tournamentRooms.get(currentUser.tournamentID);
 
+    console.log(`NEW JOIN: ${currentUser.username}`)
+    if (currentUser.username == "0" || currentUser.username == 0)
+    {
+        console.log(`ILLEGAL USERNAME (${currentUser.username})`)
+        socket.send(JSON.stringify({stop : true}));
+        return ;
+    }
     if (currentTournament)
     {
+        for (const [socket, user] of currentTournament.users)
+            if (user.username == currentUser.username)
+            {
+                socket.send(JSON.stringify({stop: true}));
+                console.log(`USERNAME ALREADY USED IN ROOM (${currentUser.username})`); // A PACKET SHOULD BE SENT THE THE USER SO HE GOES BACK TO THE PREVIOUS PAGE AND CLOSES HIS WS
+                return ;
+            }
         currentTournament.users.set(socket, currentUser);
         await updatePlayer(tournamentID, 1);         
     }
@@ -305,8 +322,7 @@ async function joinTournament(socket, tournamentID)
         sendInformations(tournamentID);
     }
     else
-        console.log('What happened there bro');
-    console.log("--------------------------");
+        ;
 }
 
 export function tournament(connection, req)
@@ -315,10 +331,8 @@ export function tournament(connection, req)
     const username      = req.query?.username;
     const tournamentID  = req.query?.tournamentID;
 
-    console.log("--------------------------\n");
     if (!userInfos.has(socket))
     {
-        console.log('Adding new user to set');
         userInfos.set(socket, new PlayerInfo(username, tournamentID));
         joinTournament(socket, tournamentID);
     }
@@ -371,15 +385,17 @@ export function tournament(connection, req)
     {
         let currentUser = userInfos.get(socket);
         let currentTournament = tournamentRooms.get(currentUser.tournamentID);
-        if (currentTournament.state != "En cours")
+        if (currentTournament != undefined)
         {
-            console.log("--------------------------");
-            if (currentTournament)
+            if (currentTournament.state == "En cours" && !currentTournament.nuked)
             {
-                currentTournament.users.delete(socket);
-                updatePlayer(currentUser.tournamentID, -1);
-                console.log('client leave the room');
-            }
+                console.log("NUKE THE ROOM!");
+                sendAll(currentUser.tournamentID, { stop : true });
+                currentTournament.nuked = true;
+            }                
+            currentTournament.users.delete(socket);
+            updatePlayer(currentUser.tournamentID, -1);
+            console.log('client leave the room');
             if (currentTournament.users.size === 0)
             {
                 tournamentRooms.delete(currentUser.tournamentID);
@@ -392,9 +408,8 @@ export function tournament(connection, req)
                 if (socket && user)
                     user.isOP = true;
             }
-            userInfos.delete(socket);
-            console.log('goodbye client');
-            console.log("--------------------------");
         }
+        console.log(`GOODBYE IN TOURNAMENT ${userInfos.get(socket).username}`)
+        userInfos.delete(socket);
     })
 }
