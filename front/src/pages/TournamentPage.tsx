@@ -61,6 +61,11 @@ const TournamentPage = () => {
         navigate("/pong/duo", { state: { fromStartGame: true, username : username, match : matchToPlay, round: roundToPlay,
                                 roomID : server_packet.roomID, game_id : server_packet.game_id, isTournament : true }});
       }
+      if (server_packet.stop)
+      {
+        ws.close();
+        navigate("/lobby");
+      }
     };
 
     ws.onopen = () => { console.log('Successfully connected to server'); };

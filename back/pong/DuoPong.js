@@ -51,7 +51,7 @@ class	Room
 {
 	constructor()
 	{
-		console.log('created a new room');
+		// console.log('created a new room');
 		this.player1socket = null;
 		this.player2socket = null;
 		this.game = new Game();
@@ -105,9 +105,8 @@ async function setWinner(room, dataTournament)
 			winner = currentGame.player2;
 			looser = currentGame.player1;
 		}
-		if (dataTournament.isTournament != undefined)
+		if (dataTournament.isTournament != "undefined")
 		{
-			console.log("================> ici");
 			const match = await getMatchByMatchRound(dataTournament.game_id, dataTournament.match, dataTournament.round);
 			if (match)
 			{
@@ -283,7 +282,7 @@ async function startRoom(roomID, dataTournament)
 		room.player1socket.send(JSON.stringify({ shouldStop: true}));
 	if (room.player2socket)
 		room.player2socket.send(JSON.stringify({ shouldStop: true}));
-	console.log('Stopped game');
+	// console.log('Stopped game');
 	rooms.delete(roomID);
 }
 
@@ -291,16 +290,17 @@ function	register_user(socket, username)
 {
 	if (!userInfos.has(socket))
 	{
-		console.log('New user, saving socket info');
+		// console.log('New user, saving socket info');
 		if (username)
 		{
 			userInfos.set(socket, new PlayerInfo());
 			userInfos.get(socket).username = username;
-			console.log(`USER USERNAME: ${userInfos.get(socket).username}`);
+			// console.log(`USER USERNAME: ${userInfos.get(socket).username}`);
 		}
 	}
 	else
-		console.log('Old user, doing nothing');	
+		;
+		// console.log('Old user, doing nothing');	
 }
 
 function addUserToRoom(socket, roomID, username, dataTournament)
@@ -315,19 +315,20 @@ function addUserToRoom(socket, roomID, username, dataTournament)
 			room.player1socket = socket;
 		else if (room.player2socket == null && userInfos.get(room.player1socket).username != username)
 		{
-			console.log('added user2 in the room');
+			// console.log('added user2 in the room');
 			room.player2socket = socket;
 			room.game.player2.username = username;
 			startRoom(roomID, dataTournament);
 		}
 		else
-			console.log('erm, room is full boi');
+			;
+			// console.log('erm, room is full boi');
 	}
 	else
 	{
 		rooms.set(roomID, new Room());
 		room = rooms.get(roomID);
-		console.log('added user1 in the room');
+		// console.log('added user1 in the room');
 		room.player1socket = socket;
 		room.game.player1.username = username;
 	}
@@ -351,13 +352,14 @@ export function	duoPong(connection, req)
 	const roomID = req.query?.roomID;
 	if (roomID != "undefined" && roomID != null)
 	{
-		console.log(roomID);
+		// console.log(roomID);
 		addUserToRoom(socket, roomID, username, dataTournament);
 	}
 	currentPlayerInfo = userInfos.get(socket);
 	currentRoom = rooms.get(currentPlayerInfo.roomID);
 	if (!currentRoom)
-		console.log('User hasn\'t given a roomID yet');
+		;
+		// console.log('User hasn\'t given a roomID yet');
 
 	socket.on('message', message =>
 	{
@@ -380,12 +382,15 @@ export function	duoPong(connection, req)
 					player.DownInput = packet.state;
 			}
 			else if (currentRoom && !currentRoom.player2socket)
-				console.log('You are alone in this room');
+				;
+				// console.log('You are alone in this room');
 			else
-				console.log('erm... You are not in a room lil bro');
+				;
+				// console.log('erm... You are not in a room lil bro');
 		}
 		else
-			console.log('erm... You are not in a room lil bro');
+			;
+			// console.log('erm... You are not in a room lil bro');
 	})
 
 	socket.on('close', () =>
@@ -399,7 +404,7 @@ export function	duoPong(connection, req)
 				currentRoom.player2socket = null;
 			currentRoom.game.shouldStop = true;
 		}
+		console.log(`GOODBYE (IN DUOPONG)${userInfos.get(socket).username}`);
 		userInfos.delete(socket);
-		console.log('goodbye client');
 	})
 }
