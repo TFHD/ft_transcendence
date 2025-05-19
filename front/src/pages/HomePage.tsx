@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
 import Modal2FA from '../components/Model2FA'
-import GoogleLoginButton from "../components/GoogleButton.tsx";
+import GoogleLoginButton from "../components/GoogleButton";
 
 const host = window.location.hostname;
 
