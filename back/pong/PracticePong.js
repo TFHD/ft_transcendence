@@ -39,6 +39,7 @@ export class	Game
 		this.shouldStop				= false;
 
 		this.AITargetY				= 0;
+		this.AIMode					= 1;
 	}
 }
 
@@ -212,6 +213,7 @@ export function	practicePong(connection, req)
 {
 	const socket = connection;
 	const username = req.query?.username;
+	const mode = req.query?.mode;
 
 	if (!userSockets.has(socket))
 	{
@@ -219,6 +221,7 @@ export function	practicePong(connection, req)
 		userSockets.add(socket);
 		userGames.set(socket, new Game());
 		userGames.get(socket).player1.name = username;
+		userGames.get(socket).AIMode = mode;
 		SoloPongGame(socket);
 	}
 

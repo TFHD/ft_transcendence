@@ -140,7 +140,7 @@ function	calcBallHit(currentGame)
 	return (tempGame.ball.position.y);
 }
 
-async function UpdateAI(currentGame)
+async function UpdateAI(currentGame, mode)
 {
 	while (!currentGame.shouldStop)
 	{
@@ -151,14 +151,17 @@ async function UpdateAI(currentGame)
         else
             currentGame.AITargetY += 1;
 
-		await mssleep(1000);
+        if (mode === 1)
+		    await mssleep(1000);
+        if (mode === 2)
+		    await mssleep(16);
 	}
 	console.log('Stopped AI ballpos checker');
 }
 
 export async function AILogic(currentGame)
 {
-	UpdateAI(currentGame); //Updates AI's infos on the game every second (async)
+	UpdateAI(currentGame, currentGame.AIMode); //Updates AI's infos on the game every second (async)
 
 	while (!currentGame.shouldStop)
 	{
