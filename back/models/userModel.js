@@ -30,7 +30,7 @@ export const findUserByGoogleId = async (googleId) => {
 };
 
 export const findUserById = async (id) => {
-	return await db.get('SELECT * FROM users WHERE id = ?', id);
+	return await db.get('SELECT * FROM users WHERE user_id = ?', id);
 };
 
 export function generateRandomUserID() {
@@ -77,12 +77,12 @@ export const updateUser = async (id, fields) => {
 
 export async function updateMultiplayerStats(username) {
 	const winResult = await db.get(
-		'SELECT COUNT(*) AS winCount FROM history WHERE winner_username = ?',
+		'SELECT COUNT(*) AS winCount FROM history WHERE winner_username = ? AND equality = 0',
 		username
 	);
 
 	const loseResult = await db.get(
-		'SELECT COUNT(*) AS loseCount FROM history WHERE looser_username = ?',
+		'SELECT COUNT(*) AS loseCount FROM history WHERE looser_username = ? AND equality = 0',
 		username
 	);
 

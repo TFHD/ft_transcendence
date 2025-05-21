@@ -1,6 +1,6 @@
 
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
-import { findUserByUsername, updateUser, updateMultiplayerStats } from "../models/userModel.js";
+import { findUserByUsername, updateUser, updateMultiplayerStats, findUserById } from "../models/userModel.js";
 import { createHistory } from "../models/historyModel.js";
 import { setMatchWinner, getMatchByMatchRound, setScoreByMatchRound } from "../models/tournamentModel.js"
 
@@ -21,6 +21,7 @@ class	Player
 		this.y			= 0;
 		this.score		= 0;
 		this.username	= null;
+		this.player_id	= null;
 	}
 }
 
@@ -51,7 +52,7 @@ class	Room
 {
 	constructor()
 	{
-		// console.log('created a new room');
+		console.log('created a new room');
 		this.player1socket = null;
 		this.player2socket = null;
 		this.game = new Game();
@@ -85,6 +86,9 @@ let rightPaddle = { position: Vector3(20, 0, 0) };
 
 async function setWinner(room, dataTournament)
 {
+	let equality = 0;
+	let user_win = null;
+	let user_loose = null;
 	try
 	{
 		let currentGame = room.game;
@@ -105,7 +109,9 @@ async function setWinner(room, dataTournament)
 			winner = currentGame.player2;
 			looser = currentGame.player1;
 		}
-		if (dataTournament.isTournament != "undefined")
+		if (currentGame.player1.score === currentGame.player2.score)
+			equality = 1;
+		if (dataTournament.isTournament != 'undefined')
 		{
 			const match = await getMatchByMatchRound(dataTournament.game_id, dataTournament.match, dataTournament.round);
 			if (match)
@@ -116,19 +122,22 @@ async function setWinner(room, dataTournament)
 				else
 					await setScoreByMatchRound(match.game_id, match.match, match.round, currentGame.player2.score, currentGame.player1.score);
 			}
+				user_win = await findUserById(winner.player_id);
+				user_loose = await findUserById(looser.player_id);
+				await updateUser(user_win.user_id, {last_opponent: looser.username});
+				await updateUser(user_loose.user_id, {last_opponent: winner.username});
+				await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, equality, "tournament", 0);
 		}
 		else
 		{
-			const user_win = await findUserByUsername(currentGame.winner);
-			const user_loose = await findUserByUsername(currentGame.looser);
-			if (currentGame.player1.score === currentGame.player2.score)
-				user_win.username = "";
+			user_win = await findUserByUsername(currentGame.winner);
+			user_loose = await findUserByUsername(currentGame.looser);
 			await updateUser(user_win.user_id, {last_opponent: user_loose.username});
 			await updateUser(user_loose.user_id, {last_opponent: user_win.username});
-			await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, "duo", 0);
-			await updateMultiplayerStats(user_win.username);
-			await updateMultiplayerStats(user_loose.username);
+			await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, equality, "duo", 0);
 		}
+		await updateMultiplayerStats(user_win.username);
+		await updateMultiplayerStats(user_loose.username);
 	}
 	catch (e)
 	{
@@ -282,7 +291,7 @@ async function startRoom(roomID, dataTournament)
 		room.player1socket.send(JSON.stringify({ shouldStop: true}));
 	if (room.player2socket)
 		room.player2socket.send(JSON.stringify({ shouldStop: true}));
-	// console.log('Stopped game');
+	console.log('Stopped game');
 	rooms.delete(roomID);
 }
 
@@ -290,17 +299,16 @@ function	register_user(socket, username)
 {
 	if (!userInfos.has(socket))
 	{
-		// console.log('New user, saving socket info');
+		console.log('New user, saving socket info');
 		if (username)
 		{
 			userInfos.set(socket, new PlayerInfo());
 			userInfos.get(socket).username = username;
-			// console.log(`USER USERNAME: ${userInfos.get(socket).username}`);
+			console.log(`USER USERNAME: ${userInfos.get(socket).username}`);
 		}
 	}
 	else
-		;
-		// console.log('Old user, doing nothing');	
+		console.log('Old user, doing nothing');	
 }
 
 function addUserToRoom(socket, roomID, username, dataTournament)
@@ -315,22 +323,25 @@ function addUserToRoom(socket, roomID, username, dataTournament)
 			room.player1socket = socket;
 		else if (room.player2socket == null && userInfos.get(room.player1socket).username != username)
 		{
-			// console.log('added user2 in the room');
+			console.log('added user2 in the room');
 			room.player2socket = socket;
 			room.game.player2.username = username;
+			if (dataTournament.isTournament != 'undefined')
+				room.game.player2.player_id = dataTournament.user_id;
 			startRoom(roomID, dataTournament);
 		}
 		else
-			;
-			// console.log('erm, room is full boi');
+			console.log('erm, room is full boi');
 	}
 	else
 	{
 		rooms.set(roomID, new Room());
 		room = rooms.get(roomID);
-		// console.log('added user1 in the room');
+		console.log('added user1 in the room');
 		room.player1socket = socket;
 		room.game.player1.username = username;
+		if (dataTournament.isTournament != 'undefined')
+			room.game.player1.player_id = dataTournament.user_id;
 	}
 }
 
@@ -342,7 +353,8 @@ export function	duoPong(connection, req)
 		match : req.query?.match,
 		round : req.query?.round,
 		game_id : req.query?.game_id,
-		isTournament : req.query?.isTournament
+		isTournament : req.query?.isTournament,
+		user_id : req.query?.user_id
 	}
 
 	register_user(socket, username);
@@ -352,14 +364,13 @@ export function	duoPong(connection, req)
 	const roomID = req.query?.roomID;
 	if (roomID != "undefined" && roomID != null)
 	{
-		// console.log(roomID);
+		console.log(roomID);
 		addUserToRoom(socket, roomID, username, dataTournament);
 	}
 	currentPlayerInfo = userInfos.get(socket);
 	currentRoom = rooms.get(currentPlayerInfo.roomID);
 	if (!currentRoom)
-		;
-		// console.log('User hasn\'t given a roomID yet');
+		console.log('User hasn\'t given a roomID yet');
 
 	socket.on('message', message =>
 	{
@@ -382,15 +393,12 @@ export function	duoPong(connection, req)
 					player.DownInput = packet.state;
 			}
 			else if (currentRoom && !currentRoom.player2socket)
-				;
-				// console.log('You are alone in this room');
+				console.log('You are alone in this room');
 			else
-				;
-				// console.log('erm... You are not in a room lil bro');
+				console.log('erm... You are not in a room lil bro');
 		}
 		else
-			;
-			// console.log('erm... You are not in a room lil bro');
+			console.log('erm... You are not in a room lil bro');
 	})
 
 	socket.on('close', () =>
@@ -404,7 +412,7 @@ export function	duoPong(connection, req)
 				currentRoom.player2socket = null;
 			currentRoom.game.shouldStop = true;
 		}
-		console.log(`GOODBYE (IN DUOPONG)${userInfos.get(socket).username}`);
 		userInfos.delete(socket);
+		console.log('goodbye client');
 	})
 }

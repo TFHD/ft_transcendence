@@ -1,6 +1,6 @@
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom, isPowerOfTwo } from "./Utils.js"
 import { createGame, getGameByGameId, updateGame, deleteGame } from "../models/gameModels.js"
-import { createMatch, setMatchWinner, getMatchByMatchRound, changeNextvalue, getMatchByNextMatchRound, getMatchesByRound } from "../models/tournamentModel.js"
+import { createMatch, getMatchByMatchRound, changeNextvalue, getMatchByNextMatchRound, getMatchesByRound, deleteTournamentMatches } from "../models/tournamentModel.js"
 
 class   PlayerInfo
 {
@@ -52,7 +52,7 @@ async function setNextInfosIntoDB(tournamentID, match, round, next_match, next_r
 
 async function deleteTournament(tournamentID)
 {
-    try { await deleteGame(tournamentID); }
+    try { await deleteGame(tournamentID); await deleteTournamentMatches(tournamentID); }
     catch (e) { console.log(e); } 
 }
 
@@ -226,8 +226,10 @@ async function LetsPlay(tournamentID)
             {
                 user1 = match.p1_displayname;
                 user2 = match.p2_displayname;
-                getSocketByUserName(tournamentID, user1).send(JSON.stringify(data));
-                getSocketByUserName(tournamentID, user2).send(JSON.stringify(data));
+                if (user1 && user2) {
+                    getSocketByUserName(tournamentID, user1).send(JSON.stringify(data));
+                    getSocketByUserName(tournamentID, user2).send(JSON.stringify(data));
+                }
             }
         }
     }
@@ -244,8 +246,10 @@ async function LetsPlay(tournamentID)
                     if (!user1) user1 = the_match.winner_id;
                     else user2 = the_match.winner_id;
                 }
-                getSocketByUserName(tournamentID, user1).send(JSON.stringify(data));
-                getSocketByUserName(tournamentID, user2).send(JSON.stringify(data));
+                if (user1 && user2) {
+                    getSocketByUserName(tournamentID, user1).send(JSON.stringify(data));
+                    getSocketByUserName(tournamentID, user2).send(JSON.stringify(data));
+                }
             }
         }
     }

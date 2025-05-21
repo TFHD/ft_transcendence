@@ -109,8 +109,8 @@ export async function getUserFromId(req, res) {
 			const user = req.user;
 			if (!user)
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-			const sesssion = req.session;
-			if (!sesssion)
+			const session = req.session;
+			if (!session)
 				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 			return res.status(200).send({
 				id: user.user_id,
@@ -127,15 +127,13 @@ export async function getUserFromId(req, res) {
 				last_opponent: user.last_opponent,
 				twofa_enabled: user.twofa_enabled,
 				avatar_url : user.avatar_url,
-				last_seen: sesssion.last_seen
+				last_seen: session.last_seen
 			});
 		} else {
 			const user = await findUserByUserId(id);
 			if (!user)
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-			const sesssion = await getSessionByUserId(id);
-			if (!sesssion)
-				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+			const session = await getSessionByUserId(id);
 			return res.status(200).send({
 				id: user.user_id,
 				username: user.username,
@@ -151,7 +149,7 @@ export async function getUserFromId(req, res) {
 				last_opponent: user.last_opponent,
 				twofa_enabled: user.twofa_enabled,
 				avatar_url : user.avatar_url,
-				last_seen: sesssion.last_seen
+				last_seen: session ? session.last_seen : null
 			});
 		};
 	} catch (error) {

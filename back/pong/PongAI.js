@@ -151,9 +151,9 @@ async function UpdateAI(currentGame, mode)
         else
             currentGame.AITargetY += 1;
 
-        if (mode === 1)
+        if (mode === 0)
 		    await mssleep(1000);
-        if (mode === 2)
+        if (mode === 1)
 		    await mssleep(16);
 	}
 	console.log('Stopped AI ballpos checker');

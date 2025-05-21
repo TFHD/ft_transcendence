@@ -40,9 +40,7 @@ const StartGamePractice = () => {
     }, []);
 
   const [options, setOptions] = useState<IAOption[]>([
-    { name: 'Mode difficile', isActive: false },
-    { name: 'Utiliser la stratégie avancée', isActive: true },
-    { name: 'Mode aléatoire', isActive: false }
+    { name: 'Mode difficile', isActive: false }
   ]);
 
   const handleToggle = (index: number) => {
@@ -52,7 +50,7 @@ const StartGamePractice = () => {
   };
 
   const handleValidate = () => {
-    navigate(`/pong/practice`, { state: { fromStartGame: true, gameMode : "practice" } });
+    navigate(`/pong/practice`, { state: { fromStartGame: true, gameMode : "practice", mode : options[0].isActive } });
   };
 
   return (

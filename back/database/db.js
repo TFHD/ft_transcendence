@@ -38,8 +38,20 @@ await db.exec(`
 		looser_username TEXT NOT NULL,
 		winner_score INTEGER DEFAULT 0,
 		looser_score INTEGER DEFAULT 0,
+		equality INTEGER DEFAULT 0,
 		game_mode TEXT DEFAULT NULL,
 		time TEXT DEFAULT NULL
+	);
+`);
+
+await db.exec(`
+	CREATE TABLE IF NOT EXISTS friends (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user1_id INTEGER NOT NULL,
+		user2_id INTEGER NOT NULL,
+		sender INTEGER NOT NULL,
+		ask_to INTEGER NOT NULL,
+		is_friend INTEGER NOT NULL
 	);
 `);
 

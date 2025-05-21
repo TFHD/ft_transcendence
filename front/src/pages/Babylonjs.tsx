@@ -2,7 +2,7 @@ import React from 'react';
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from 'react-router-dom'
 import {BABYLON, GUI, LOADERS} from '../components/babylonImports'
-import { CheckToken, getUsername } from '../components/CheckConnection'
+import { CheckToken, getUsername, getId } from '../components/CheckConnection'
 
 let ws:WebSocket | null = null;
 
@@ -14,11 +14,13 @@ const BabylonPage = () => {
 	const host                  = window.location.hostname;
   const navigate              = useNavigate();
   const location              = useLocation();
-  let fromStartGame         = location.state?.fromStartGame;
-  let roomID                = location.state?.roomID;
+  let fromStartGame           = location.state?.fromStartGame;
+  let roomID                  = location.state?.roomID;
   const isTournament          = location.state?.isTournament;
+  const mode                  = location.state?.mode;
   const gameMode              = window.location.pathname.split("/")[2];
   let   canAcessgame          = false;
+  let   user_id               = undefined;
   let   explosionX            = undefined;
   let   explosionY            = undefined;
   let   endGame               = undefined;
@@ -26,7 +28,7 @@ const BabylonPage = () => {
 		username : location.state?.username,
 		match : location.state?.match,
 		round : location.state?.round,
-    game_id :location.state?.game_id
+    game_id :location.state?.game_id,
 	}
 
   useEffect(() => {
@@ -37,6 +39,7 @@ const BabylonPage = () => {
         setUsername(res);
       });
     }
+    getId().then(res => {user_id = res;});
   }, []);
 
   useEffect(() => {
@@ -314,59 +317,61 @@ const BabylonPage = () => {
       //   ####################################################   WEBSOCKET   ####################################################
       //   #######################################################################################################################
 
-      if (!ws)
-      {
-        console.log(isTournament);
-          ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&isTournament=${isTournament}`);
-          wsRef.current = ws;
-      }
-
-      ws.onopen = () => { console.log('Successfully connected to server'); };
-
-      ws.onmessage = (message) =>
-      {
-        const server_packet = JSON.parse(message.data);
-
-        rightPaddle.position.y = server_packet.player2Y;
-        leftPaddle.position.y = server_packet.player1Y;
-        ball.position.x = server_packet.ballX;
-        ball.position.y = server_packet.ballY;
-        Player1Score.text = server_packet.player1Score + "";
-        Player2Score.text = server_packet.player2Score + "";
-        if (Player1Name.text == "Player1")
-          Player1Name.text = server_packet.player1Name + "";
-        if (Player2Name.text == "Player2")
-          Player2Name.text = server_packet.player2Name + "";
-        explosionX = server_packet.explosionX;
-        explosionY = server_packet.explosionY;
-        endGame = server_packet.shouldStop;
-
-        if (Status = ENUM_STATUS.pause)
-          changeGameVisual();
-
-        if (endGame)
+      getId().then(res => {
+        if (!ws)
         {
-          if (dataTournament.username != undefined)
-            navigate(`/tournament/${dataTournament.game_id}`, { state : {fromStartGame : true, finish : true, roomID : dataTournament.game_id, username : username, matchPlayed : dataTournament.match , roundPlayed : dataTournament.round}});
-          else
-            navigate(-1);
+            user_id = res;
+            ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&isTournament=${isTournament}&user_id=${user_id}&mode=${mode}`);
+            wsRef.current = ws;
         }
 
-        createExplosion(ball.position, {r1 : 0, g1 : 1, b1 : 0}, {r2 : 0, g2 : 1, b2 : 0}, 0.5, 2, 0.1, 0.2, 200);
-        if (explosionX  != undefined && explosionY != undefined)
-          createExplosion(new BABYLON.Vector3(explosionX, explosionY, 0), {r1 : 1, g1 : 0, b1 : 0}, {r2 : 1, g2 : 0.1, b2 : 0.1}, 10, 20, 1, 5, 700);
-      };
+        ws.onopen = () => { console.log('Successfully connected to server'); };
 
-      ws.onclose = (event) =>
-      {
-        console.log('Disconnected from server', event.code, event.reason);
-        ws = null;
-      };
+        ws.onmessage = (message) =>
+        {
+          const server_packet = JSON.parse(message.data);
 
-      ws.onerror = (e) =>
-      {
-        console.log('Connection error', e);
-      };
+          rightPaddle.position.y = server_packet.player2Y;
+          leftPaddle.position.y = server_packet.player1Y;
+          ball.position.x = server_packet.ballX;
+          ball.position.y = server_packet.ballY;
+          Player1Score.text = server_packet.player1Score + "";
+          Player2Score.text = server_packet.player2Score + "";
+          if (Player1Name.text == "Player1")
+            Player1Name.text = server_packet.player1Name + "";
+          if (Player2Name.text == "Player2")
+            Player2Name.text = server_packet.player2Name + "";
+          explosionX = server_packet.explosionX;
+          explosionY = server_packet.explosionY;
+          endGame = server_packet.shouldStop;
+
+          if (Status = ENUM_STATUS.pause)
+            changeGameVisual();
+
+          if (endGame)
+          {
+            if (dataTournament.username != undefined)
+              navigate(`/tournament/${dataTournament.game_id}`, { state : {fromStartGame : true, finish : true, roomID : dataTournament.game_id, username : username, matchPlayed : dataTournament.match , roundPlayed : dataTournament.round}});
+            else
+              navigate(-1);
+          }
+
+          createExplosion(ball.position, {r1 : 0, g1 : 1, b1 : 0}, {r2 : 0, g2 : 1, b2 : 0}, 0.5, 2, 0.1, 0.2, 200);
+          if (explosionX  != undefined && explosionY != undefined)
+            createExplosion(new BABYLON.Vector3(explosionX, explosionY, 0), {r1 : 1, g1 : 0, b1 : 0}, {r2 : 1, g2 : 0.1, b2 : 0.1}, 10, 20, 1, 5, 700);
+        };
+
+        ws.onclose = (event) =>
+        {
+          console.log('Disconnected from server', event.code, event.reason);
+          ws = null;
+        };
+
+        ws.onerror = (e) =>
+        {
+          console.log('Connection error', e);
+        };
+      });
         return () =>
       {
           engine.dispose();

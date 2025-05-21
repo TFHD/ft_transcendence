@@ -26,7 +26,7 @@ const StartGameMultiplayer = () => {
     username: "",
     win: 0,
     losses: 0,
-    lastGameOpponent: "nobody"
+    lastGameOpponent: "nobody",
   });
 
   useEffect(() => {
@@ -48,7 +48,7 @@ const StartGameMultiplayer = () => {
           username: reponse.data.username, 
           win: reponse.data.multiplayer_win,
           losses: reponse.data.multiplayer_loose,
-          lastGameOpponent: reponse.data.last_opponent
+          lastGameOpponent: reponse.data.last_opponent,
         });
         const historyResponse = await axios.get(`https://${host}:8000/api/history/@me`, {
           withCredentials: true,
