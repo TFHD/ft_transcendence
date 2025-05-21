@@ -4,11 +4,6 @@
 
 #include <transcendence.h>
 
-CURL	*__curl_ctx	= NULL;
-TCLI	*__TCLI_ctx	= NULL;
-
-char	__TCLI_tmp[1024]	= {0};
-
 // #include <stdio.h>
 // #include <nopoll.h>
 // 
@@ -112,11 +107,6 @@ typedef enum e_cli_reqtype
 	CLI_DELETE = 4,
 }	cli_reqtype;
 
-struct resp_buf {
-    char *data;
-    size_t len;
-};
-
 void	TCLI(render)(TCLI_SceneCtx *);
 
 # define	UP_ARROW_SCAN		0x415b1b
@@ -126,16 +116,11 @@ void	TCLI(render)(TCLI_SceneCtx *);
 
 void	TCLI(loop)(void)
 {
-	static TCLI_buff	buff_cb = (TCLI_buff)
-	{
-		.data = NULL,
-		.len = 0
-	};
-    curl_easy_setopt(CURL_CTX, CURLOPT_WRITEFUNCTION, TCLI_curlCB);
-    curl_easy_setopt(CURL_CTX, CURLOPT_WRITEDATA, &buff_cb);
+    curl_easy_setopt(CURL_CTX, CURLOPT_WRITEFUNCTION, TCLI(curlCB));
+    curl_easy_setopt(CURL_CTX, CURLOPT_WRITEDATA, &TCLI_CBSTR);
 
 	TCLI_SceneCtx	*ctx	= NULL;
-	TCLI_SCENE				= &TCLI_mainMenu;
+	TCLI_SCENE				= &TCLI(mainMenu);
 	TCLI_STATUS				|= TCLI_SCENE_SWAP;
 
 	printf("width = %u, height = %u\n", TCLI_WIDTH, TCLI_HEIGHT);
@@ -153,10 +138,10 @@ void	TCLI(loop)(void)
 
 		char	uchar[4] = {0};
 
-#if 1
-		write(STDOUT_FILENO, "\033[0;0f", 6);
-		write(STDOUT_FILENO, TCLI_SCREEN.data,
-			TCLI_SCREEN.width * TCLI_SCREEN.height * SCREEN_CHAR_SIZE);
+#if 0
+		write(STDERR_FILENO, "\033[0;0f", 6);
+		write(STDERR_FILENO, TCLI_SCREEN.data,
+			TCLI_SCREEN.width * TCLI_SCREEN.height * TCLI_CHAR_SIZE);
 	
 #endif
 
@@ -182,6 +167,7 @@ void	TCLI(loop)(void)
 
 #if 1
 		TCLI(handleKey)(ctx, uchar[0]);
+		TCLI(screenClear)(&TCLI_SCREEN);
 		TCLI(render)(ctx);
 #endif
 
@@ -191,13 +177,11 @@ void	TCLI(loop)(void)
 //
 // 		TCLI_STATUS &= ~TCLI_FLAG_OK;
 	}
-
-	free(buff_cb.data);
 }
 
 int main(int argc, char **argv)
 {
-	TCLI_init(argc, argv);
-	TCLI_loop();
-	TCLI_cleanup();
+	TCLI(init)(argc, argv);
+	TCLI(loop)();
+	TCLI(cleanup)();
 }
