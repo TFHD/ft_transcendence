@@ -113,10 +113,13 @@ class   Hit
     state = false;
 }
 
+const   MAX_ITER = 100000;
+
 function	calcBallHit(currentGame)
 {
 	let	tempGame = new Game();
     let hit = new Hit;
+    let iter = 0;
 
     tempGame.ball.position.x = currentGame.ball.position.x;
     tempGame.ball.position.y = currentGame.ball.position.y;
@@ -136,7 +139,10 @@ function	calcBallHit(currentGame)
 	while (hit.state === false)
     {
         updateBall(tempGame, hit);
+        if (iter++ > MAX_ITER)
+            break ;
     }
+    console.log('returning ball position')
 	return (tempGame.ball.position.y);
 }
 
@@ -151,9 +157,9 @@ async function UpdateAI(currentGame, mode)
         else
             currentGame.AITargetY += 1;
 
-        if (mode === 0)
+        if (mode === "false")
 		    await mssleep(1000);
-        if (mode === 1)
+        else
 		    await mssleep(16);
 	}
 	console.log('Stopped AI ballpos checker');
@@ -161,8 +167,9 @@ async function UpdateAI(currentGame, mode)
 
 export async function AILogic(currentGame)
 {
+    console.log('Starting AI ball checker');
 	UpdateAI(currentGame, currentGame.AIMode); //Updates AI's infos on the game every second (async)
-
+    console.log('Starting AI gameplay');
 	while (!currentGame.shouldStop)
 	{
         currentGame.player2.UpInput = false;
