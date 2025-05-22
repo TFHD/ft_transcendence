@@ -69,7 +69,7 @@ export async function manageFriendshipDelete(req, res) {
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
 			const relation = await findFriendRelation(req.user.user_id, friendId);
 			if (relation) {
-				if (relation.initiator_id === req.user.user_id)
+				if (relation.status === 'accepted' || relation.initiator_id === req.user.user_id)
 					await deleteFriendRelation(req.user.user_id, friendId);
 				else
 					return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
