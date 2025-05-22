@@ -3,6 +3,7 @@ import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Uti
 import { findUserByUsername, updateUser, updateMultiplayerStats, findUserById } from "../models/userModel.js";
 import { createHistory } from "../models/historyModel.js";
 import { setMatchWinner, getMatchByMatchRound, setScoreByMatchRound } from "../models/tournamentModel.js"
+import { authSocketMiddleware } from "../middlewares/wsMiddleware.js";
 
 const SPEED_MULTIPLIER = 1.1;
 const MAX_BALL_Y = 10;
@@ -345,8 +346,13 @@ function addUserToRoom(socket, roomID, username, dataTournament)
 	}
 }
 
-export function	duoPong(connection, req)
+export async function duoPong(connection, req)
 {
+	const sessionData = await authSocketMiddleware(req);
+	if (!sessionData) {
+		socket.close(1008, "Unauthorized");
+		return ;
+	}
 	const	socket = connection;
 	const username = req.query?.username;
 	const dataTournament = {

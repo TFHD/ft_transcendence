@@ -14,6 +14,8 @@ import userRoutes from "./routes/userRoutes.js";
 import twofaRoutes from "./routes/2faRoutes.js";
 import gameRoutes from './routes/gameRoutes.js';
 import { cookieSecret } from "./config/cookie.config.js";
+import { gatewayRoutes } from "./routes/gatewayRoutes.js";
+import { friendsRoutes } from "./routes/friendsRoutes.js";
 
 dotenv.config();
 
@@ -38,7 +40,7 @@ app.register(cors, {
 		callback(null, true);
 	},
 	credentials: true,
-	methods: ['GET', 'POST', 'PATCH', 'DELETE']
+	methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT']
 });
 
 // app.register(cors, {
@@ -55,7 +57,7 @@ app.register(cors, {
 // 			callback(new Error("Origin not allowed"), false);
 // 	},
 // 	credentials: true,
-// 	methods: ['GET', 'POST', 'PATCH', 'DELETE']
+// 	methods: ['GET', 'POST', 'PATCH', 'DELETE', PUT]
 // });
 
 app.register(websocket);
@@ -72,9 +74,11 @@ await app.register(authRoutes);
 await app.register(gameRoutes);
 await app.register(userRoutes);
 await app.register(twofaRoutes);
+await app.register(friendsRoutes);
 
 const router = (fastify) => {
 	PongWebsocket(fastify);
+	gatewayRoutes(fastify);
 };
 
 app.register(router, { prefix: '/api' });

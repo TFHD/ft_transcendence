@@ -20,6 +20,6 @@ export async function getSessionByToken(token) {
 	return await db.get('SELECT * FROM sessions WHERE token = ?', token);
 };
 
-export async function updateLastSeen(token) {
-	await db.run('UPDATE sessions SET last_seen = CURRENT_TIMESTAMP WHERE token = ?', token);
+export async function updateLastSeen(user_id) {
+	await db.run('UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE user_id = ?', user_id);
 };

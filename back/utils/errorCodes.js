@@ -89,4 +89,34 @@ export const errorCodes = Object.freeze({
 		message: 'Invalid file type. Only image files are allowed.',
 		status: 400
 	},
+	FRIENDS_ALREADY_ADDED: {
+		code: 'FRIENDS_ALREADY_ADDED',
+		type: 'validation_error',
+		message: 'You are already friends with this user.',
+		status: 409
+	},
+	FRIENDS_BLOCKED: {
+		code: 'FRIENDS_BLOCKED',
+		type: 'validation_error',
+		message: 'You have blocked this user.',
+		status: 409
+	},
+	FRIENDS_NOT_FOUND: {
+		code: 'FRIENDS_NOT_FOUND',
+		type: 'validation_error',
+		message: 'Friend not found.',
+		status: 404
+	},
+	FRIENDS_PENDING: {
+		code: 'FRIENDS_PENDING',
+		type: 'validation_error',
+		message: 'Friend request is pending.',
+		status: 409
+	},
+	INVALID_FIELDS: {
+		code: 'INVALID_FIELDS',
+		type: 'validation_error',
+		message: 'Invalid fields provided.',
+		status: 400
+	}
 });

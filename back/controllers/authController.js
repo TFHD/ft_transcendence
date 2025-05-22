@@ -15,7 +15,7 @@ export async function returnCookie(user, res) {
 	if (existingSession) {
 		const isValid = verifyToken(existingSession.token);
 		if (isValid) {
-			await updateLastSeen(existingSession.token);
+			await updateLastSeen(user.user_id);
 			return res.setCookie('token', existingSession.token, cookieOpts()).status(200).send({success : true});
 		}
 		await deleteSession(existingSession.token);

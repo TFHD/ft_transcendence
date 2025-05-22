@@ -13,8 +13,8 @@ export async function authMiddleware(req, res) {
 		const session = await getSessionByToken(token);
 		if (!session || verifyToken(token) === false)
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-		await updateLastSeen(token);
 		const user = await findUserByUserId(session.user_id);
+		await updateLastSeen(user.user_id);
 		req.session = session;
 		req.user = user;
 	} catch (error) {

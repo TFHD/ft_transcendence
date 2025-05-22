@@ -1,6 +1,7 @@
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom, isPowerOfTwo } from "./Utils.js"
 import { createGame, getGameByGameId, updateGame, deleteGame } from "../models/gameModels.js"
 import { createMatch, getMatchByMatchRound, changeNextvalue, getMatchByNextMatchRound, getMatchesByRound, deleteTournamentMatches } from "../models/tournamentModel.js"
+import { authSocketMiddleware } from "../middlewares/wsMiddleware.js";
 
 class   PlayerInfo
 {
@@ -329,8 +330,14 @@ async function joinTournament(socket, tournamentID)
         ;
 }
 
-export function tournament(connection, req)
+export async function tournament(connection, req)
 {
+	const sessionData = await authSocketMiddleware(req);
+	if (!sessionData) {
+		socket.close(1008, "Unauthorized");
+		return ;
+	}
+
     const socket        = connection;
     const username      = req.query?.username;
     const tournamentID  = req.query?.tournamentID;

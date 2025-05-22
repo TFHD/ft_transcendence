@@ -1,5 +1,6 @@
 import { parseJSON, mssleep, Vector3, addInPlace, length, copyFrom } from "./Utils.js"
 import { findUserByUsername, updateUser } from "../models/userModel.js";
+import { authSocketMiddleware } from "../middlewares/wsMiddleware.js";
 
 const	userSockets = new Set();
 //Saves all sockets to check if they already have their websocket setup
@@ -201,8 +202,13 @@ const	SoloPongGame = async (socket, username) =>
 	console.log('Stopped game');
 }
 
-export function	soloPong(connection, req)
+export async function	soloPong(connection, req)
 {
+	const sessionData = await authSocketMiddleware(req);
+	if (!sessionData) {
+		socket.close(1008, "Unauthorized");
+		return ;
+	}
 	const socket = connection;
 	const username = req.query?.username;
 

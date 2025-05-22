@@ -79,7 +79,7 @@ export async function getUsersByUsername(req, res) {
 				last_opponent: user.last_opponent,
 				twofa_enabled: user.twofa_enabled,
 				avatar_url : user.avatar_url,
-				last_seen: sesssion.last_seen
+				last_seen: user.last_seen
 			});
 		} else {
 			const users = await findUsersByPartialUsername(id);
@@ -127,17 +127,15 @@ export async function getUserFromId(req, res) {
 				last_opponent: user.last_opponent,
 				twofa_enabled: user.twofa_enabled,
 				avatar_url : user.avatar_url,
-				last_seen: session.last_seen
+				last_seen: user.last_seen
 			});
 		} else {
 			const user = await findUserByUserId(id);
 			if (!user)
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-			const session = await getSessionByUserId(id);
 			return res.status(200).send({
 				id: user.user_id,
 				username: user.username,
-				email: user.email,
 				created_at: user.created_at,
 				updated_at: user.updated_at,
 				multiplayer_win: user.multiplayer_win,
@@ -147,9 +145,8 @@ export async function getUserFromId(req, res) {
 				singleplayer_win: user.singleplayer_win,
 				singleplayer_loose: user.singleplayer_loose,
 				last_opponent: user.last_opponent,
-				twofa_enabled: user.twofa_enabled,
 				avatar_url : user.avatar_url,
-				last_seen: session ? session.last_seen : null
+				last_seen: user.last_seen
 			});
 		};
 	} catch (error) {

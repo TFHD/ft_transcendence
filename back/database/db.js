@@ -25,7 +25,8 @@ await db.exec(`
 		twofa_secret TEXT DEFAULT NULL,
 		google_id TEXT DEFAULT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 `);
 
@@ -49,12 +50,11 @@ await db.exec(`
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user1_id INTEGER NOT NULL,
 		user2_id INTEGER NOT NULL,
-		sender INTEGER NOT NULL,
-		ask_to INTEGER NOT NULL,
-		is_friend INTEGER NOT NULL
+		status TEXT NOT NULL,
+		initiator_id INTEGER NOT NULL
 	);
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_friends_pair ON friends(user1_id, user2_id);
 `);
-
 
 await db.exec(`
 	CREATE TABLE IF NOT EXISTS tournament (
@@ -72,22 +72,21 @@ await db.exec(`
 	);
 `);
 
-	await db.exec(`
-		CREATE TABLE IF NOT EXISTS games (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			game_id TEXT NOT NULL UNIQUE,
-			game_mode TEXT NOT NULL,
-			players INTEGER NOT NULL,
-			players_limit NOT NULL
-		);
-	`);
+await db.exec(`
+	CREATE TABLE IF NOT EXISTS games (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		game_id TEXT NOT NULL UNIQUE,
+		game_mode TEXT NOT NULL,
+		players INTEGER NOT NULL,
+		players_limit NOT NULL
+	);
+`);
 
 await db.exec(`
 	CREATE TABLE IF NOT EXISTS sessions (
 		user_id INTEGER PRIMARY KEY NOT NULL UNIQUE,
 		token TEXT NOT NULL UNIQUE,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 	);
 `);

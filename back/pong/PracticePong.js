@@ -153,6 +153,7 @@ function updateBall(currentGame, socket)
 }
 
 import	{ AILogic } from "./PongAI.js"
+import { authSocketMiddleware } from "../middlewares/wsMiddleware.js";
 
 const	SoloPongGame = async (socket) =>
 {
@@ -209,8 +210,13 @@ async function setWinner(currentGame)
 
 };
 
-export function	practicePong(connection, req)
+export async function	practicePong(connection, req)
 {
+	const sessionData = await authSocketMiddleware(req);
+	if (!sessionData) {
+		socket.close(1008, "Unauthorized");
+		return ;
+	}
 	const socket = connection;
 	const username = req.query?.username;
 	const mode = req.query?.mode;
