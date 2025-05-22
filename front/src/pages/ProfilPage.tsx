@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckToken, getId, IdentifyFriend } from "../components/CheckConnection";
+import { CheckToken, getId } from "../components/CheckConnection";
 import axios from 'axios';
 
 const host = window.location.hostname;
@@ -12,15 +12,14 @@ type User = {
   multiplayer_win: number;
   multiplayer_loose: number;
   last_opponent: string;
+  created_at?: string;
+  updated_at?: string;
+  last_seen?: string;
 };
 
-type FriendRequest = {
-  id: number
-  user1_id: number;
-  user2_id: number;
-  sender: number;
-  ask_to: number;
-  is_friend: number;
+type FriendRelation = {
+  type: number; // 0 = pending, 1 = accepted, 2 = blocked
+  user: User;
 };
 
 const ProfilPage = () => {
@@ -29,11 +28,10 @@ const ProfilPage = () => {
 
   const [user, setUser] = useState<User | null>(null);
   const [myID, setMyID] = useState<number>(0);
-  const [friendsList, setFriendsList] = useState<FriendRequest[]>([]);
-  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
-  const [friendUsers, setFriendUsers] = useState<{ [id: number]: User }>({});
-  const [friendRequestUsers, setFriendRequestUsernames] = useState<{ [id: number]: User }>({});
+  const [friendsList, setFriendsList] = useState<FriendRelation[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRelation[]>([]);
   const [isRequestSent, setIsRequestSent] = useState(false);
+  const [alreadyFriend, setAlreadyFriend] = useState(false);
 
   useEffect(() => {
     CheckToken().then(res => {
@@ -58,60 +56,40 @@ const ProfilPage = () => {
   }, [username, navigate]);
 
   useEffect(() => {
-    const fetchFriendRequests = async () => {
+    const fetchRelations = async () => {
+      if (!user) return;
       try {
-        const res = await axios.get(`https://${host}:8000/api/friends_request`, { withCredentials: true });
-        const requests = res.data.friends_req;
+        const res = await axios.get(
+          `https://${host}:8000/api/users/${user.id}/friends`,
+          { withCredentials: true }
+        );
+
+        const friends: FriendRelation[] = [];
+        const requests: FriendRelation[] = [];
+        res.data.forEach((relation: FriendRelation) => {
+          if (relation.type === 1) friends.push(relation);
+          else if (
+            relation.type === 0 &&
+            myID === user.id
+          ) {
+            requests.push(relation);
+          }
+        });
+        setFriendsList(friends);
         setFriendRequests(requests);
 
-        const usernamesMap: { [id: number]: User } = {};
-        for (const req of requests) {
-          if (!usernamesMap[req.sender]) {
-            const resUser = await axios.get(`https://${host}:8000/api/users/${req.sender}`, { withCredentials: true });
-            usernamesMap[req.sender] = resUser.data as User;
-          }
-        }
-        setFriendRequestUsernames(usernamesMap);
+        const amIFriend = friends.some((relation) => relation.user.id === myID || (isOwnProfile && relation.user.id !== myID));
+        setAlreadyFriend(amIFriend);
       } catch (err) {
-        console.error('Erreur de récupération des demandes d\'amis :', err);
+        console.error('Erreur de récupération des relations :', err);
       }
     };
-
-    const fetchData = async () => {
-      if (username) {
-        await fetchFriends();
-        await fetchFriendRequests();
-        getId().then(res => { setMyID(res); });
-      }
-    };
-
-    fetchData();
-  }, [username, user]);
-
-  const fetchFriends = async () => {
-    if (!user) return;
-    try {
-      const res = await axios.get(`https://${host}:8000/api/friends/${user.id}`, { withCredentials: true });
-      const friends = res.data.friends;
-      setFriendsList(friends);
-      const usernamesMap: { [id: number]: User } = {};
-      for (const friend of friends) {
-        const friendId = IdentifyFriend(user.id, friend.user1_id, friend.user2_id);
-        if (!usernamesMap[friendId]) {
-          const resUser = await axios.get(`https://${host}:8000/api/users/${friendId}`, { withCredentials: true });
-          usernamesMap[friendId] = resUser.data as User;
-        }
-      }
-      setFriendUsers(usernamesMap);
-    } catch (err) {
-      console.error('Erreur de récupération des amis :', err);
-    }
-  };
+    if (user && myID) fetchRelations();
+  }, [user, myID]);
 
   const sendFriendRequest = async (userId: number) => {
     try {
-      await axios.post(`https://${host}:8000/api/friends/${userId}`, {}, { withCredentials: true });
-      setFriendRequests([...friendRequests, { user1_id: myID, user2_id: userId, sender: user!.id, ask_to: userId, is_friend: 0, id: Date.now() }]);
+      await axios.put(`https://${host}:8000/api/users/${myID}/friends/${userId}`, { type: 1 }, { withCredentials: true });
       setIsRequestSent(true);
     } catch (err) {
       console.error('Erreur lors de l\'envoi de la demande d\'ami :', err);
@@ -120,9 +98,14 @@ const ProfilPage = () => {
 
   const acceptFriendRequest = async (userId: number) => {
     try {
-      await axios.patch(`https://${host}:8000/api/friends/${userId}`, {}, { withCredentials: true });
-      setFriendRequests(friendRequests.filter(req => req.sender !== userId));
-      fetchFriends();
+      await axios.put(`https://${host}:8000/api/users/${myID}/friends/${userId}`, { type: 1 }, { withCredentials: true });
+      setFriendRequests(friendRequests.filter(req => req.user.id !== userId));
+
+      const res = await axios.get(
+        `https://${host}:8000/api/users/${myID}/friends`,
+        { withCredentials: true }
+      );
+      setFriendsList(res.data.filter((r: FriendRelation) => r.type === 1));
     } catch (err) {
       console.error('Erreur lors de l\'acceptation de la demande d\'ami :', err);
     }
@@ -130,8 +113,9 @@ const ProfilPage = () => {
 
   const deleteFriend = async (userId: number) => {
     try {
-      const reponse = await axios.delete(`https://${host}:8000/api/friends/${userId}`, { withCredentials: true });
-      setFriendsList(friendsList.filter(friend => IdentifyFriend(user!.id, friend.user1_id, friend.user2_id) !== userId));
+      await axios.delete(`https://${host}:8000/api/users/${myID}/friends/${userId}`, { withCredentials: true });
+      setFriendsList(friendsList.filter(friend => friend.user.id !== userId));
+      setAlreadyFriend(false);
     } catch (err) {
       console.error('Erreur lors de la suppression de l\'ami :', err);
     }
@@ -139,8 +123,8 @@ const ProfilPage = () => {
 
   const cancelFriendRequest = async (userId: number) => {
     try {
-      await axios.delete(`https://${host}:8000/api/friends/${userId}`, { withCredentials: true });
-      setFriendRequests(friendRequests.filter(req => req.sender !== userId));
+      await axios.delete(`https://${host}:8000/api/users/${myID}/friends/${userId}`, { withCredentials: true });
+      setFriendRequests(friendRequests.filter(req => req.user.id !== userId));
       setIsRequestSent(false);
     } catch (err) {
       console.error('Erreur lors de l\'annulation de la demande d\'ami :', err);
@@ -155,48 +139,45 @@ const ProfilPage = () => {
     );
   }
 
-  const isOwnProfile      = myID === user.id;
-  const alreadyFriend     = friendsList.some(fr => ((fr.user1_id === myID || fr.user2_id === myID) && !isOwnProfile));
-  const alreadyRequested  = friendRequests.some(req => req.ask_to === user.id || req.sender === user.id);
+  const isOwnProfile = myID === user.id;
 
-  function FriendCard({avatar, username, onDelete }: {avatar: string, username: string, onDelete: () => void }) {
+  function FriendCard({ avatar, username, onDelete }: { avatar: string, username: string, onDelete: () => void }) {
     return (
       <div className="flex items-center bg-[#23242d] rounded-xl p-3 pr-4 mb-3 shadow-md hover:shadow-2xl transition relative group">
         <img src={avatar || '/assets/no_profile.jpg'} alt="Ami" className="w-12 h-12 rounded-full border-2 border-[#44a29f] object-cover" />
         <span className="ml-4 text-lg font-bold text-[#f7c80e]">{username}</span>
         {isOwnProfile && (
-        <button
-          onClick={onDelete}
-          className="ml-auto bg-[#e74c3c] text-white p-2 rounded-full hover:bg-[#c0392b] transition opacity-0 group-hover:opacity-100"
-          title="Retirer l'ami"
-        >
-          <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path stroke="white" strokeWidth="2" d="M6 6l8 8M14 6l-8 8"/></svg>
-        </button>
+          <button
+            onClick={onDelete}
+            className="ml-auto bg-[#e74c3c] text-white p-2 rounded-full hover:bg-[#c0392b] transition opacity-0 group-hover:opacity-100"
+            title="Retirer l'ami"
+          >
+            <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path stroke="white" strokeWidth="2" d="M6 6l8 8M14 6l-8 8"/></svg>
+          </button>
         )}
       </div>
     );
   }
 
-  function RequestCard({ sender, avatar, username, onAccept, onCancel }: { sender : number, avatar: string, username: string, onAccept: () => void, onCancel: () => void }) {
-    if (sender != user?.id)
-      return (
-        <div className="flex items-center bg-[#23242d] rounded-xl p-3 pr-4 mb-3 shadow-md hover:shadow-2xl transition">
-          <img src={avatar || '/assets/no_profile.jpg'} alt="Demande" className="w-12 h-12 rounded-full border-2 border-[#44a29f] object-cover" />
-          <span className="ml-4 text-lg font-bold text-white">{username}</span>
-          <button onClick={onAccept} className="ml-auto bg-[#27ae60] text-white px-3 py-1 rounded-full hover:bg-[#2ecc71] transition mr-2" title="Accepter">
-            <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M5 10.5l3.5 3.5L15 7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
-          </button>
-          <button onClick={onCancel} className="bg-[#e74c3c] text-white px-3 py-1 rounded-full hover:bg-[#c0392b] transition" title="Refuser">
-            <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path stroke="white" strokeWidth="2" d="M6 6l8 8M14 6l-8 8"/></svg>
-          </button>
-        </div>
-      );
+  function RequestCard({ avatar, username, onAccept, onCancel }: { avatar: string, username: string, onAccept: () => void, onCancel: () => void }) {
+    return (
+      <div className="flex items-center bg-[#23242d] rounded-xl p-3 pr-4 mb-3 shadow-md hover:shadow-2xl transition">
+        <img src={avatar || '/assets/no_profile.jpg'} alt="Demande" className="w-12 h-12 rounded-full border-2 border-[#44a29f] object-cover" />
+        <span className="ml-4 text-lg font-bold text-white">{username}</span>
+        <button onClick={onAccept} className="ml-auto bg-[#27ae60] text-white px-3 py-1 rounded-full hover:bg-[#2ecc71] transition mr-2" title="Accepter">
+          <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M5 10.5l3.5 3.5L15 7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
+        </button>
+        <button onClick={onCancel} className="bg-[#e74c3c] text-white px-3 py-1 rounded-full hover:bg-[#c0392b] transition" title="Refuser">
+          <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path stroke="white" strokeWidth="2" d="M6 6l8 8M14 6l-8 8"/></svg>
+        </button>
+      </div>
+    );
   }
 
   function AddFriendButton() {
     let state = "add";
     if (alreadyFriend) state = "friend";
-    else if (alreadyRequested || isRequestSent) state = "pending";
+    else if (isRequestSent) state = "pending";
 
     return (
       <div className="fixed bottom-10 right-10 z-50">
@@ -250,30 +231,27 @@ const ProfilPage = () => {
       </div>
 
       {!isOwnProfile && <AddFriendButton />}
+
       <div className="my-10 max-w-xl mx-auto">
         <h2 className="text-2xl font-bold text-[#f7c80e] mb-4 flex items-center gap-3">
           <svg width="26" height="26" fill="none" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2" stroke="#f7c80e" strokeWidth="2" /><circle cx="10" cy="7" r="4" stroke="#f7c80e" strokeWidth="2" /></svg>
-          {isOwnProfile && "Mes Amis" || !isOwnProfile && "Amis"}
+          Amis
         </h2>
         <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
           {friendsList.length === 0 ? (
             <p className="text-center text-gray-400">Vous n'avez aucun ami pour le moment.</p>
           ) : (
-            friendsList.map((friend) => {
-              const friendId = IdentifyFriend(user.id, friend.user1_id, friend.user2_id);
-              return (
-                <FriendCard
-                  key={friend.id}
-                  avatar={friendUsers[friendId]?.avatar_url || '/assets/no_profile.jpg'}
-                  username={friendUsers[friendId]?.username || 'Chargement...'}
-                  onDelete={() => deleteFriend(friendId)}
-                />
-              );
-            })
+            friendsList.map((relation) => (
+              <FriendCard
+                key={relation.user.id}
+                avatar={relation.user.avatar_url || '/assets/no_profile.jpg'}
+                username={relation.user.username}
+                onDelete={() => deleteFriend(relation.user.id)}
+              />
+            ))
           )}
         </div>
       </div>
-
       {isOwnProfile && (
         <div className="my-10 max-w-xl mx-auto">
           <h2 className="text-2xl font-bold text-[#f7c80e] mb-4 flex items-center gap-3">
@@ -286,12 +264,11 @@ const ProfilPage = () => {
             ) : (
               friendRequests.map((req) => (
                 <RequestCard
-                  key={req.id}
-                  sender={req.sender}
-                  avatar={friendRequestUsers[req.sender]?.avatar_url || '/assets/no_profile.jpg'}
-                  username={friendRequestUsers[req.sender]?.username || 'Chargement...'}
-                  onAccept={() => acceptFriendRequest(req.sender)}
-                  onCancel={() => cancelFriendRequest(req.sender)}
+                  key={req.user.id}
+                  avatar={req.user.avatar_url || '/assets/no_profile.jpg'}
+                  username={req.user.username}
+                  onAccept={() => acceptFriendRequest(req.user.id)}
+                  onCancel={() => cancelFriendRequest(req.user.id)}
                 />
               ))
             )}
