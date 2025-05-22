@@ -28,7 +28,7 @@ export async function updateFriendRelation(user1_id, user2_id, data) {
 export async function getAllFriendsById(user_id) {
 	const rows = await db.all(`
 		SELECT * FROM friends
-		WHERE (user1_id = ? OR user2_id = ?) AND status = 'accepted'
+		WHERE (user1_id = ? OR user2_id = ?)
 	`, [user_id, user_id]);
 	return rows;
 }

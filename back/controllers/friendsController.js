@@ -145,7 +145,21 @@ export async function getAllFriends(req, res) {
 				friendsRow.map(async (row) => {
 					const friendId = (row.user1_id === user.user_id) ? row.user2_id : row.user1_id;
 					const friendInfo = await findUserByUserId(friendId);
+					switch (row.status) {
+						case 'pending':
+							row.status = 0;
+							break ;
+						case 'accepted':
+							row.status = 1;
+							break ;
+						case 'blocked':
+							row.status = 2;
+							break ;
+						default:
+							return res.status(errorCodes.INVALID_FIELDS.status).send(errorCodes.INVALID_FIELDS);
+					}
 					return {
+						type: row.status,
 						user: {
 							id: friendInfo.user_id,
 							username: friendInfo.username,
