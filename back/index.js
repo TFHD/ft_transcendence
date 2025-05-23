@@ -19,6 +19,8 @@ import { friendsRoutes } from "./routes/friendsRoutes.js";
 
 dotenv.config();
 
+global.wsClients = new Map();
+
 const PORT = process.env.PORT;
 const ADDRESS = process.env.ADDRESS;
 
@@ -70,16 +72,16 @@ app.register(multipart, {
 
 cloudinary.config(cloudinaryConfig);
 
+const router = (fastify) => {
+	PongWebsocket(fastify);
+	gatewayRoutes(fastify);
+};
+
 await app.register(authRoutes);
 await app.register(gameRoutes);
 await app.register(userRoutes);
 await app.register(twofaRoutes);
 await app.register(friendsRoutes);
-
-const router = (fastify) => {
-	PongWebsocket(fastify);
-	gatewayRoutes(fastify);
-};
 
 app.register(router, { prefix: '/api' });
 
