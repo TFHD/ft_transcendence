@@ -169,6 +169,33 @@ async function setWinner(currentGame, username)
 		await updateUser(user.user_id, {singleplayer_loose : user.singleplayer_loose + 1, last_opponent: username + "1"});
 };
 
+const MAXX = 20;
+const MINX = -20;
+
+const MAXY = 10;
+const MINY = -10;
+
+function normalize(value, min, max) {
+	return 2 * (value - min) / (max - min) - 1;
+}
+
+function sendNormalized(socket, currentGame) {
+	const normalizedBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
+	const normalizedBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
+	const normalizedPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
+	const normalizedPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
+
+	if (currentGame.player1.isTerminal === "true")
+	{
+		socket.send(JSON.stringify({
+			ballX: normalizedBallX,
+			ballY: normalizedBallY,
+			player1Y: normalizedPlayer1Y,
+			player2Y: normalizedPlayer2Y,
+		}));
+	}
+}
+
 const	SoloPongGame = async (socket, username) =>
 {
 	let currentGame = userGames.get(socket);
@@ -195,6 +222,7 @@ const	SoloPongGame = async (socket, username) =>
 				player1Name: username,
 				player2Name: username + "1"
 			}))
+			sendNormalized(socket, currentGame)
 			await mssleep(16);
 		}
 	}
@@ -217,6 +245,7 @@ export async function	soloPong(connection, req)
 		console.log('Adding new user to set');
 		userSockets.add(socket);
 		userGames.set(socket, new Game());
+		userGames.get(socket).player1.isTerminal = req.query?.terminal;
 		if (username)
 			SoloPongGame(socket, username);
 		else
