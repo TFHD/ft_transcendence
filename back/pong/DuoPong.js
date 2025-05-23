@@ -285,29 +285,40 @@ async function startRoom(roomID, dataTournament)
 			currentGame.shouldStop = true;
 		if (!currentGame.shouldStop)
 		{
-			room.player1socket.send(JSON.stringify({
-				player1Y: currentGame.player1.y,
-				player2Y: currentGame.player2.y,
+			let sentBallX = currentGame.ball.position.x;
+			let sentBallY = currentGame.ball.position.y;
+			let sentPlayer1Y = currentGame.player1.y;
+			let sentPlayer2Y = currentGame.player2.y;
+			if (currentGame.player1.isTerminal === "true")
+			{
+				sentBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
+				sentBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
+				sentPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
+				sentPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
+			}
+			room?.player1socket.send(JSON.stringify({
+				player1Y: sentPlayer1Y,
+				player2Y: sentPlayer2Y,
 
 				player1Score: currentGame.player1.score,
 				player2Score: currentGame.player2.score,
 
-				ballX: currentGame.ball.position.x,
-				ballY: currentGame.ball.position.y,
+				ballX: sentBallX,
+				ballY: sentBallY,
 
 				player1Name: userInfos.get(room.player1socket).username,
 				player2Name: userInfos.get(room.player2socket).username
 			}))
 			
-			room.player2socket.send(JSON.stringify({
-				player1Y: currentGame.player1.y,
-				player2Y: currentGame.player2.y,
+			room?.player2socket.send(JSON.stringify({
+				player1Y: sentPlayer1Y,
+				player2Y: sentPlayer2Y,
 
 				player1Score: currentGame.player1.score,
 				player2Score: currentGame.player2.score,
 
-				ballX: currentGame.ball.position.x,
-				ballY: currentGame.ball.position.y,
+				ballX: sentBallX,
+				ballY: sentBallY,
 
 				player1Name: userInfos.get(room.player1socket).username,
 				player2Name: userInfos.get(room.player2socket).username,
@@ -326,16 +337,16 @@ async function startRoom(roomID, dataTournament)
 	rooms.delete(roomID);
 }
 
-function	register_user(socket, username)
+function	register_user(socket, username, terminal)
 {
 	if (!userInfos.has(socket))
 	{
 		console.log('New user, saving socket info');
-		if (username)
+		if (username != undefined)
 		{
 			userInfos.set(socket, new PlayerInfo());
 			userInfos.get(socket).username = username;
-			userInfos.get(socket).isTerminal = req.query?.terminal
+			userInfos.get(socket).isTerminal = terminal
 			console.log(`USER USERNAME: ${userInfos.get(socket).username}`);
 		}
 	}
@@ -394,7 +405,26 @@ export async function duoPong(connection, req)
 		user_id : req.query?.user_id
 	}
 
-	register_user(socket, username);
+	socket.isAlive = true;
+	socket.on('pong', () => {
+		socket.isAlive = true;
+	});
+	
+	const interval = setInterval(() => {
+		if (socket.isAlive === false) {
+			clearInterval(interval);
+			socket.terminate();
+			userSockets.delete(socket);
+			userGames.delete(socket);
+			console.log('Disconnected due to inactivity');
+			return;
+		}
+		socket.isAlive = false;
+		socket.ping();
+	}, 10 * 1000);
+
+	console.log(username);
+	register_user(socket, username, req.query?.terminal);
 	
 	let	currentRoom = null;
 	let	currentPlayerInfo = null;
@@ -440,6 +470,7 @@ export async function duoPong(connection, req)
 
 	socket.on('close', () =>
 	{
+		clearInterval(interval);	
 		currentRoom = rooms.get(currentPlayerInfo.roomID);
 		if (currentRoom)
 		{
