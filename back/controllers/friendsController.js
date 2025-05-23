@@ -75,7 +75,7 @@ async function blockFriend(req, res, friendId, friendInfo) {
 
 export async function manageFriendshipDelete(req, res) {
 	if (!req.params)
-		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+		return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
 	const { id, friendId } = req.params;
 
 	try {
@@ -134,9 +134,12 @@ export async function manageFriendshipDelete(req, res) {
 }
 
 export async function manageFriendshipPut(req, res) {
-	if (!req.params || !req.body)
-		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+	if (!req.params)
+		return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
 	const { id, friendId } = req.params;
+
+	if (!req.body)
+		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 	const { type } = req.body
 
 	try {
@@ -191,7 +194,7 @@ export async function manageFriendshipPut(req, res) {
 
 export async function getAllFriends(req, res) {
 	if (!req.params)
-		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+		return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
 	const { id } = req.params;
 
 	try {

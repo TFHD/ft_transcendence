@@ -4,7 +4,7 @@ import { errorCodes } from '../utils/errorCodes.js';
 
 export async function getMatchsById(req, res) {
     if (!req.params)
-        return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+        return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
     const { id } = req.params;
 
     try {
@@ -27,7 +27,7 @@ export async function getMatchsById(req, res) {
 
 export async function getGameById(req, res) {
     if (!req.params)
-        return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+        return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
     const { id } = req.params;
 
     try {

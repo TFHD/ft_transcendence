@@ -118,5 +118,17 @@ export const errorCodes = Object.freeze({
 		type: 'validation_error',
 		message: 'Invalid fields provided.',
 		status: 400
+	},
+	BAD_REQUEST: {
+		code: 'BAD_REQUEST',
+		type: 'validation_error',
+		message: 'Bad request.',
+		status: 400
+	},
+	MESSAGE_NOT_FOUND: {
+		code: 'MESSAGE_NOT_FOUND',
+		type: 'validation_error',
+		message: 'Message not found.',
+		status: 404
 	}
 });

@@ -16,6 +16,7 @@ import gameRoutes from './routes/gameRoutes.js';
 import { cookieSecret } from "./config/cookie.config.js";
 import { gatewayRoutes } from "./routes/gatewayRoutes.js";
 import { friendsRoutes } from "./routes/friendsRoutes.js";
+import { messagesRoutes } from "./routes/messagesRoutes.js";
 
 dotenv.config();
 
@@ -82,6 +83,7 @@ await app.register(gameRoutes);
 await app.register(userRoutes);
 await app.register(twofaRoutes);
 await app.register(friendsRoutes);
+await app.register(messagesRoutes);
 
 app.register(router, { prefix: '/api' });
 

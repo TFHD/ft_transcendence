@@ -15,7 +15,7 @@ export const __dirname = path.dirname(__filename);
 
 export async function getHistoryFromId(req, res) {
 	if (!req.params)
-		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+		return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
 	const { id } = req.params;
 
 	try {
@@ -49,7 +49,7 @@ export async function getHistoryFromId(req, res) {
 
 export async function getUsersByUsername(req, res) {
 	if (!req.params)
-		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+		return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
 	const { id } = req.params;
 
 	try {
@@ -98,7 +98,7 @@ export async function getUsersByUsername(req, res) {
 
 export async function getUserFromId(req, res) {
 	if (!req.params)
-		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+		return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
 	const { id } = req.params;
 	try {
 		if (!id)
@@ -157,7 +157,7 @@ export async function getUserFromId(req, res) {
 
 export async function patchUserFromId(req, res) {
 	if (!req.params)
-		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
+		return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
 	if (!req.body)
 		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 	let { id } = req.params;

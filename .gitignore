@@ -1,5 +1,5 @@
 .nfs*
-.sqlite*
+*.sqlite
 node_modules/
 back/.env
 .vscode
