@@ -197,15 +197,26 @@ const	SoloPongGame = async (socket) =>
 
 		if (!currentGame.shouldStop)
 		{
+			let sentBallX = currentGame.ball.position.x;
+			let sentBallY = currentGame.ball.position.y;
+			let sentPlayer1Y = currentGame.player1.y;
+			let sentPlayer2Y = currentGame.player2.y;
+			if (currentGame.player1.isTerminal === "true")
+			{
+				sentBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
+				sentBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
+				sentPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
+				sentPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
+			}
 			socket.send(JSON.stringify({
-				player1Y: currentGame.player1.y,
-				player2Y: currentGame.player2.y,
+				player1Y: sentPlayer1Y,
+				player2Y: sentPlayer2Y,
 
 				player1Score: currentGame.player1.score,
 				player2Score: currentGame.player2.score,
 
-				ballX: currentGame.ball.position.x,
-				ballY: currentGame.ball.position.y,
+				ballX: sentBallX,
+				ballY: sentBallY,
 
 				player1Name: currentGame.player1.name,
 				player2Name: "AI"
@@ -250,6 +261,24 @@ export async function	practicePong(connection, req)
 	const username = req.query?.username;
 	const mode = req.query?.mode;
 
+	socket.isAlive = true;
+	socket.on('pong', () => {
+		socket.isAlive = true;
+	});
+
+	const interval = setInterval(() => {
+		if (socket.isAlive === false) {
+			clearInterval(interval);
+			socket.terminate();
+			userSockets.delete(socket);
+			userGames.delete(socket);
+			console.log('Disconnected due to inactivity');
+			return;
+		}
+		socket.isAlive = false;
+		socket.ping();
+	}, 10 * 1000);
+
 	if (!userSockets.has(socket))
 	{
 		console.log('Adding new user to set');
@@ -278,6 +307,7 @@ export async function	practicePong(connection, req)
 
 	socket.on('close', () =>
 	{
+		clearInterval(interval);
 		currentGame.shouldStop = true;
 		userSockets.delete(socket);
 		userGames.delete(socket);
