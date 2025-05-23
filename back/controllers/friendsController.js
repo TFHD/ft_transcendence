@@ -2,7 +2,7 @@ import { getAllFriendsById, findFriendRelation, updateFriendRelation, createFrie
 import { findUserByUserId } from "../models/userModel.js";
 import { errorCodes } from "../utils/errorCodes.js";
 
-async function addFriend(req, res, friendId) {
+async function addFriend(req, res, friendId, friendInfo) {
 	const relation = await findFriendRelation(req.user.user_id, friendId);
 	if (relation) {
 		if (relation.status === 'blocked')
@@ -16,6 +16,13 @@ async function addFriend(req, res, friendId) {
 				status: 'accepted',
 				initiator_id: req.user.user_id
 			});
+			const data = {
+				type: 1,
+				user: friendInfo
+			};
+			const socket = global.wsClients.get(Number(friendId));
+			if (socket && socket.readyState === 1)
+				socket.send(JSON.stringify({op: "friends_add", data }));
 			return res.status(204).send();
 		};
 		return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
@@ -24,10 +31,17 @@ async function addFriend(req, res, friendId) {
 		status: 'pending',
 		initiator_id: req.user.user_id
 	});
+	const data = {
+		type: 0,
+		user: friendInfo
+	};
+	const socket = global.wsClients.get(Number(friendId));
+	if (socket && socket.readyState === 1)
+		socket.send(JSON.stringify({op: "friends_request", data }));
 	return res.status(201).send();
 }
 
-async function blockFriend(req, res, friendId) {
+async function blockFriend(req, res, friendId, friendInfo) {
 	const relation = await findFriendRelation(req.user.user_id, friendId);
 	if (relation) {
 		if (relation.status === 'blocked')
@@ -36,12 +50,26 @@ async function blockFriend(req, res, friendId) {
 			status: 'blocked',
 			initiator_id: req.user.user_id
 		});
+		const data = {
+			type: 2,
+			user: friendInfo
+		};
+		const socket = global.wsClients.get(Number(friendId));
+		if (socket && socket.readyState === 1)
+			socket.send(JSON.stringify({op: "friends_block", data }));
 		return res.status(204).send();
 	};
 	await createFriendRelation(req.user.user_id, friendId, {
 		status: 'blocked',
 		initiator_id: req.user.user_id
 	});
+	const data = {
+		type: 2,
+		user: friendInfo
+	};
+	const socket = global.wsClients.get(Number(friendId));
+	if (socket && socket.readyState === 1)
+		socket.send(JSON.stringify({op: "friends_block", data }));
 	return res.status(201).send();
 }
 
@@ -69,8 +97,30 @@ export async function manageFriendshipDelete(req, res) {
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
 			const relation = await findFriendRelation(req.user.user_id, friendId);
 			if (relation) {
-				if (relation.status === 'accepted' || relation.initiator_id === req.user.user_id)
+				if (relation.status === 'accepted' || relation.status === 'pending'
+					|| relation.initiator_id === req.user.user_id) {
 					await deleteFriendRelation(req.user.user_id, friendId);
+					const data = {
+						user: {
+							id: req.user.user_id,
+							username: req.user.username,
+							created_at: req.user.created_at,
+							updated_at: req.user.updated_at,
+							multiplayer_win: req.user.multiplayer_win,
+							multiplayer_loose: req.user.multiplayer_loose,
+							practice_win: req.user.practice_win,
+							practice_loose: req.user.practice_loose,
+							singleplayer_win: req.user.singleplayer_win,
+							singleplayer_loose: req.user.singleplayer_loose,
+							last_opponent: req.user.last_opponent,
+							avatar_url : req.user.avatar_url,
+							last_seen: req.user.last_seen
+						}
+					};
+					const socket = global.wsClients.get(Number(friendId));
+					if (socket && socket.readyState === 1)
+						socket.send(JSON.stringify({op: "friends_remove", data }));
+				}
 				else
 					return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 				return res.status(204).send();
@@ -106,15 +156,31 @@ export async function manageFriendshipPut(req, res) {
 			const isValidFriendId = await findUserByUserId(friendId);
 			if (!isValidFriendId)
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
+			const friendInfo = {
+				id: req.user.user_id,
+				username: req.user.username,
+				created_at: req.user.created_at,
+				updated_at: req.user.updated_at,
+				multiplayer_win: req.user.multiplayer_win,
+				multiplayer_loose: req.user.multiplayer_loose,
+				practice_win: req.user.practice_win,
+				practice_loose: req.user.practice_loose,
+				singleplayer_win: req.user.singleplayer_win,
+				singleplayer_loose: req.user.singleplayer_loose,
+				last_opponent: req.user.last_opponent,
+				avatar_url : req.user.avatar_url,
+				last_seen: req.user.last_seen
+			}
 			switch (type) {
 				case 1:
-					return await addFriend(req, res, friendId);
+					return await addFriend(req, res, friendId, friendInfo);
 					break ;
 				case 2:
-					return await blockFriend(req, res, friendId);
+					return await blockFriend(req, res, friendId, friendInfo);
 					break ;
 				default:
 					return res.status(errorCodes.INVALID_FIELDS.status).send(errorCodes.INVALID_FIELDS);
+					break ;
 			}
 		} else
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
@@ -131,56 +197,60 @@ export async function getAllFriends(req, res) {
 	try {
 		if (!id)
 			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
-		if (id === '@me' || id == req.user.user_id) {
-			if (!req.user.user_id)
-				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-			const user = req.user;
-			if (!user)
-				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-			const sesssion = req.session;
-			if (!sesssion)
-				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-			const friendsRow = await getAllFriendsById(user.user_id);
-			const friends = await Promise.all(
-				friendsRow.map(async (row) => {
-					const friendId = (row.user1_id === user.user_id) ? row.user2_id : row.user1_id;
-					const friendInfo = await findUserByUserId(friendId);
-					switch (row.status) {
-						case 'pending':
-							row.status = 0;
-							break ;
-						case 'accepted':
-							row.status = 1;
-							break ;
-						case 'blocked':
-							row.status = 2;
-							break ;
-						default:
-							return res.status(errorCodes.INVALID_FIELDS.status).send(errorCodes.INVALID_FIELDS);
-					}
-					return {
-						type: row.status,
-						user: {
-							id: friendInfo.user_id,
-							username: friendInfo.username,
-							created_at: friendInfo.created_at,
-							updated_at: friendInfo.updated_at,
-							multiplayer_win: friendInfo.multiplayer_win,
-							multiplayer_loose: friendInfo.multiplayer_loose,
-							practice_win: friendInfo.practice_win,
-							practice_loose: friendInfo.practice_loose,
-							singleplayer_win: friendInfo.singleplayer_win,
-							singleplayer_loose: friendInfo.singleplayer_loose,
-							last_opponent: friendInfo.last_opponent,
-							avatar_url : friendInfo.avatar_url,
-							last_seen: friendInfo.last_seen
-						}
-					};
-				})
-			);
-			return res.status(200).send(friends);
-		} else
+		if (!req.user.user_id)
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+		let user;
+		if (id === '@me' || id == req.user.user_id)
+			user = req.user;
+		else
+			user = await findUserByUserId(id);
+		if (!user)
+			return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
+		const sesssion = req.session;
+		if (!sesssion)
+			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+		const friendsRow = await getAllFriendsById(user.user_id);
+		let friends = await Promise.all(
+			friendsRow.map(async (row) => {
+				if (row.initiator_id === user.user_id && row.status === 'pending')
+					return null;
+				const friendId = (row.user1_id === user.user_id) ? row.user2_id : row.user1_id;
+				const friendInfo = await findUserByUserId(friendId);
+				switch (row.status) {
+					case 'pending':
+						row.status = 0;
+						break ;
+					case 'accepted':
+						row.status = 1;
+						break ;
+					case 'blocked':
+						row.status = 2;
+						break ;
+					default:
+						return res.status(errorCodes.INVALID_FIELDS.status).send(errorCodes.INVALID_FIELDS);
+				}
+				return {
+					type: row.status,
+					user: {
+						id: friendInfo.user_id,
+						username: friendInfo.username,
+						created_at: friendInfo.created_at,
+						updated_at: friendInfo.updated_at,
+						multiplayer_win: friendInfo.multiplayer_win,
+						multiplayer_loose: friendInfo.multiplayer_loose,
+						practice_win: friendInfo.practice_win,
+						practice_loose: friendInfo.practice_loose,
+						singleplayer_win: friendInfo.singleplayer_win,
+						singleplayer_loose: friendInfo.singleplayer_loose,
+						last_opponent: friendInfo.last_opponent,
+						avatar_url : friendInfo.avatar_url,
+						last_seen: friendInfo.last_seen
+					}
+				};
+			})
+		);
+		friends = friends.filter((friend) => friend !== null);
+		return res.status(200).send(friends);
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}

@@ -1,8 +1,6 @@
 import { authSocketMiddleware } from "../middlewares/wsMiddleware.js";
 import { updateLastSeen } from "../models/sessionModel.js";
 
-global.wsClients = new Map();
-
 export async function setupGateway(socket, req) {
 	const sessionData = await authSocketMiddleware(req);
 	if (!sessionData) {
@@ -14,7 +12,7 @@ export async function setupGateway(socket, req) {
 	socket.isAlive = true;
 
 	global.wsClients.set(user.user_id, socket);
-		
+
 	socket.on('pong', () => {
 		socket.isAlive = true;
 	});
