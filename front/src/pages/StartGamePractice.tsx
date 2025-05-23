@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
 import axios from 'axios';
+import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -24,6 +25,8 @@ const StartGamePractice = () => {
       CheckToken().then(res => {
         if (!res)
           navigate("/");
+        if (!getGatewaySocket()) {
+          connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
         });
 
     const getInfos = async () => {

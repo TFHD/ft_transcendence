@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
 import '../styles/globals.css';
 import axios from 'axios';
+import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -32,6 +33,8 @@ const StartGameMultiplayer = () => {
   useEffect(() => {
     CheckToken().then(res => {
       if (!res) navigate("/");
+      if (!getGatewaySocket()) {
+        connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
     });
 
     const getInfos = async () => {
@@ -76,7 +79,7 @@ const StartGameMultiplayer = () => {
       } catch (e) { console.log(e); }
     }
     else
-      navigate(`/pong/duo`, { state: { fromStartGame: true, roomID: roomId } });
+      navigate(`/pong/duo`, { state: { fromStartGame: true, roomID: roomId, username : userData.username } });
   };
 
   const isValid = isTournamentMode ? (roomId.length === 6 && tournamentUsername.trim().length > 0) : (roomId.length === 6);

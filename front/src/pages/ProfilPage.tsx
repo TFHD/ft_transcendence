@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckToken, getId } from "../components/CheckConnection";
 import axios from 'axios';
+import { connectGateWaySocket, getGatewaySocket } from '../components/GatewaySocket'
 
 const host = window.location.hostname;
+let ws: WebSocket | null = null;
 
 type User = {
   id: number;
@@ -18,7 +20,7 @@ type User = {
 };
 
 type FriendRelation = {
-  type: number; // 0 = pending, 1 = accepted, 2 = blocked
+  type: number;
   user: User;
 };
 
@@ -27,15 +29,29 @@ const ProfilPage = () => {
   const navigate = useNavigate();
 
   const [user, setUser] = useState<User | null>(null);
-  const [myID, setMyID] = useState<number>(0);
+  const [me, setMe] = useState<User | null>(null);
   const [friendsList, setFriendsList] = useState<FriendRelation[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRelation[]>([]);
   const [isRequestSent, setIsRequestSent] = useState(false);
   const [alreadyFriend, setAlreadyFriend] = useState(false);
 
+  const isOwnProfile = me && user && me.id === user.id;
+
+useEffect(() => {
+  const fetchMe = async () => {
+    const res = await axios.get(`https://${host}:8000/api/users/@me`, { withCredentials: true });
+    setMe(res.data);
+  };
+  fetchMe();
+}, []);
+
   useEffect(() => {
     CheckToken().then(res => {
       if (!res) navigate("/");
+      ws = getGatewaySocket()
+      if (!ws) {
+        ws = connectGateWaySocket(`wss://${host}:8000/api/gateway`);
+      }
     });
 
     const fetchUser = async () => {
@@ -51,11 +67,9 @@ const ProfilPage = () => {
 
     if (username) {
       fetchUser();
-      getId().then(res => { setMyID(res); });
     }
   }, [username, navigate]);
 
-  useEffect(() => {
     const fetchRelations = async () => {
       if (!user) return;
       try {
@@ -68,67 +82,104 @@ const ProfilPage = () => {
         const requests: FriendRelation[] = [];
         res.data.forEach((relation: FriendRelation) => {
           if (relation.type === 1) friends.push(relation);
-          else if (
-            relation.type === 0 &&
-            myID === user.id
-          ) {
+          else if (relation.type === 0 && me!.id === user.id) {
             requests.push(relation);
           }
         });
         setFriendsList(friends);
         setFriendRequests(requests);
 
-        const amIFriend = friends.some((relation) => relation.user.id === myID || (isOwnProfile && relation.user.id !== myID));
+        const amIFriend = friends.some((relation) => relation.user.id === me!.id || (isOwnProfile && relation.user.id !== me!.id));
         setAlreadyFriend(amIFriend);
-      } catch (err) {
-        console.error('Erreur de récupération des relations :', err);
-      }
+      } catch (err) {}
     };
-    if (user && myID) fetchRelations();
-  }, [user, myID]);
+
+  useEffect(() => {
+    if (user && me) fetchRelations();
+  }, [user, me]);
+
+  useEffect(() => {
+    if (!ws || !me) return;
+    ws.onopen = () => { console.log('Successfully connected to server'); };
+    ws.onerror = (e) => { console.log('Connection error', e); };
+    ws.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); ws = null; };
+
+    ws.onmessage = (message) => {
+      try {
+        const gateway = JSON.parse(message.data);
+
+        if (gateway.op === "friends_add" && gateway.data && gateway.data.user) {
+          setFriendsList(prev => {
+            if (prev.some(f => f.user.id === gateway.data.user.id)) {
+              return prev;
+            } else if (isOwnProfile) {
+              return [...prev, { type: 1, user: gateway.data.user }];
+
+            } else {
+              return [...prev, { type: 1, user: me }];
+            }
+          });
+          setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
+        }
+
+        if (gateway.op === "friends_remove" && gateway.data && gateway.data.user) {
+          setFriendsList(prev => prev.filter(f => f.user.id !== gateway.data.user.id));
+          setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
+            if (user && user.id === gateway.data.user.id) {
+              fetchRelations();
+      }
+        }
+
+        if (gateway.op === "friends_request" && gateway.data && gateway.data.user) {
+          if (isOwnProfile) {
+            setFriendRequests(prev =>
+              prev.some(req => req.user.id === gateway.data.user.id)
+                ? prev
+                : [...prev, { type: 0, user: gateway.data.user }]
+            );
+          }
+        }
+      } catch (err) {}
+    };
+
+    return () => {
+      if (ws) ws.onmessage = null;
+    };
+  }, [ws, me, isOwnProfile]);
 
   const sendFriendRequest = async (userId: number) => {
     try {
-      await axios.put(`https://${host}:8000/api/users/${myID}/friends/${userId}`, { type: 1 }, { withCredentials: true });
+      await axios.put(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { type: 1 }, { withCredentials: true });
       setIsRequestSent(true);
-    } catch (err) {
-      console.error('Erreur lors de l\'envoi de la demande d\'ami :', err);
-    }
+    } catch (err) {}
   };
 
   const acceptFriendRequest = async (userId: number) => {
     try {
-      await axios.put(`https://${host}:8000/api/users/${myID}/friends/${userId}`, { type: 1 }, { withCredentials: true });
+      await axios.put(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { type: 1 }, { withCredentials: true });
       setFriendRequests(friendRequests.filter(req => req.user.id !== userId));
-
-      const res = await axios.get(
-        `https://${host}:8000/api/users/${myID}/friends`,
-        { withCredentials: true }
-      );
-      setFriendsList(res.data.filter((r: FriendRelation) => r.type === 1));
-    } catch (err) {
-      console.error('Erreur lors de l\'acceptation de la demande d\'ami :', err);
-    }
+      setFriendsList(friendsList => {
+        if (friendsList.some(f => f.user.id === userId)) return friendsList;
+        const req = friendRequests.find(r => r.user.id === userId);
+        return req ? [...friendsList, { type: 1, user: req.user }] : friendsList;
+      });
+    } catch (err) {}
   };
 
   const deleteFriend = async (userId: number) => {
     try {
-      await axios.delete(`https://${host}:8000/api/users/${myID}/friends/${userId}`, { withCredentials: true });
+      await axios.delete(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { withCredentials: true });
       setFriendsList(friendsList.filter(friend => friend.user.id !== userId));
       setAlreadyFriend(false);
-    } catch (err) {
-      console.error('Erreur lors de la suppression de l\'ami :', err);
-    }
+    } catch (err) {}
   };
 
   const cancelFriendRequest = async (userId: number) => {
     try {
-      await axios.delete(`https://${host}:8000/api/users/${myID}/friends/${userId}`, { withCredentials: true });
+      await axios.delete(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { withCredentials: true });
       setFriendRequests(friendRequests.filter(req => req.user.id !== userId));
       setIsRequestSent(false);
-    } catch (err) {
-      console.error('Erreur lors de l\'annulation de la demande d\'ami :', err);
-    }
+    } catch (err) {}
   };
 
   if (!user) {
@@ -138,8 +189,6 @@ const ProfilPage = () => {
       </div>
     );
   }
-
-  const isOwnProfile = myID === user.id;
 
   function FriendCard({ avatar, username, onDelete }: { avatar: string, username: string, onDelete: () => void }) {
     return (
@@ -239,7 +288,7 @@ const ProfilPage = () => {
         </h2>
         <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
           {friendsList.length === 0 ? (
-            <p className="text-center text-gray-400">Vous n'avez aucun ami pour le moment.</p>
+            <p className="text-center text-gray-400">{isOwnProfile ? "Vous n'avez aucun ami pour le moment." : `${user.username} n'a pas d'amis pour le moment.`}</p>
           ) : (
             friendsList.map((relation) => (
               <FriendCard

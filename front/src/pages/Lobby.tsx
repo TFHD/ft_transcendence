@@ -4,7 +4,8 @@ import axios from 'axios';
 import { createObjectClickable, setActions, CreateDynamicText } from '../components/LobbyAssets';
 import { useNavigate } from 'react-router-dom';
 import { CheckToken } from '../components/CheckConnection';
-import {BABYLON, GUI, LOADERS} from '../components/babylonImports'
+import { BABYLON, GUI, LOADERS } from '../components/babylonImports'
+import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -37,6 +38,9 @@ const BabylonScene = () => {
       if (!res)
         navigate("/");
     });
+    if (!getGatewaySocket()) {
+      connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
+
 
     if (!canvasRef.current) return;
 

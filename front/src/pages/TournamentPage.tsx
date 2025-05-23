@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckToken } from '../components/CheckConnection';
 import axios from 'axios';
-import { connectSocket, closeSocket } from '../components/SocketTournamentManager';
+import { connectTournamentSocket, closeTournamentSocket } from '../components/SocketTournamentManager';
+import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -30,7 +31,11 @@ const TournamentPage = () => {
   });
 
   useEffect(() => {
-    CheckToken().then(res => { if (!res) navigate("/"); });
+    CheckToken().then(res => {
+      if (!res) navigate("/"); 
+      if (!getGatewaySocket()) {
+            connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
+    });
 
     if (!fromStartGame)
       navigate("/start-game-multiplayer");
@@ -40,7 +45,7 @@ const TournamentPage = () => {
           wsRef.current.send(JSON.stringify({ finish: true, matchPlayed : matchPlayed, roundPlayed : roundPlayed }));
   }
 
-    const ws = connectSocket(`wss://${host}:8000/api/pong/tournament?tournamentID=${roomID}&username=${username}`);
+    const ws = connectTournamentSocket(`wss://${host}:8000/api/pong/tournament?tournamentID=${roomID}&username=${username}`);
     wsRef.current = ws;
 
     ws.onmessage = (message) =>
@@ -93,7 +98,7 @@ const TournamentPage = () => {
       <div className="w-full md:w-80 p-6 bg-[#1e2933] flex flex-col justify-between">
         <div>
           <button
-            onClick={() => {closeSocket(); navigate('/lobby')}}
+            onClick={() => {closeTournamentSocket(); navigate('/lobby')}}
             className="mb-6 w-full bg-[#5d5570] text-white py-2 rounded-lg hover:bg-[#3c434b] transition"
           >
             ⬅️ Retour

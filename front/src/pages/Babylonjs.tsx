@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from 'react-router-dom'
 import {BABYLON, GUI, LOADERS} from '../components/babylonImports'
 import { CheckToken, getUsername, getId } from '../components/CheckConnection'
+import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
 
 let ws:WebSocket | null = null;
 
@@ -47,6 +48,8 @@ const BabylonPage = () => {
     CheckToken().then(res => {
     if (!res)
       navigate("/");
+    if (!getGatewaySocket()) {
+      connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
     });
 
     if (gameMode != "solo" && gameMode != "duo" && gameMode != "practice")
@@ -321,6 +324,7 @@ const BabylonPage = () => {
         if (!ws)
         {
             user_id = res;
+            console.log(gameMode);
             ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&isTournament=${isTournament}&user_id=${user_id}&mode=${mode}`);
             wsRef.current = ws;
         }

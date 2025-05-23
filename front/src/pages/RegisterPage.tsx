@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckToken } from "../components/CheckConnection";
+import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -14,6 +15,8 @@ const RegisterPage = () => {
       if (res)
         navigate("/lobby");
       });
+      if (!getGatewaySocket()) {
+        connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
   }, []);
 
   const [formData, setFormData] = useState({
