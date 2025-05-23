@@ -20,6 +20,16 @@ export async function getSessionByToken(token) {
 	return await db.get('SELECT * FROM sessions WHERE token = ?', token);
 };
 
-export async function updateLastSeen(user_id) {
-	await db.run('UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE user_id = ?', user_id);
-};
+export async function updateLastSeen(user_id, paddedLastSeen) {
+    if (paddedLastSeen) {
+        await db.run(
+            `UPDATE users SET last_seen = ? WHERE user_id = ?`,
+            [paddedLastSeen, user_id]
+        );
+    } else {
+        await db.run(
+            `UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE user_id = ?`,
+            [user_id]
+        );
+    }
+}
