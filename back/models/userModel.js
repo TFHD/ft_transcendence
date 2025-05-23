@@ -38,6 +38,11 @@ export function generateRandomUserID() {
 	return userId;
 };
 
+export function generateRandomMessageID() {
+	const messageId = crypto.randomInt(100000000000, 1000000000000);
+	return messageId;
+}
+
 export function generateRandomUsername() {
 	const randomString = crypto.randomBytes(4).toString('hex');
 	const username = `user_${randomString}`;

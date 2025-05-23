@@ -91,4 +91,16 @@ await db.exec(`
 	);
 `);
 
+await db.exec(`
+	CREATE TABLE IF NOT EXISTS messages (
+		message_id INTEGER PRIMARY KEY NOT NULL UNIQUE,
+		sender_id INTEGER NOT NULL,
+		receiver_id INTEGER NOT NULL,
+		content TEXT NOT NULL,
+		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+		FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+	);
+`);
+
 export default db;
