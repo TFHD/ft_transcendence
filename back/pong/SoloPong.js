@@ -180,20 +180,13 @@ function normalize(value, min, max) {
 }
 
 function sendNormalized(socket, currentGame) {
-	const normalizedBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
-	const normalizedBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
-	const normalizedPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
-	const normalizedPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
 
-	if (currentGame.player1.isTerminal === "true")
-	{
-		socket.send(JSON.stringify({
-			ballX: normalizedBallX,
-			ballY: normalizedBallY,
-			player1Y: normalizedPlayer1Y,
-			player2Y: normalizedPlayer2Y,
-		}));
-	}
+	socket.send(JSON.stringify({
+		ballX: normalizedBallX,
+		ballY: normalizedBallY,
+		player1Y: normalizedPlayer1Y,
+		player2Y: normalizedPlayer2Y,
+	}));
 }
 
 const	SoloPongGame = async (socket, username) =>
@@ -209,20 +202,30 @@ const	SoloPongGame = async (socket, username) =>
 
 		if (!currentGame.shouldStop)
 		{
+			let sentBallX = currentGame.ball.position.x;
+			let sentBallY = currentGame.ball.position.y;
+			let sentPlayer1Y = currentGame.player1.y;
+			let sentPlayer2Y = currentGame.player2.y;
+			if (currentGame.player1.isTerminal === "true")
+			{
+				sentBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
+				sentBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
+				sentPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
+				sentPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
+			}
 			socket.send(JSON.stringify({
-				player1Y: currentGame.player1.y,
-				player2Y: currentGame.player2.y,
+				player1Y: sentPlayer1Y,
+				player2Y: sentPlayer2Y,
 
 				player1Score: currentGame.player1.score,
 				player2Score: currentGame.player2.score,
 
-				ballX: currentGame.ball.position.x,
-				ballY: currentGame.ball.position.y,
+				ballX: sentBallX,
+				ballY: sentBallY,
 
 				player1Name: username,
 				player2Name: username + "1"
 			}))
-			sendNormalized(socket, currentGame)
 			await mssleep(16);
 		}
 	}
@@ -239,6 +242,24 @@ export async function	soloPong(connection, req)
 	}
 	const socket = connection;
 	const username = req.query?.username;
+	
+	socket.isAlive = true;
+	socket.on('pong', () => {
+		socket.isAlive = true;
+	});
+	
+	const interval = setInterval(() => {
+		if (socket.isAlive === false) {
+			clearInterval(interval);
+			socket.terminate();
+			userSockets.delete(socket);
+			userGames.delete(socket);
+			console.log('Disconnected due to inactivity');
+			return;
+		}
+		socket.isAlive = false;
+		socket.ping();
+	}, 10 * 1000);
 
 	if (!userSockets.has(socket))
 	{
@@ -246,6 +267,7 @@ export async function	soloPong(connection, req)
 		userSockets.add(socket);
 		userGames.set(socket, new Game());
 		userGames.get(socket).player1.isTerminal = req.query?.terminal;
+
 		if (username)
 			SoloPongGame(socket, username);
 		else
@@ -273,6 +295,7 @@ export async function	soloPong(connection, req)
 
 	socket.on('close', () =>
 	{
+		clearInterval(interval);
 		currentGame.shouldStop = true;
 		userSockets.delete(socket);
 		userGames.delete(socket);
