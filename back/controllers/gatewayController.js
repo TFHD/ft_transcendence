@@ -8,10 +8,10 @@ async function notifyUserStatus(userId, status) {
 		await updateLastSeen(userId, paddedLastSeen.toISOString());
 		const friends = await findFriendByRelationType(userId, "accepted");
 		for (const friend of friends) {
-			const socket = global.wsClients.get(friend.user1_id === userId ? friend.user2_id : friend.user1_id);
+			const socket = global.wsClients.get(friend.user1_id === userId ? Number(friend.user2_id) : Number(friend.user1_id));
 			if (socket && socket.readyState === 1) {
 				socket.send(JSON.stringify({
-					type: `user_${status}`,
+					op: `user_${status}`,
 					data: {
 						user: {
 							user_id: userId,
