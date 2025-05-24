@@ -4,7 +4,7 @@ import axios from 'axios';
 import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
 import Modal2FA from '../components/Model2FA'
 import GoogleLoginButton from "../components/GoogleButton";
-import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
+import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -15,8 +15,6 @@ const HomePage = () => {
       if (res)
         navigate("/lobby");
       });
-      if (!getGatewaySocket()) {
-        connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
   }, []);
   
   const askFor2FACode = (): Promise<string> => {

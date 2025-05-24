@@ -5,7 +5,7 @@ import { createObjectClickable, setActions, CreateDynamicText } from '../compone
 import { useNavigate } from 'react-router-dom';
 import { CheckToken } from '../components/CheckConnection';
 import { BABYLON, GUI, LOADERS } from '../components/babylonImports'
-import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
+import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -23,6 +23,7 @@ const BabylonScene = () => {
         }
       });
       navigate("/");
+      closeGateWaySocket();
     } catch (error) {
       console.error("Erreur lors de la déconnexion :", error);
     }
@@ -35,8 +36,7 @@ const BabylonScene = () => {
   useEffect(() => {
 
     CheckToken().then(res => {
-      if (!res)
-        navigate("/");
+      if (!res) { navigate("/"); closeGateWaySocket(); }
     });
     if (!getGatewaySocket()) {
       connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}

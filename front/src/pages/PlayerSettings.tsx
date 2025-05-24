@@ -3,7 +3,7 @@ import axios from 'axios';
 import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
 import { useNavigate } from 'react-router-dom';
 import Modal2FA from '../components/Model2FA'
-import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
+import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -26,7 +26,7 @@ const PlayerSettingsPage = () => {
 
   useEffect(() => {
     CheckToken().then(res => {
-      if (!res) navigate("/");
+      if (!res) { navigate("/"); closeGateWaySocket(); }
       if (!getGatewaySocket()) {
         connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
       const check2FA = async () => {

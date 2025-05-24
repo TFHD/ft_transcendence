@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
 import axios from 'axios';
-import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
+import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -23,8 +23,7 @@ const StartGamePractice = () => {
 
     useEffect(() => {
       CheckToken().then(res => {
-        if (!res)
-          navigate("/");
+        if (!res) { navigate("/"); closeGateWaySocket(); } 
         if (!getGatewaySocket()) {
           connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
         });

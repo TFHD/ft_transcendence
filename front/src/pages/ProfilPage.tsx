@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckToken, getId } from "../components/CheckConnection";
+import { CheckToken } from "../components/CheckConnection";
 import axios from 'axios';
-import { connectGateWaySocket, getGatewaySocket } from '../components/GatewaySocket'
+import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket } from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 let ws: WebSocket | null = null;
@@ -20,7 +20,7 @@ type User = {
 };
 
 type FriendRelation = {
-  type: number;
+  type: number; // 0=pending, 1=friend, 2=blocked
   user: User;
 };
 
@@ -34,20 +34,23 @@ const ProfilPage = () => {
   const [friendRequests, setFriendRequests] = useState<FriendRelation[]>([]);
   const [isRequestSent, setIsRequestSent] = useState(false);
   const [alreadyFriend, setAlreadyFriend] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockError, setBlockError] = useState(false);
+  const [onlineMap, setOnlineMap] = useState<{ [userId: number]: boolean }>({});
 
   const isOwnProfile = me && user && me.id === user.id;
 
-useEffect(() => {
-  const fetchMe = async () => {
-    const res = await axios.get(`https://${host}:8000/api/users/@me`, { withCredentials: true });
-    setMe(res.data);
-  };
-  fetchMe();
-}, []);
+  useEffect(() => {
+    const fetchMe = async () => {
+      const res = await axios.get(`https://${host}:8000/api/users/@me`, { withCredentials: true });
+      setMe(res.data);
+    };
+    fetchMe();
+  }, []);
 
   useEffect(() => {
     CheckToken().then(res => {
-      if (!res) navigate("/");
+      if (!res) { navigate("/"); closeGateWaySocket(); }
       ws = getGatewaySocket()
       if (!ws) {
         ws = connectGateWaySocket(`wss://${host}:8000/api/gateway`);
@@ -70,32 +73,67 @@ useEffect(() => {
     }
   }, [username, navigate]);
 
-    const fetchRelations = async () => {
-      if (!user) return;
-      try {
-        const res = await axios.get(
-          `https://${host}:8000/api/users/${user.id}/friends`,
-          { withCredentials: true }
+  function parseMySQLUTC(dateStr: string): number {
+    return new Date(dateStr.replace(' ', 'T') + 'Z').getTime();
+  }
+
+  const computeOnlineMap = (friends: FriendRelation[]): { [userId: number]: boolean } => {
+    const map: { [userId: number]: boolean } = {};
+    const now = Date.now();
+    friends.forEach(fr => {
+      if (!fr.user.last_seen) {
+        map[fr.user.id] = false;
+      } else {
+        const lastSeen = parseMySQLUTC(fr.user.last_seen);
+        map[fr.user.id] = (now - lastSeen) < 35000;
+      }
+    });
+    return map;
+  };
+
+  const fetchRelations = async () => {
+    if (!user) return;
+    try {
+      const res = await axios.get(
+        `https://${host}:8000/api/users/${user.id}/friends`,
+        { withCredentials: true }
+      );
+
+      const friends: FriendRelation[] = [];
+      const requests: FriendRelation[] = [];
+
+      // Pour le blocage entre l'utilisateur connecté et le profil visité
+      let blocked = false;
+      if (me && user) {
+        const blockRel = res.data.find((r: FriendRelation) =>
+          (r.type === 2) &&
+          ((r.user.id === user.id && me.id !== user.id) || (r.user.id === me.id && me.id !== user.id))
         );
+        blocked = !!blockRel;
+      }
+      setIsBlocked(blocked);
 
-        const friends: FriendRelation[] = [];
-        const requests: FriendRelation[] = [];
-        res.data.forEach((relation: FriendRelation) => {
-          if (relation.type === 1) friends.push(relation);
-          else if (relation.type === 0 && me!.id === user.id) {
-            requests.push(relation);
-          }
-        });
-        setFriendsList(friends);
-        setFriendRequests(requests);
+      res.data.forEach((relation: FriendRelation) => {
+        if (relation.type === 1) friends.push(relation);
+        else if (relation.type === 0 && me!.id === user.id) {
+          requests.push(relation);
+        }
+      });
 
-        const amIFriend = friends.some((relation) => relation.user.id === me!.id || (isOwnProfile && relation.user.id !== me!.id));
-        setAlreadyFriend(amIFriend);
-      } catch (err) {}
-    };
+      setFriendsList(friends);
+      setFriendRequests(requests);
+      const amIFriend = friends.some((relation) => relation.user.id === me!.id || (isOwnProfile && relation.user.id !== me!.id));
+      setAlreadyFriend(amIFriend);
+      return friends;
+    } catch (err) {}
+  };
 
   useEffect(() => {
-    if (user && me) fetchRelations();
+    if (user && me) {
+      fetchRelations().then(friends => {
+        setOnlineMap(computeOnlineMap(friends!));
+      });
+    }
   }, [user, me]);
 
   useEffect(() => {
@@ -107,27 +145,41 @@ useEffect(() => {
     ws.onmessage = (message) => {
       try {
         const gateway = JSON.parse(message.data);
-
+        if (gateway.op === "user_online" && gateway.data?.user)
+          setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: true }));
+        if (gateway.op === "user_offline" && gateway.data?.user)
+          setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: false }));
         if (gateway.op === "friends_add" && gateway.data && gateway.data.user) {
           setFriendsList(prev => {
             if (prev.some(f => f.user.id === gateway.data.user.id)) {
               return prev;
             } else if (isOwnProfile) {
               return [...prev, { type: 1, user: gateway.data.user }];
-
             } else {
-              return [...prev, { type: 1, user: me }];
+              return [...prev, { type: 1, user: me! }];
             }
           });
           setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
+          setOnlineMap(prev => ({ ...prev, [gateway.data.user.id]: gateway.data.user.last_seen ? (Date.now() - new Date(gateway.data.user.last_seen).getTime() < 35000) : false }));
         }
 
         if (gateway.op === "friends_remove" && gateway.data && gateway.data.user) {
           setFriendsList(prev => prev.filter(f => f.user.id !== gateway.data.user.id));
           setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
-            if (user && user.id === gateway.data.user.id) {
-              fetchRelations();
-      }
+          setOnlineMap(prev => {
+            const { [gateway.data.user.id]: removed, ...rest } = prev;
+            return rest;
+          });
+          if (user && user.id === gateway.data.user.id) {
+            fetchRelations();
+          }
+        }
+
+        if (gateway.op === "friends_block" && gateway.data && gateway.data.user) {
+          if (user && gateway.data.user.id === user.id) {
+            setIsBlocked(true);
+            setAlreadyFriend(false);
+          }
         }
 
         if (gateway.op === "friends_request" && gateway.data && gateway.data.user) {
@@ -145,13 +197,35 @@ useEffect(() => {
     return () => {
       if (ws) ws.onmessage = null;
     };
-  }, [ws, me, isOwnProfile]);
+  }, [ws, me, isOwnProfile, user]);
 
   const sendFriendRequest = async (userId: number) => {
     try {
       await axios.put(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { type: 1 }, { withCredentials: true });
       setIsRequestSent(true);
     } catch (err) {}
+  };
+
+  const blockUser = async (userId: number) => {
+    try {
+      await axios.put(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { type: 2 }, { withCredentials: true });
+      setIsBlocked(true);
+      setAlreadyFriend(false);
+      setBlockError(false);
+    } catch (err) {
+      setBlockError(true);
+    }
+  };
+
+  const unblockUser = async (userId: number) => {
+    try {
+      await axios.delete(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { withCredentials: true });
+      setIsBlocked(false);
+      setAlreadyFriend(false);
+      setBlockError(false);
+    } catch (err) {
+      setBlockError(true);
+    }
   };
 
   const acceptFriendRequest = async (userId: number) => {
@@ -171,6 +245,10 @@ useEffect(() => {
       await axios.delete(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { withCredentials: true });
       setFriendsList(friendsList.filter(friend => friend.user.id !== userId));
       setAlreadyFriend(false);
+      setOnlineMap(prev => {
+        const { [userId]: removed, ...rest } = prev;
+        return rest;
+      });
     } catch (err) {}
   };
 
@@ -190,19 +268,77 @@ useEffect(() => {
     );
   }
 
-  function FriendCard({ avatar, username, onDelete }: { avatar: string, username: string, onDelete: () => void }) {
+  function FriendCard({
+    avatar,
+    username,
+    onDelete,
+    online,
+    onBlock,
+    onUnblock,
+    blocked,
+  }: {
+    avatar: string;
+    username: string;
+    onDelete: () => void;
+    online: boolean;
+    onBlock: () => void;
+    onUnblock: () => void;
+    blocked: boolean;
+  }) {
     return (
       <div className="flex items-center bg-[#23242d] rounded-xl p-3 pr-4 mb-3 shadow-md hover:shadow-2xl transition relative group">
-        <img src={avatar || '/assets/no_profile.jpg'} alt="Ami" className="w-12 h-12 rounded-full border-2 border-[#44a29f] object-cover" />
+        <div className="relative">
+          <img
+            src={avatar || '/assets/no_profile.jpg'}
+            alt="Ami"
+            className="w-12 h-12 rounded-full border-2 border-[#44a29f] object-cover"
+          />
+          <span
+            className={`absolute right-0 bottom-0 block w-4 h-4 rounded-full border-2 ${
+              online ? 'bg-green-500 border-green-200' : 'bg-gray-400 border-gray-300'
+            }`}
+            title={online ? 'En ligne' : 'Hors ligne'}
+          ></span>
+        </div>
         <span className="ml-4 text-lg font-bold text-[#f7c80e]">{username}</span>
         {isOwnProfile && (
-          <button
-            onClick={onDelete}
-            className="ml-auto bg-[#e74c3c] text-white p-2 rounded-full hover:bg-[#c0392b] transition opacity-0 group-hover:opacity-100"
-            title="Retirer l'ami"
-          >
-            <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path stroke="white" strokeWidth="2" d="M6 6l8 8M14 6l-8 8"/></svg>
-          </button>
+          <div className="ml-auto flex gap-2 opacity-0 group-hover:opacity-100 transition">
+            <button
+              onClick={onDelete}
+              className="bg-[#e74c3c] text-white p-2 rounded-full hover:bg-[#c0392b] transition"
+              title="Retirer l'ami"
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                <path stroke="white" strokeWidth="2" d="M6 6l8 8M14 6l-8 8" />
+              </svg>
+            </button>
+            {blocked ? (
+              <button
+                onClick={onUnblock}
+                className={`p-2 rounded-full transition ${blockError ? "bg-orange-400 text-white" : "bg-[#44a29f] text-white hover:bg-[#36a97f]"}`}
+                title="Débloquer l'utilisateur"
+              >
+                <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                  <circle cx="10" cy="10" r="8" stroke="#fff" strokeWidth="2" />
+                  <path d="M7 10l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                {blockError && (
+                  <span className="ml-2 text-sm font-bold">Tu es bloqué</span>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={onBlock}
+                className="bg-[#f39c12] text-white p-2 rounded-full hover:bg-[#e67e22] transition"
+                title="Bloquer l'utilisateur"
+              >
+                <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                  <circle cx="10" cy="10" r="8" stroke="#fff" strokeWidth="2" />
+                  <path d="M6 6l8 8M14 6l-8 8" stroke="white" strokeWidth="2" />
+                </svg>
+              </button>
+            )}
+          </div>
         )}
       </div>
     );
@@ -229,7 +365,7 @@ useEffect(() => {
     else if (isRequestSent) state = "pending";
 
     return (
-      <div className="fixed bottom-10 right-10 z-50">
+      <div className="fixed bottom-10 right-10 z-50 flex gap-2">
         {state === "add" && (
           <button
             onClick={() => sendFriendRequest(user!.id)}
@@ -256,6 +392,28 @@ useEffect(() => {
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#44a29f" /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
             Ami
           </button>
+        )}
+        {!isOwnProfile && (
+          isBlocked ? (
+            <button
+              onClick={() => unblockUser(user!.id)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-full shadow-xl text-lg font-bold
+                ${blockError ? "bg-orange-400 text-white" : "bg-[#44a29f] text-white hover:bg-[#36a97f] transition"}`}
+              title="Débloquer"
+            >
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill={blockError ? "#f39c12" : "#44a29f"} /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
+              {blockError ? "Tu es bloqué" : "Débloquer"}
+            </button>
+          ) : (
+            <button
+              onClick={() => blockUser(user!.id)}
+              className="flex items-center gap-2 bg-[#f39c12] text-white px-6 py-3 rounded-full shadow-xl hover:bg-[#e67e22] transition text-lg font-bold"
+              title="Bloquer"
+            >
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f39c12" /><path d="M6 6l12 12M18 6l-12 12" stroke="white" strokeWidth="2" /></svg>
+              Bloquer
+            </button>
+          )
         )}
       </div>
     );
@@ -296,6 +454,10 @@ useEffect(() => {
                 avatar={relation.user.avatar_url || '/assets/no_profile.jpg'}
                 username={relation.user.username}
                 onDelete={() => deleteFriend(relation.user.id)}
+                online={!!onlineMap[relation.user.id]}
+                onBlock={() => blockUser(relation.user.id)}
+                onUnblock={() => unblockUser(relation.user.id)}
+                blocked={relation.type === 2}
               />
             ))
           )}

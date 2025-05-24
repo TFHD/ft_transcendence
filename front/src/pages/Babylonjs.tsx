@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from 'react-router-dom'
 import {BABYLON, GUI, LOADERS} from '../components/babylonImports'
 import { CheckToken, getUsername, getId } from '../components/CheckConnection'
-import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
+import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
 
 let ws:WebSocket | null = null;
 
@@ -46,8 +46,7 @@ const BabylonPage = () => {
   useEffect(() => {
     if (username === "default") return;
     CheckToken().then(res => {
-    if (!res)
-      navigate("/");
+    if (!res) { navigate("/"); closeGateWaySocket(); } 
     if (!getGatewaySocket()) {
       connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
     });

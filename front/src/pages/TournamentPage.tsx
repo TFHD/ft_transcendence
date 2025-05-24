@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckToken } from '../components/CheckConnection';
 import axios from 'axios';
 import { connectTournamentSocket, closeTournamentSocket } from '../components/SocketTournamentManager';
-import { connectGateWaySocket, getGatewaySocket} from '../components/GatewaySocket'
+import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 
@@ -32,7 +32,7 @@ const TournamentPage = () => {
 
   useEffect(() => {
     CheckToken().then(res => {
-      if (!res) navigate("/"); 
+      if (!res) { navigate("/"); closeGateWaySocket(); } 
       if (!getGatewaySocket()) {
             connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
     });
