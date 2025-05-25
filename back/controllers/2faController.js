@@ -19,9 +19,15 @@ export async function setup2FA(req, res) {
 		const otpAuthUrl = secret.otpauth_url;
 		const qrCode = await QRCode.toDataURL(otpAuthUrl);
 		const qrCodeImage = await QRCode.toString(otpAuthUrl, {type:'terminal'});
+		let newQrCodeImage = qrCodeImage.replaceAll('\u001b[47m  \u001b[0m', '1').replaceAll('\u001b[40m  \u001b[0m', '0');
+		let newQrCodeImageArray = newQrCodeImage.split('\n');
+		newQrCodeImageArray.pop();
 		return res.status(200).send({
 			qrCode : qrCode,
-			qrCodeImage : qrCodeImage,
+			cli: {
+				size: newQrCodeImageArray.length,
+				qrCodeImage : newQrCodeImageArray,
+			}
 		});
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
