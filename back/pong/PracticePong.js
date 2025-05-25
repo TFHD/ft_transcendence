@@ -183,6 +183,30 @@ function sendNormalized(socket, currentGame) {
 	}
 }
 
+function sendDatas(socket, currentGame) {
+	let sentBallX = currentGame.ball.position.x;
+	let sentBallY = currentGame.ball.position.y;
+	let sentPlayer1Y = currentGame.player1.y;
+	let sentPlayer2Y = currentGame.player2.y;
+	if (currentGame.player1.isTerminal === "true")
+	{
+		sentBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
+		sentBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
+		sentPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
+		sentPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
+	}
+	socket.send(JSON.stringify({
+		player1Y: sentPlayer1Y,
+		player2Y: sentPlayer2Y,
+		player1Score: currentGame.player1.score,
+		player2Score: currentGame.player2.score,
+		ballX: sentBallX,
+		ballY: sentBallY,
+		player1Name: currentGame.player1.name,
+		player2Name: "AI"
+	}))
+}
+
 const	SoloPongGame = async (socket) =>
 {
 	let currentGame = userGames.get(socket);
@@ -197,31 +221,7 @@ const	SoloPongGame = async (socket) =>
 
 		if (!currentGame.shouldStop)
 		{
-			let sentBallX = currentGame.ball.position.x;
-			let sentBallY = currentGame.ball.position.y;
-			let sentPlayer1Y = currentGame.player1.y;
-			let sentPlayer2Y = currentGame.player2.y;
-			if (currentGame.player1.isTerminal === "true")
-			{
-				sentBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
-				sentBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
-				sentPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
-				sentPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
-			}
-			socket.send(JSON.stringify({
-				player1Y: sentPlayer1Y,
-				player2Y: sentPlayer2Y,
-
-				player1Score: currentGame.player1.score,
-				player2Score: currentGame.player2.score,
-
-				ballX: sentBallX,
-				ballY: sentBallY,
-
-				player1Name: currentGame.player1.name,
-				player2Name: "AI"
-			}))
-			sendNormalized(socket, currentGame)
+			sendDatas(socket, currentGame);
 			await mssleep(16);
 		}
 	}

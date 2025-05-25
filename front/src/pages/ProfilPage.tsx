@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { CheckToken } from "../components/CheckConnection";
 import axios from 'axios';
 import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket } from '../components/GatewaySocket'
+import ChatWindow from '../components/ChatWindow';
+
 
 const host = window.location.hostname;
 let ws: WebSocket | null = null;
@@ -20,7 +22,8 @@ type User = {
 };
 
 type FriendRelation = {
-  type: number; // 0=pending, 1=friend, 2=blocked
+  type: number;
+  initiator_id : number;
   user: User;
 };
 
@@ -35,6 +38,7 @@ const ProfilPage = () => {
   const [isRequestSent, setIsRequestSent] = useState(false);
   const [alreadyFriend, setAlreadyFriend] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [blockRelation, setBlockRelation] = useState<FriendRelation | null>(null); // <- Ajout
   const [blockError, setBlockError] = useState(false);
   const [onlineMap, setOnlineMap] = useState<{ [userId: number]: boolean }>({});
 
@@ -92,7 +96,7 @@ const ProfilPage = () => {
   };
 
   const fetchRelations = async () => {
-    if (!user) return;
+    if (!user || !me) return;
     try {
       const res = await axios.get(
         `https://${host}:8000/api/users/${user.id}/friends`,
@@ -101,25 +105,19 @@ const ProfilPage = () => {
 
       const friends: FriendRelation[] = [];
       const requests: FriendRelation[] = [];
+      let blockRel: FriendRelation | null = null;
 
-      // Pour le blocage entre l'utilisateur connecté et le profil visité
-      let blocked = false;
-      if (me && user) {
-        const blockRel = res.data.find((r: FriendRelation) =>
-          (r.type === 2) &&
-          ((r.user.id === user.id && me.id !== user.id) || (r.user.id === me.id && me.id !== user.id))
-        );
-        blocked = !!blockRel;
-      }
-      setIsBlocked(blocked);
-
-      res.data.forEach((relation: FriendRelation) => {
+      for (const relation of res.data as FriendRelation[]) {
+        if (relation.type === 2) {
+          blockRel = relation;
+        }
         if (relation.type === 1) friends.push(relation);
-        else if (relation.type === 0 && me!.id === user.id) {
+        else if (relation.type === 0 && me.id === user.id) {
           requests.push(relation);
         }
-      });
-
+      }
+      setBlockRelation(blockRel);
+      setIsBlocked(!!blockRel);
       setFriendsList(friends);
       setFriendRequests(requests);
       const amIFriend = friends.some((relation) => relation.user.id === me!.id || (isOwnProfile && relation.user.id !== me!.id));
@@ -154,9 +152,9 @@ const ProfilPage = () => {
             if (prev.some(f => f.user.id === gateway.data.user.id)) {
               return prev;
             } else if (isOwnProfile) {
-              return [...prev, { type: 1, user: gateway.data.user }];
+              return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: gateway.data.user }];
             } else {
-              return [...prev, { type: 1, user: me! }];
+              return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: me! }];
             }
           });
           setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
@@ -187,7 +185,7 @@ const ProfilPage = () => {
             setFriendRequests(prev =>
               prev.some(req => req.user.id === gateway.data.user.id)
                 ? prev
-                : [...prev, { type: 0, user: gateway.data.user }]
+                : [...prev, { type: 0, initiator_id: gateway.initiator_id, user: gateway.data.user }]
             );
           }
         }
@@ -235,7 +233,7 @@ const ProfilPage = () => {
       setFriendsList(friendsList => {
         if (friendsList.some(f => f.user.id === userId)) return friendsList;
         const req = friendRequests.find(r => r.user.id === userId);
-        return req ? [...friendsList, { type: 1, user: req.user }] : friendsList;
+        return req ? [...friendsList, { type: 1, initiator_id: req.initiator_id, user: req.user }] : friendsList;
       });
     } catch (err) {}
   };
@@ -268,15 +266,7 @@ const ProfilPage = () => {
     );
   }
 
-  function FriendCard({
-    avatar,
-    username,
-    onDelete,
-    online,
-    onBlock,
-    onUnblock,
-    blocked,
-  }: {
+  function FriendCard({avatar, username, onDelete, online, onBlock, onUnblock, blocked, initiator_id}: {
     avatar: string;
     username: string;
     onDelete: () => void;
@@ -284,7 +274,9 @@ const ProfilPage = () => {
     onBlock: () => void;
     onUnblock: () => void;
     blocked: boolean;
+    initiator_id?: number;
   }) {
+    const canUnblock = blocked && initiator_id === me?.id;
     return (
       <div className="flex items-center bg-[#23242d] rounded-xl p-3 pr-4 mb-3 shadow-md hover:shadow-2xl transition relative group">
         <div className="relative">
@@ -312,7 +304,7 @@ const ProfilPage = () => {
                 <path stroke="white" strokeWidth="2" d="M6 6l8 8M14 6l-8 8" />
               </svg>
             </button>
-            {blocked ? (
+            {canUnblock ? (
               <button
                 onClick={onUnblock}
                 className={`p-2 rounded-full transition ${blockError ? "bg-orange-400 text-white" : "bg-[#44a29f] text-white hover:bg-[#36a97f]"}`}
@@ -326,6 +318,8 @@ const ProfilPage = () => {
                   <span className="ml-2 text-sm font-bold">Tu es bloqué</span>
                 )}
               </button>
+            ) : blocked ? (
+              <span className="text-orange-400 font-bold ml-2">Utilisateur bloqué</span>
             ) : (
               <button
                 onClick={onBlock}
@@ -364,47 +358,62 @@ const ProfilPage = () => {
     if (alreadyFriend) state = "friend";
     else if (isRequestSent) state = "pending";
 
+    const canUnblock = blockRelation && blockRelation.type === 2 && blockRelation.initiator_id === me?.id;
+
     return (
       <div className="fixed bottom-10 right-10 z-50 flex gap-2">
-        {state === "add" && (
+        {canUnblock ? (
           <button
-            onClick={() => sendFriendRequest(user!.id)}
-            className="flex items-center gap-2 bg-[#2980b9] text-white px-6 py-3 rounded-full shadow-xl hover:bg-[#3498db] transition text-lg font-bold"
-            title="Ajouter en ami"
+            onClick={() => unblockUser(user!.id)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-full shadow-xl text-lg font-bold
+              ${blockError ? "bg-orange-400 text-white" : "bg-[#44a29f] text-white hover:bg-[#36a97f] transition"}`}
+            title="Débloquer"
           >
-            <span className="text-2xl">+</span> Ajouter
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill={blockError ? "#f39c12" : "#44a29f"} /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
+            {blockError ? "Tu es bloqué" : "Débloquer"}
           </button>
-        )}
-        {state === "pending" && (
+        ) : blockRelation && blockRelation.type === 2 ? (
           <button
-            className="flex items-center gap-2 bg-[#95a5a6] text-white px-6 py-3 rounded-full shadow-xl cursor-not-allowed text-lg font-bold"
+            className="flex items-center gap-2 bg-orange-400 text-white px-6 py-3 rounded-full shadow-xl text-lg font-bold cursor-not-allowed"
             disabled
+            title="Tu es bloqué"
           >
-            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#bfc9ca" /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
-            Demande envoyée
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" fill="#f39c12" />
+              <path d="M6 6l12 12M18 6l-12 12" stroke="white" strokeWidth="2" />
+            </svg>
+            Tu es bloqué
           </button>
-        )}
-        {state === "friend" && (
-          <button
-            className="flex items-center gap-2 bg-[#44a29f] text-white px-6 py-3 rounded-full shadow-xl cursor-not-allowed text-lg font-bold"
-            disabled
-          >
-            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#44a29f" /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
-            Ami
-          </button>
-        )}
-        {!isOwnProfile && (
-          isBlocked ? (
+        ) : (
+          <>
+          {state === "add" && (
             <button
-              onClick={() => unblockUser(user!.id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-full shadow-xl text-lg font-bold
-                ${blockError ? "bg-orange-400 text-white" : "bg-[#44a29f] text-white hover:bg-[#36a97f] transition"}`}
-              title="Débloquer"
+              onClick={() => sendFriendRequest(user!.id)}
+              className="flex items-center gap-2 bg-[#2980b9] text-white px-6 py-3 rounded-full shadow-xl hover:bg-[#3498db] transition text-lg font-bold"
+              title="Ajouter en ami"
             >
-              <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill={blockError ? "#f39c12" : "#44a29f"} /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
-              {blockError ? "Tu es bloqué" : "Débloquer"}
+              <span className="text-2xl">+</span> Ajouter
             </button>
-          ) : (
+          )}
+          {state === "pending" && (
+            <button
+              className="flex items-center gap-2 bg-[#95a5a6] text-white px-6 py-3 rounded-full shadow-xl cursor-not-allowed text-lg font-bold"
+              disabled
+            >
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#bfc9ca" /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
+              Demande envoyée
+            </button>
+          )}
+          {state === "friend" && (
+            <button
+              className="flex items-center gap-2 bg-[#44a29f] text-white px-6 py-3 rounded-full shadow-xl cursor-not-allowed text-lg font-bold"
+              disabled
+            >
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#44a29f" /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
+              Ami
+            </button>
+          )}
+          {!isOwnProfile && (
             <button
               onClick={() => blockUser(user!.id)}
               className="flex items-center gap-2 bg-[#f39c12] text-white px-6 py-3 rounded-full shadow-xl hover:bg-[#e67e22] transition text-lg font-bold"
@@ -413,7 +422,8 @@ const ProfilPage = () => {
               <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f39c12" /><path d="M6 6l12 12M18 6l-12 12" stroke="white" strokeWidth="2" /></svg>
               Bloquer
             </button>
-          )
+          )}
+          </>
         )}
       </div>
     );
@@ -458,6 +468,7 @@ const ProfilPage = () => {
                 onBlock={() => blockUser(relation.user.id)}
                 onUnblock={() => unblockUser(relation.user.id)}
                 blocked={relation.type === 2}
+                initiator_id={relation.initiator_id}
               />
             ))
           )}
@@ -497,6 +508,7 @@ const ProfilPage = () => {
           border-radius: 8px;
         }
       `}</style>
+      <ChatWindow />
     </div>
   );
 };

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
 import '../styles/globals.css';
 import axios from 'axios';
 import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
+import ChatWindow from '../components/ChatWindow';
+
 
 const host = window.location.hostname;
 
@@ -21,6 +23,8 @@ type Match = {
 
 const StartGameMultiplayer = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const cantJoin = location.state?.cantJoin;
   const [history, setHistory] = useState<Match[]>([]);
   const [tournamentUsername, setTournamentUsername] = useState('');
   const [userData, setUserData] = useState({
@@ -130,6 +134,11 @@ const StartGameMultiplayer = () => {
             }}
           />
         )}
+        {cantJoin && (
+          <div className="text-red-500 font-bold mb-2 text-center">
+            Ce username est déjà pris !
+          </div>
+        )}
         <div className="flex justify-between items-center mb-4">
           <span className="text-white text-md pr-4">Mode Tournoi</span>
           <button
@@ -186,19 +195,20 @@ const StartGameMultiplayer = () => {
         )}
       </div>
       <div className="flex justify-center mt-6">
-      <button
-        onClick={handlePlay}
-        disabled={!isValid}
-        className={`text-white text-xl py-3 px-8 rounded-lg transition ${
-          isValid
-            ? 'bg-[#21A51D] hover:bg-[#1C8918]'
-            : 'bg-gray-500 cursor-not-allowed'
-        }`}
-      >
-        ▶️ Lancer la partie
-      </button>
+        <button
+          onClick={handlePlay}
+          disabled={!isValid}
+          className={`text-white text-xl py-3 px-8 rounded-lg transition ${
+            isValid
+              ? 'bg-[#21A51D] hover:bg-[#1C8918]'
+              : 'bg-gray-500 cursor-not-allowed'
+          }`}
+        >
+          ▶️ Lancer la partie
+        </button>
       </div>
     </div>
+    <ChatWindow />
   </div>
   );
 };

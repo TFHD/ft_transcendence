@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckToken } from '../components/CheckConnection';
-import axios from 'axios';
 import { connectTournamentSocket, closeTournamentSocket } from '../components/SocketTournamentManager';
 import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
+import ChatWindow from '../components/ChatWindow';
+
 
 const host = window.location.hostname;
+let ws:WebSocket | null = null;
 
 const TournamentPage = () => {
 
@@ -45,12 +47,16 @@ const TournamentPage = () => {
           wsRef.current.send(JSON.stringify({ finish: true, matchPlayed : matchPlayed, roundPlayed : roundPlayed }));
   }
 
-    const ws = connectTournamentSocket(`wss://${host}:8000/api/pong/tournament?tournamentID=${roomID}&username=${username}`);
+    ws = connectTournamentSocket(`wss://${host}:8000/api/pong/tournament?tournamentID=${roomID}&username=${username}`);
     wsRef.current = ws;
 
     ws.onmessage = (message) =>
     {
       const server_packet = JSON.parse(message.data);
+      if (server_packet.alreadyInUse != undefined && server_packet.alreadyInUse == true) {
+        closeTournamentSocket();
+        navigate("/start-game-multiplayer", {state : { cantJoin : true}})
+      }
       if (server_packet.canStart != undefined)
         setCanStart(server_packet.canStart);
       if (server_packet.id) {
@@ -68,7 +74,7 @@ const TournamentPage = () => {
       }
       if (server_packet.stop)
       {
-        ws.close();
+        ws!.close();
         navigate("/lobby");
       }
     };
@@ -98,7 +104,7 @@ const TournamentPage = () => {
       <div className="w-full md:w-80 p-6 bg-[#1e2933] flex flex-col justify-between">
         <div>
           <button
-            onClick={() => {closeTournamentSocket(); navigate('/lobby')}}
+            onClick={() => {closeTournamentSocket(); navigate('/start-game-multiplayer')}}
             className="mb-6 w-full bg-[#5d5570] text-white py-2 rounded-lg hover:bg-[#3c434b] transition"
           >
             ⬅️ Retour
@@ -179,6 +185,7 @@ const TournamentPage = () => {
           </button>
         </div>
       )}
+      <ChatWindow />
     </div>
   );
 };

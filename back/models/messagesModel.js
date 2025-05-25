@@ -34,7 +34,7 @@ export async function getAllMessages(userId, targetId, limit = 50, offset = 0) {
 	return await db.all(`
 		SELECT * FROM messages
 		WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-		ORDER BY timestamp DESC
+		ORDER BY timestamp ASC
 		LIMIT ? OFFSET ?
 	`, [userId, targetId, targetId, userId, limit, offset]);
 }

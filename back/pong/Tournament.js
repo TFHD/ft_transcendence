@@ -302,15 +302,15 @@ async function joinTournament(socket, tournamentID)
     if (currentUser.username == "0" || currentUser.username == 0)
     {
         console.log(`ILLEGAL USERNAME (${currentUser.username})`)
-        socket.send(JSON.stringify({stop : true}));
+        socket.send(JSON.stringify({alreadyInUse : true}));
         return ;
     }
     if (currentTournament)
     {
-        for (const [socket, user] of currentTournament.users)
+        for (const [socket_while, user] of currentTournament.users)
             if (user.username == currentUser.username)
             {
-                socket.send(JSON.stringify({stop: true}));
+                socket.send(JSON.stringify({alreadyInUse: true}));
                 console.log(`USERNAME ALREADY USED IN ROOM (${currentUser.username})`); // A PACKET SHOULD BE SENT THE THE USER SO HE GOES BACK TO THE PREVIOUS PAGE AND CLOSES HIS WS
                 return ;
             }
@@ -403,9 +403,9 @@ export async function tournament(connection, req)
                 console.log("NUKE THE ROOM!");
                 sendAll(currentUser.tournamentID, { stop : true });
                 currentTournament.nuked = true;
-            }                
-            currentTournament.users.delete(socket);
-            updatePlayer(currentUser.tournamentID, -1);
+            } 
+            if (currentTournament.users.delete(socket))
+                updatePlayer(currentUser.tournamentID, -1);
             console.log('client leave the room');
             if (currentTournament.users.size === 0)
             {

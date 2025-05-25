@@ -353,7 +353,7 @@ const BabylonPage = () => {
 
           if (endGame)
           {
-            if (dataTournament.username != undefined)
+            if (dataTournament.game_id != undefined)
               navigate(`/tournament/${dataTournament.game_id}`, { state : {fromStartGame : true, finish : true, roomID : dataTournament.game_id, username : username, matchPlayed : dataTournament.match , roundPlayed : dataTournament.round}});
             else
               navigate(-1);
