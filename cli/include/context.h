@@ -20,6 +20,8 @@ typedef enum
 	TCLI_FLAG_OK	= 1 << 0,
 	TCLI_SCENE_SWAP	= 1 << 1,
 	TCLI_REPLY		= 1 << 2,
+	TCLI_PONG_GAME	= 1 << 3,
+	TCLI_PONG_SOLO	= 1 << 4,
 }	TCLI(Flags);
 
 struct	_tcli_buff
@@ -42,11 +44,18 @@ struct _tcli
 	struct curl_slist	*headers;
 	char				*postfields;
 	TCLI(Buffer)		buffer;
+
+	double				ballX;
+	double				ballY;
+	double				p1Y;
+	double				p2Y;
 };
 
 extern	CURL		*CURL_CTX;
 extern	TCLI		*TCLI_CTX;
 extern	char		TCLI_TMP[1024];
+extern	char		TCLI_WSBUF_RECV[1024];
+extern	char		TCLI_WSBUF_SEND[1024];
 
 # define	TCLI_STATUS			TCLI_CTX->status
 # define	TCLI_ACTIVE			(TCLI_CTX->status & TCLI_FLAG_OK)
@@ -61,6 +70,9 @@ extern	char		TCLI_TMP[1024];
 
 # define	TCLI_URL			TCLI_CTX->url
 # define	TCLI_URL_HDR		"https://Trans:8000/api/"
+# define	TCLI_WSS_HDR		"wss://Trans:8000/api/"
+# define	TCLI_WSS_UPGRADE	"wss://Trans:8000/api/pong/solo?username=sacha&terminal=true"
+# define	TCLI_WSS_MULTI		"wss://Trans:8000/api/pong/duo?roomID=cacaca&username=sacha&terminal=true"
 
 # define	TCLI_IP				TCLI_CTX->ip
 

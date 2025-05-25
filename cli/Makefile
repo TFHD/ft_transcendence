@@ -14,7 +14,6 @@ CC			:=	clang
 
 CFLAGS		:=	-Wall -Wextra -g -ferror-limit=10000000
 IFLAGS		:=	-I include 						\
-				-I ./include/nopoll				\
 				-I ./include/curl				\
 				-I ./include/cJSON				\
 
@@ -34,7 +33,7 @@ check-libs:
 	fi
 
 $(NAME):	 	$(OBJS)	
-	@$(CC) $(CFLAGS) -save-temps $^ -L$(PWD)/lib -lnopoll -lcurl -lcjson -o $(NAME) $(IFLAGS) 
+	@$(CC) $(CFLAGS) -save-temps $^ -L$(PWD)/lib -lcurl -lcjson -lX11 -o $(NAME) $(IFLAGS) 
 
 	@echo " $(GREEN)$(BOLD)$(ITALIC)■$(RESET)  building	$(GRAY)$(BOLD)$(ITALIC)$(NAME)$(RESET)"
 
@@ -53,7 +52,7 @@ fclean:			clean
 	$(RM) $(NAME)
 
 cleandeps :
-	$(RM) ./include/cjson ./include/cJSON ./include/curl ./include/nopoll ./lib/* ./share ./bin
+	$(RM) ./include/cjson ./include/cJSON ./include/curl ./lib/* ./share ./bin
 
 re:			fclean all
 

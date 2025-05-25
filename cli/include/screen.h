@@ -113,6 +113,9 @@ TCLI_API(screenDrawSquare)
 TCLI_API(screenDrawImg)
 (TCLI(Screen) *screen, vec2 start, vec2 size, uint32_t *img);
 
+TCLI_API(screenSetPixel)
+(TCLI(Screen) *screen, vec2 pos, uint32_t color);
+
 TCLI_API(screenInit)
 (TCLI(Screen) *screen);
 

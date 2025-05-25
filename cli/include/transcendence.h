@@ -16,12 +16,12 @@
 
 # include <curl.h>
 # include <cJSON.h>
-# include <nopoll.h>
 
 # include <types.h>
 # include <screen.h>
 # include <ui.h>
 # include <context.h>
+# include <events.h>
 # include <http.h>
 # include <scenes.h>
 

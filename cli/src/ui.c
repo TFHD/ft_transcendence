@@ -8,58 +8,59 @@
 
 TCLI_API(loadScene)(void *toLoad)
 {
-	TCLI_SCENE = (TCLI(Scene))toLoad;
+	TCLI_SCENE = (TCLI_Scene)toLoad;
 	TCLI_STATUS |= TCLI_SCENE_SWAP;
 }
 
-TCLI_INTERN(handleAction)(TCLI(SceneCtx) *ctx)
+TCLI_INTERN(handleAction)(TCLI_SceneCtx *ctx)
 {
-	TCLI(Elem)		*current = ctx->select;
-	TCLI(Action)	*actions = &ctx->actions[current->action];
+	TCLI_Elem		*current = ctx->select;
+	
+	if (!current)
+		return ;
+	if (current->h.type == -1U)
+		return ;
+	
+	TCLI_Action	*actions = &ctx->actions[current->action];
 
 	for (uint32_t i = 0; i < current->actionCount; ++actions, ++i)
 	{
-		printf("Action %d:%p   --   status = %16lx\n", i, actions->func, TCLI_STATUS);
-		if (actions->func == TCLI(loadScene))
+		if (actions->func == TCLI_loadScene)
 		{
-			printf("  Loading scene...\n");
-			TCLI(SceneLoader)	f = actions->func;
-			TCLI(Scene)			*a = actions->arg;
+			TCLI_SceneLoader	f = actions->func;
+			TCLI_Scene			*a = actions->arg;
 
 			f(a);
 			break ;
 		}
-		if (actions->func == TCLI(makeRequest))
+		if (actions->func == TCLI_makeRequest)
 		{
-			printf("  HTTP Request...\n");
-			TCLI(Requester)	f = actions->func;
+			TCLI_Requester	f = actions->func;
 			uint64_t		a = (uint64_t) actions->arg;
 
 			f(ctx, a);
 			continue ;
 		}
-		if (actions->func == TCLI(evalReply))
+		if (actions->func == TCLI_evalReply)
 		{
-			printf("  Evaluating reply...\n");
-			TCLI(Evaluer)	f = actions->func;
+			TCLI_Evaluer	f = actions->func;
 			uint64_t		a = (uint64_t) actions->arg;
 
 			f(a);
 			continue ;
 		}
-		if (actions->func == (void *) 1)
+		if ((uint64_t)actions->func == 1)
 		{
-			printf("  Skipped an Action...\n");
+			uint64_t	skip = (uint64_t)actions->arg;
 			if (!(TCLI_STATUS & TCLI_REPLY))
 			{
-				actions++;
-				i++;
+				actions += skip;
+				i += skip;
 			}
 			continue ;
 		}
-		printf("  Rendering change...\n");
-		TCLI(Renderer)	f = actions->func;
-		TCLI(Elem)		*a = actions->arg;
+		TCLI_Renderer	f = actions->func;
+		TCLI_Elem		*a = actions->arg;
 
 		f(a);
 	}
@@ -67,16 +68,18 @@ TCLI_INTERN(handleAction)(TCLI(SceneCtx) *ctx)
 
 // TODO : add SELECT and DESELECT action pushes
 
-TCLI_INTERN(handleJump)(TCLI(SceneCtx) *ctx, char key)
+TCLI_INTERN(handleJump)(TCLI_SceneCtx *ctx, char key)
 {
-	TCLI(Elem)	*current = ctx->select;
-	TCLI(Elem)	*next = current->nexts[(int)key];
+	TCLI_Elem	*current = ctx->select;
+	TCLI_Elem	*next = current->nexts[(int)key];
 
 	if (!next)
 		return ;
 
+	if (current->h.type == -1U)
+		return ;
 	if (current->onDeselect.func)
-		((TCLI(Renderer))(current->onDeselect.func))(current->onDeselect.arg);
+		((TCLI_Renderer)(current->onDeselect.func))(current->onDeselect.arg);
 	if (next == (void *)TCLI_ELEM_LAST)
 	{
 		if (!ctx->last)
@@ -88,128 +91,130 @@ TCLI_INTERN(handleJump)(TCLI(SceneCtx) *ctx, char key)
 		ctx->select = next;
 	ctx->last = current;
 	current = ctx->select;
+	if (current)
+		printf("current = %p [%s]\n", current, current->txt);
 	if (current->onSelect.func)
-		((TCLI(Renderer))(current->onSelect.func))(current->onSelect.arg);
+		((TCLI_Renderer)(current->onSelect.func))(current->onSelect.arg);
 }
 
-TCLI_INTERN(handleInput)(TCLI(Elem) *current, char key)
+TCLI_INTERN(handleInput)(TCLI_Elem *current, char key)
 {
 	if (current->h.type == TCLI_ELEM_TEXTBOX)
 	{
 		uint32_t	len = strlen(current->input);
 		
-		if (len >= 15)
-			return ;
 		if (key == 127 && len > 0)
 			current->input[len - 1] = 0;
+		else if (len >= 15)
+			return ;
 		else if (key >= 32 && key < 127)
 			current->input[len] = key;
 	}
 }
 
-TCLI_API(handleKey)(TCLI(SceneCtx) *ctx, char key)
+TCLI_API(handleKey)(TCLI_SceneCtx *ctx, char key)
 {
 	if (key < 4)
-		TCLI(handleJump)(ctx, key);
+		TCLI_handleJump(ctx, key);
 	else if (key == '\n')
-		TCLI(handleAction)(ctx);
+		TCLI_handleAction(ctx);
 	else
-		TCLI(handleInput)(ctx->select, key);
+		TCLI_handleInput(ctx->select, key);
 }
 
-TCLI_API(renderImage)(TCLI(Elem) *e)
+TCLI_API(renderImage)(TCLI_Elem *e)
 {
-	TCLI(screenDrawImg)
+	TCLI_screenDrawImg
 	(
 		&TCLI_SCREEN,
 		e->pos[TCLI_IDX_BOX], e->size, e->image
 	);
 }
 
-TCLI_API(renderText)(TCLI(Elem) *e)
+TCLI_API(renderText)(TCLI_Elem *e)
 {
-	TCLI(screenDrawText)
+	TCLI_screenDrawText
 	(
 		&TCLI_SCREEN,
 		e->txt, e->pos[TCLI_IDX_TEXT], e->colors[TCLI_IDX_TEXT]
 	);
 }
 
-TCLI_API(renderTextbox)(TCLI(Elem) *e)
+TCLI_API(renderTextbox)(TCLI_Elem *e)
 {
-	TCLI(screenDrawSquare)
+	TCLI_screenDrawSquare
 	(
 		&TCLI_SCREEN,
 		e->pos[TCLI_IDX_BOX], e->size, e->colors[TCLI_IDX_BOX], 1
 	);
-	TCLI(screenDrawText)
+	TCLI_screenDrawText
 	(
 		&TCLI_SCREEN,
 		e->txt, e->pos[TCLI_IDX_TEXT], e->colors[TCLI_IDX_TEXT]
 	);
-	TCLI(screenDrawText)
+	TCLI_screenDrawText
 	(
 		&TCLI_SCREEN,
 		e->input, e->pos[TCLI_IDX_INPUT], e->colors[TCLI_IDX_INPUT]
 	);
 }
 
-TCLI_API(renderButton)(TCLI(Elem) *e)
+TCLI_API(renderButton)(TCLI_Elem *e)
 {
-	TCLI(screenDrawSquare)
+	TCLI_screenDrawSquare
 	(
 		&TCLI_SCREEN,
 		e->pos[TCLI_IDX_BOX], e->size, e->colors[TCLI_IDX_BOX], 1
 	);
-	TCLI(screenDrawText)
+	TCLI_screenDrawText
 	(
 		&TCLI_SCREEN,
 		e->txt, e->pos[TCLI_IDX_TEXT], e->colors[TCLI_IDX_TEXT]
 	);
 }
 
-const TCLI(Renderer)	_renderers[4] = 
+const TCLI_Renderer	_renderers[4] = 
 {
-	TCLI(renderText),
-	TCLI(renderTextbox),
-	TCLI(renderButton),
-	TCLI(renderImage),
+	TCLI_renderText,
+	TCLI_renderTextbox,
+	TCLI_renderButton,
+	TCLI_renderImage,
 };
 
-TCLI_API(render)(TCLI(SceneCtx) *ctx)
+TCLI_API(render)(TCLI_SceneCtx *ctx)
 {
 	if (!ctx)
 		return ;
 	for (uint32_t i = 1; i < ctx->elemCount; ++i)
 	{
-		TCLI(Elem)	*curr = &ctx->elems[i];
+		TCLI_Elem	*curr = &ctx->elems[i];
 
 		_renderers[curr->h.type](curr);
 	}
 }
 
-TCLI_API(rootElem)(TCLI(SceneCtx) *ctx)
+TCLI_API(rootElem)(TCLI_SceneCtx *ctx)
 {
-	memset(ctx->elems, 0xFF, sizeof(TCLI(Elem)));
+	memset(ctx->elems, 0xFF, sizeof(TCLI_Elem));
 	ctx->elemCount++;
 }
 
-TCLI_INTERN(selectButton)(TCLI(Elem) *button)
+TCLI_INTERN(selectButton)(TCLI_Elem *button)
 {
 	button->colors[TCLI_IDX_TEXT] = 0xf21212;
 }
 
-TCLI_INTERN(deselectButton)(TCLI(Elem) *button)
+TCLI_INTERN(deselectButton)(TCLI_Elem *button)
 {
 	button->colors[TCLI_IDX_TEXT] = 0xc3c3c3;
 }
 
-TCLI(Elem)	*TCLI(newButton)
-(TCLI(SceneCtx) *ctx, const char *txt, vec2 pos, vec2 size, uint32_t txtColor, uint32_t boxColor, uint32_t dftColor)
+TCLI_Elem	*TCLI_newButton
+(TCLI_SceneCtx *ctx, const char *txt, vec2 pos, vec2 size, uint32_t txtColor, uint32_t boxColor, uint32_t dftColor)
 {
-	TCLI(Elem)	*button = &ctx->elems[ctx->elemCount];
+	TCLI_Elem	*button = &ctx->elems[ctx->elemCount];
 
-	button->h = (TCLI(ElemHdr)){.type = TCLI_ELEM_BUTTON};
+	button->h = (TCLI_ElemHdr){.type = TCLI_ELEM_BUTTON};
 
 	button->pos[TCLI_IDX_BOX] = pos;
 	button->colors[TCLI_IDX_BOX] = boxColor;
@@ -226,8 +231,8 @@ TCLI(Elem)	*TCLI(newButton)
 	button->colors[TCLI_IDX_TEXT] = txtColor;
 	button->colors[TCLI_IDX_DEFAULT] = dftColor;
 
-	button->onSelect = (TCLI(Action)){TCLI(selectButton), button};
-	button->onDeselect = (TCLI(Action)){TCLI(deselectButton), button};
+	button->onSelect = (TCLI_Action){TCLI_selectButton, button};
+	button->onDeselect = (TCLI_Action){TCLI_deselectButton, button};
 	
 	button->action = -1U;
 
@@ -236,12 +241,12 @@ TCLI(Elem)	*TCLI(newButton)
 	return (button);
 }
 
-TCLI(Elem)	*TCLI(newText)
-(TCLI(SceneCtx) *ctx, const char *txt, vec2 pos, uint32_t txtColor, uint32_t dftColor)
+TCLI_Elem	*TCLI_newText
+(TCLI_SceneCtx *ctx, const char *txt, vec2 pos, uint32_t txtColor, uint32_t dftColor)
 {
-	TCLI(Elem)	*text = &ctx->elems[ctx->elemCount];
+	TCLI_Elem	*text = &ctx->elems[ctx->elemCount];
 
-	text->h = (TCLI(ElemHdr)){.type = TCLI_ELEM_TEXT};
+	text->h = (TCLI_ElemHdr){.type = TCLI_ELEM_TEXT};
 
 	text->pos[TCLI_IDX_BOX] = pos;
 
@@ -261,24 +266,24 @@ TCLI(Elem)	*TCLI(newText)
 	return (text);
 }
 
-TCLI_INTERN(selectTextbox)(TCLI(Elem) *textbox)
+TCLI_INTERN(selectTextbox)(TCLI_Elem *textbox)
 {
 	textbox->colors[TCLI_IDX_TEXT] = 0xf21212;
 	textbox->colors[TCLI_IDX_BOX] = 0xf21212;
 }
 
-TCLI_INTERN(deselectTextbox)(TCLI(Elem) *textbox)
+TCLI_INTERN(deselectTextbox)(TCLI_Elem *textbox)
 {
 	textbox->colors[TCLI_IDX_TEXT] = textbox->colors[TCLI_IDX_DEFAULT];
 	textbox->colors[TCLI_IDX_BOX] = textbox->colors[TCLI_IDX_DEFAULT];
 }
 
-TCLI(Elem)	*TCLI(newTextbox)
-(TCLI_SceneCtx *ctx, const char *txt, vec2 pos, uint32_t txtColor)
+TCLI_Elem	*TCLI_newTextbox
+(TCLI_SceneCtx *ctx, const char *txt, vec2 pos, vec2 size, uint32_t txtColor)
 {
-	TCLI(Elem)	*textbox = &ctx->elems[ctx->elemCount];
+	TCLI_Elem	*textbox = &ctx->elems[ctx->elemCount];
 
-	textbox->h = (TCLI(ElemHdr)){.type = TCLI_ELEM_TEXTBOX};
+	textbox->h = (TCLI_ElemHdr){.type = TCLI_ELEM_TEXTBOX};
 
 	textbox->pos[TCLI_IDX_TEXT] = (vec2){pos.x + 2, pos.y + 2};
 	textbox->colors[TCLI_IDX_BOX] = txtColor;
@@ -289,13 +294,13 @@ TCLI(Elem)	*TCLI(newTextbox)
 	uint32_t	txtLen = strlen(txt);
 	memcpy(textbox->txt, txt, txtLen);
 
-	textbox->size = (vec2) {16 * 4, 9};
+	textbox->size = size; 
 
 	textbox->pos[TCLI_IDX_BOX] = (vec2){pos.x + txtLen * 4 + 1, pos.y};
 	textbox->pos[TCLI_IDX_INPUT] = (vec2){pos.x + txtLen * 4 + 3, pos.y + 2};
 
-	textbox->onSelect = (TCLI(Action)){TCLI(selectTextbox), textbox};
-	textbox->onDeselect = (TCLI(Action)){TCLI(deselectTextbox), textbox};
+	textbox->onSelect = (TCLI_Action){TCLI_selectTextbox, textbox};
+	textbox->onDeselect = (TCLI_Action){TCLI_deselectTextbox, textbox};
 
 	textbox->action = -1U;
 
@@ -304,42 +309,42 @@ TCLI(Elem)	*TCLI(newTextbox)
 	return (textbox);
 }
 
-TCLI_API(setPos)(TCLI(Elem) *elem, uint8_t idx, vec2 pos)
+TCLI_API(setPos)(TCLI_Elem *elem, uint8_t idx, vec2 pos)
 {
 	if (!elem || idx >= TCLI_IDX_LAST)
 		return ;
 	elem->pos[idx] = pos;
 }
 
-TCLI_API(setColor)(TCLI(Elem) *elem, uint8_t idx, uint32_t color)
+TCLI_API(setColor)(TCLI_Elem *elem, uint8_t idx, uint32_t color)
 {
 	if (!elem || idx >= TCLI_IDX_LAST)
 		return ;
 	elem->colors[idx] = color;
 }
 
-TCLI_API(setNext)(TCLI(Elem) *elem, uint8_t idx, TCLI(Elem) *next)
+TCLI_API(setNext)(TCLI_Elem *elem, uint8_t idx, TCLI_Elem *next)
 {
 	if (!elem || idx >= TCLI_IDX_LAST)
 		return ;
 	elem->nexts[idx] = next;
 }
 
-TCLI_API(setTextInvisible)(TCLI(Elem) *elem)
+TCLI_API(setTextInvisible)(TCLI_Elem *elem)
 {
 	if (!elem)
 		return ;
 	elem->colors[TCLI_IDX_TEXT] = 0;
 }
 
-TCLI_API(setTextVisible)(TCLI(Elem) *elem)
+TCLI_API(setTextVisible)(TCLI_Elem *elem)
 {
 	if (!elem)
 		return ;
 	elem->colors[TCLI_IDX_TEXT] = elem->colors[TCLI_IDX_DEFAULT];
 }
 
-TCLI_API(addAction)(TCLI(SceneCtx) *ctx, TCLI(Elem) *to, TCLI(Action) what)
+TCLI_API(addAction)(TCLI_SceneCtx *ctx, TCLI_Elem *to, TCLI_Action what)
 {
 	if (to->action == -1U)
 		to->action = ctx->actionCount;

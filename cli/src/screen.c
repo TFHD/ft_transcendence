@@ -48,14 +48,14 @@ TCLI_INTERN(screenPutColor)(uint32_t color, char *ptr)
 
 	color &= ~(0xFF << 24);
 	comp = (color & 0xFF0000) >> 14;
-	TCLI(strcpy)(&ptr[7], &COLOR_TABLE[comp]);
+	TCLI_strcpy(&ptr[7], &COLOR_TABLE[comp]);
 	comp = (color & 0xFF00) >> 6;
-	TCLI(strcpy)(&ptr[11], &COLOR_TABLE[comp]);
+	TCLI_strcpy(&ptr[11], &COLOR_TABLE[comp]);
 	comp = (color & 0xFF) << 2;
-	TCLI(strcpy)(&ptr[15], &COLOR_TABLE[comp]);
+	TCLI_strcpy(&ptr[15], &COLOR_TABLE[comp]);
 }
 
-TCLI_INTERN(screenSetPixel)(TCLI(Screen) *screen, vec2 pos, uint32_t color)
+TCLI_API(screenSetPixel)(TCLI_Screen *screen, vec2 pos, uint32_t color)
 {
 	uint32_t	cx;
 	uint32_t	cy;
@@ -66,19 +66,19 @@ TCLI_INTERN(screenSetPixel)(TCLI(Screen) *screen, vec2 pos, uint32_t color)
 	cx = (TCLI_CHAR_SIZE * pos.x) + (19 * !(pos.y & 1));
 	cy = (pos.y >> 1);
 	index = ((TCLI_CHAR_SIZE * screen->width) * cy) + cx;
-	TCLI(screenPutColor)(color, &screen->data[index]);
+	TCLI_screenPutColor(color, &screen->data[index]);
 }
 
-TCLI_API(screenClear)(TCLI(Screen) *screen)
+TCLI_API(screenClear)(TCLI_Screen *screen)
 {
 	for (int32_t j = 0; j < screen->height * 2; ++j)
 	{
 		for (int32_t i = 0; i < screen->width; ++i)
-			TCLI(screenSetPixel)(screen, (vec2){i, j}, 0);
+			TCLI_screenSetPixel(screen, (vec2){i, j}, 0);
 	}
 }
 
-TCLI_API(screenDrawText)(TCLI(Screen) *screen, const char *text, vec2 start, uint32_t color)
+TCLI_API(screenDrawText)(TCLI_Screen *screen, const char *text, vec2 start, uint32_t color)
 {
 	vec2	offset = {0};
 	vec2	charpos = {0};
@@ -91,7 +91,7 @@ TCLI_API(screenDrawText)(TCLI(Screen) *screen, const char *text, vec2 start, uin
 			continue ;
 		}
 
-		const int rep = TCLI(font)[(int)(*text - 32)];
+		const int rep = TCLI_font[(int)(*text - 32)];
 		for (uint32_t i = 0; i < 5; ++i)
 		{
 			for (uint32_t j = 0; j < 3; ++j)
@@ -103,7 +103,7 @@ TCLI_API(screenDrawText)(TCLI(Screen) *screen, const char *text, vec2 start, uin
 					start.x + j + (4 * offset.x),
 					start.y + i + (6 * offset.y)
 				};
-				TCLI(screenSetPixel)(screen, charpos, color);
+				TCLI_screenSetPixel(screen, charpos, color);
 			}
 		}
 		offset.x++;
@@ -111,7 +111,7 @@ TCLI_API(screenDrawText)(TCLI(Screen) *screen, const char *text, vec2 start, uin
 	}
 }
 
-TCLI_API(screenDrawLine)(TCLI(Screen) *screen, vec2 start, vec2 end, uint32_t color)
+TCLI_API(screenDrawLine)(TCLI_Screen *screen, vec2 start, vec2 end, uint32_t color)
 {
 	vec2	diff;
 	vec2	absdiff;
@@ -131,24 +131,24 @@ TCLI_API(screenDrawLine)(TCLI(Screen) *screen, vec2 start, vec2 end, uint32_t co
 	while (test--)
 	{
 		vec2	pos = {inc.x, inc.y};
-		TCLI(screenSetPixel)(screen, pos, color);
+		TCLI_screenSetPixel(screen, pos, color);
 		inc.x += deltas.x;
 		inc.y += deltas.y;
 	}
 }
 
-TCLI_API(screenDrawSquare)(TCLI(Screen) *screen, vec2 start, vec2 size, uint32_t color, uint8_t rounded)
+TCLI_API(screenDrawSquare)(TCLI_Screen *screen, vec2 start, vec2 size, uint32_t color, uint8_t rounded)
 {
 	const vec2	end = (vec2){start.x + size.x - 1, start.y + size.y - 1};
 
 	rounded = !!rounded;
-	TCLI(screenDrawLine)(screen, (vec2){start.x + rounded, start.y}, (vec2){end.x, start.y}, color);
-	TCLI(screenDrawLine)(screen, (vec2){end.x, start.y + rounded}, end, color);
-	TCLI(screenDrawLine)(screen, (vec2){end.x - rounded, end.y}, (vec2){start.x, end.y}, color);
-	TCLI(screenDrawLine)(screen, (vec2){start.x, end.y - rounded}, (vec2)start, color);
+	TCLI_screenDrawLine(screen, (vec2){start.x + rounded, start.y}, (vec2){end.x, start.y}, color);
+	TCLI_screenDrawLine(screen, (vec2){end.x, start.y + rounded}, end, color);
+	TCLI_screenDrawLine(screen, (vec2){end.x - rounded, end.y}, (vec2){start.x, end.y}, color);
+	TCLI_screenDrawLine(screen, (vec2){start.x, end.y - rounded}, (vec2)start, color);
 }
 
-TCLI_API(screenDrawImg)(TCLI(Screen) *screen, vec2 start, vec2 size, uint32_t *img)
+TCLI_API(screenDrawImg)(TCLI_Screen *screen, vec2 start, vec2 size, uint32_t *img)
 {
 	for (int32_t j = 0; j < size.y; ++j)
 	{
@@ -156,17 +156,17 @@ TCLI_API(screenDrawImg)(TCLI(Screen) *screen, vec2 start, vec2 size, uint32_t *i
 		{
 			int32_t	index = j * size.y + i;
 
-			TCLI(screenSetPixel)(screen, (vec2){start.x + i, start.y + j}, img[index]);
+			TCLI_screenSetPixel(screen, (vec2){start.x + i, start.y + j}, img[index]);
 		}
 	}
 }
 
-TCLI_API(screenInit)(TCLI(Screen) *screen)
+TCLI_API(screenInit)(TCLI_Screen *screen)
 {
 	uint32_t	row;
 	uint32_t	col;
 
-	TCLI(ttySize)(&row, &col);
+	TCLI_ttySize(&row, &col);
 	// TODO: force terminal to be big enough...
 	screen->data = malloc(row * col * TCLI_CHAR_SIZE + 1);
 	if (screen->data)
@@ -174,7 +174,7 @@ TCLI_API(screenInit)(TCLI(Screen) *screen)
 		memset(screen->data, 0, row * col * TCLI_CHAR_SIZE + 1);
 		screen->width = col;
 		screen->height = row;
-		TCLI(screenMode)(1);
+		TCLI_screenMode(1);
 		for (uint32_t i = 0; i < row * col; ++i)
 		{
 			strcat(screen->data, TCLI_VOIDC);
@@ -183,8 +183,8 @@ TCLI_API(screenInit)(TCLI(Screen) *screen)
 	}
 }
 
-TCLI_API(screenDestroy)(TCLI(Screen) *screen)
+TCLI_API(screenDestroy)(TCLI_Screen *screen)
 {
-	TCLI(screenMode)(0);
+	TCLI_screenMode(0);
 	free(screen->data);
 }
