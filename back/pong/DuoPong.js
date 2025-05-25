@@ -451,9 +451,25 @@ export async function duoPong(connection, req)
 		if (currentRoom)
 		{
 			if (currentRoom.player1socket == socket)
+			{
 				currentRoom.player1socket = null;
-			if (currentRoom.player2socket == socket)
+				currentRoom.player1 = null;
+				if (currentRoom.player2socket == null)
+				{
+					rooms.delete(currentPlayerInfo.roomID);
+					console.log('empty room, deleted');
+				}
+			}
+			else if (currentRoom.player2socket == socket)
+			{
 				currentRoom.player2socket = null;
+				currentRoom.player2 = null;
+				if (currentRoom.player1socket == null)
+				{
+					rooms.delete(currentPlayerInfo.roomID);
+					console.log('empty room, deleted');
+				}
+			}
 			currentRoom.game.shouldStop = true;
 		}
 		userInfos.delete(socket);
