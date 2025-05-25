@@ -76,8 +76,18 @@ export async function loginUser(req, res) {
 		const validPassword = await bcrypt.compare(password, user.password);
 		if (!validPassword)
 			return res.status(errorCodes.INVALID_CREDENTIALS.status).send(errorCodes.INVALID_CREDENTIALS);
-		if (user.twofa_enabled && !code2fa)
-			return res.status(errorCodes.TWOFA_REQUIRED.status).send(errorCodes.TWOFA_REQUIRED);
+		if (user.twofa_enabled) {
+			if (!code2fa)
+				return res.status(errorCodes.TWOFA_REQUIRED.status).send(errorCodes.TWOFA_REQUIRED);
+			const verified = speakeasy.totp.verify({
+				secret: user.twofa_secret,
+				encoding: 'base32',
+				token: code2fa,
+				window: 1
+			});
+			if (!verified)
+				return res.status(errorCodes.INVALID_TWOFA_TOKEN.status).send(errorCodes.INVALID_TWOFA_TOKEN);
+		}
 		return returnCookie(user, res);
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
