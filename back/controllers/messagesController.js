@@ -120,7 +120,7 @@ export async function sendMessage(req, res) {
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 		const { messageId, timestamp } = await saveMessage(user.user_id, receiverId, cleanMessage);
 		const data = {
-			message: cleanMessage,
+			content: cleanMessage,
 			message_id: messageId,
 			timestamp: timestamp,
 			sender_id: user.user_id,
@@ -143,7 +143,7 @@ export async function sendMessage(req, res) {
 		const socket = global.wsClients.get(Number(receiverId));
 		if (socket && socket.readyState === 1)
 			socket.send(JSON.stringify({op: "message_send", data }));
-		return res.status(201).send({ success: true });
+		return res.status(201).send({ success: true, content: cleanMessage, message_id: messageId, timestamp: timestamp, sender_id: user.user_id, user: data.user });
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}

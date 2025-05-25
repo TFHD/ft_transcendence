@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckToken } from "../components/CheckConnection";
 import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
+import ChatWindow from '../components/ChatWindow';
+
 
 const host = window.location.hostname;
 
@@ -18,10 +20,11 @@ type User = {
 const SearchPage = () => {
     const search = window.location.pathname.split("/")[2];
     const [users, setUsers] = useState<User[]>([]);
-    const [searched, setSearch] = useState('');
+    const [searched, setSearch] = useState(search || '');
     const navigate = useNavigate();
 
     const handleSearch = () => {
+      console.log(search);
       navigate(`/search/${searched}`);
     };
 
@@ -63,12 +66,14 @@ const SearchPage = () => {
               </svg>
               <input
                 type="text"
+                value={searched}
                 maxLength={42}
                 placeholder="Rechercher un profil..."
                 className="bg-transparent outline-none text-white placeholder-white w-40 sm:w-64"
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && search != "") {
+                  if (e.key === 'Enter' && searched != "") {
+                    console.log(searched);
                     handleSearch();
                   }
                 }}
@@ -114,6 +119,7 @@ const SearchPage = () => {
             ))}
             </div>
         )}
+          <ChatWindow/>
         </div>
     );
 };

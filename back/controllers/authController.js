@@ -60,6 +60,7 @@ export async function loginUser(req, res) {
 		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 
 	const { email, username, password } = req.body;
+	const code2fa = req.headers['x-2fa-token'];
 
 	if (!email && !username || !password)
 		return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
@@ -69,13 +70,24 @@ export async function loginUser(req, res) {
 
 		if (!user)
 			return res.status(errorCodes.INVALID_CREDENTIALS.status).send(errorCodes.INVALID_CREDENTIALS);
-
 		if (!user.password)
 			return res.status(errorCodes.INVALID_CREDENTIALS.status).send(errorCodes.INVALID_CREDENTIALS);
-		const validPassword = await bcrypt.compare(password, user.password);
 
+		const validPassword = await bcrypt.compare(password, user.password);
 		if (!validPassword)
 			return res.status(errorCodes.INVALID_CREDENTIALS.status).send(errorCodes.INVALID_CREDENTIALS);
+		if (user.twofa_enabled) {
+			if (!code2fa)
+				return res.status(errorCodes.TWOFA_REQUIRED.status).send(errorCodes.TWOFA_REQUIRED);
+			const verified = speakeasy.totp.verify({
+				secret: user.twofa_secret,
+				encoding: 'base32',
+				token: code2fa,
+				window: 1
+			});
+			if (!verified)
+				return res.status(errorCodes.INVALID_TWOFA_TOKEN.status).send(errorCodes.INVALID_TWOFA_TOKEN);
+		}
 		return returnCookie(user, res);
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);

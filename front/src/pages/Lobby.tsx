@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckToken } from '../components/CheckConnection';
 import { BABYLON, GUI, LOADERS } from '../components/babylonImports'
 import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
+import ChatWindow from '../components/ChatWindow';
 
 const host = window.location.hostname;
 
@@ -30,7 +31,8 @@ const BabylonScene = () => {
   };
 
   const handleSearch = () => {
-    navigate(`/search/${search}`);
+    if (search.length >= 1)
+      navigate(`/search/${search}`);
   };
   
   useEffect(() => {
@@ -241,6 +243,7 @@ const BabylonScene = () => {
             <input
               type="text"
               maxLength={42}
+              minLength={1}
               placeholder="Rechercher un profil..."
               className="bg-transparent outline-none text-white placeholder-white w-40 sm:w-64"
               onChange={(e) => setSearch(e.target.value)}
@@ -258,6 +261,7 @@ const BabylonScene = () => {
         ref={canvasRef}
         style={{ width: "100%", height: "100vh", outline: "none"}}
       />
+      <ChatWindow />
     </div>
   );
 };

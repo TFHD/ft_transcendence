@@ -234,6 +234,7 @@ export async function getAllFriends(req, res) {
 				}
 				return {
 					type: row.status,
+					initiator_id : row.initiator_id,
 					user: {
 						id: friendInfo.user_id,
 						username: friendInfo.username,

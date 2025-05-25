@@ -165,7 +165,7 @@ const HomePage = () => {
         </button>
       </p>
     </div>
-    </div>
+  </div>
   );
 };
 

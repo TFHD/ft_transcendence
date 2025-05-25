@@ -24,6 +24,7 @@ class	Player
 		this.DownInput	= false;
 		this.y			= 0;
 		this.score		= 0;
+		this.isTerminal = null;
 	}
 }
 
@@ -176,16 +177,30 @@ const MAXY = 10;
 const MINY = -10;
 
 function normalize(value, min, max) {
-	return 2 * (value - min) / (max - min) - 1;
+	return (value - min) / (max - min);
 }
 
-function sendNormalized(socket, currentGame) {
-
+function sendDatas(socket, currentGame, username) {
+	let sentBallX = currentGame.ball.position.x;
+	let sentBallY = currentGame.ball.position.y;
+	let sentPlayer1Y = currentGame.player1.y;
+	let sentPlayer2Y = currentGame.player2.y;
+	if (currentGame.player1.isTerminal === "true")
+	{
+		sentBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
+		sentBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
+		sentPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
+		sentPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
+	}
 	socket.send(JSON.stringify({
-		ballX: normalizedBallX,
-		ballY: normalizedBallY,
-		player1Y: normalizedPlayer1Y,
-		player2Y: normalizedPlayer2Y,
+		ballX: sentBallX,
+		ballY: sentBallY,
+		player1Y: sentPlayer1Y,
+		player2Y: sentPlayer2Y,
+		player1Score: currentGame.player1.score,
+		player2Score: currentGame.player2.score,
+		player1Name: username,
+		player2Name: username + "1"
 	}));
 }
 
@@ -202,30 +217,7 @@ const	SoloPongGame = async (socket, username) =>
 
 		if (!currentGame.shouldStop)
 		{
-			let sentBallX = currentGame.ball.position.x;
-			let sentBallY = currentGame.ball.position.y;
-			let sentPlayer1Y = currentGame.player1.y;
-			let sentPlayer2Y = currentGame.player2.y;
-			if (currentGame.player1.isTerminal === "true")
-			{
-				sentBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
-				sentBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
-				sentPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
-				sentPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
-			}
-			socket.send(JSON.stringify({
-				player1Y: sentPlayer1Y,
-				player2Y: sentPlayer2Y,
-
-				player1Score: currentGame.player1.score,
-				player2Score: currentGame.player2.score,
-
-				ballX: sentBallX,
-				ballY: sentBallY,
-
-				player1Name: username,
-				player2Name: username + "1"
-			}))
+			sendDatas(socket, currentGame, username);
 			await mssleep(16);
 		}
 	}
@@ -234,12 +226,15 @@ const	SoloPongGame = async (socket, username) =>
 }
 
 export async function	soloPong(connection, req)
-{
+{	
+	console.log(req);
 	const sessionData = await authSocketMiddleware(req);
+	console.log("caca");
 	if (!sessionData) {
 		socket.close(1008, "Unauthorized");
 		return ;
 	}
+	console.log("caca1");
 	const socket = connection;
 	const username = req.query?.username;
 	
@@ -247,7 +242,7 @@ export async function	soloPong(connection, req)
 	socket.on('pong', () => {
 		socket.isAlive = true;
 	});
-	
+	console.log("caca2");
 	const interval = setInterval(() => {
 		if (socket.isAlive === false) {
 			clearInterval(interval);

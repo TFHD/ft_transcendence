@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { CheckToken, generateTimeBasedId } from "../components/CheckConnection";
 import axios from 'axios';
 import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
+import ChatWindow from '../components/ChatWindow';
+
 
 const host = window.location.hostname;
 
@@ -102,6 +104,7 @@ const StartGamePractice = () => {
           ▶️ Play
         </button>
       </div>
+      <ChatWindow />
     </div>
   );
 };
