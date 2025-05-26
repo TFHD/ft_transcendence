@@ -98,6 +98,8 @@ await db.exec(`
 		sender_id INTEGER NOT NULL,
 		receiver_id INTEGER NOT NULL,
 		content TEXT NOT NULL,
+		type TEXT NOT NULL,
+		room_id TEXT DEFAULT NULL,
 		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
 		FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE

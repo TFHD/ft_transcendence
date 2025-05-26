@@ -41,7 +41,9 @@ export async function getMessages(req, res) {
 			return res.status(200).send([]);
 		const decryptedMessages = messages.map(message => ({
 			...message,
-			content: decrypt(message.content)
+			content: decrypt(message.content),
+			type: message.type || 'text',
+			room_id: message.room_id || null,
 		}));
 		return res.status(200).send(decryptedMessages);
 	} catch (error) {
@@ -99,10 +101,16 @@ export async function sendMessage(req, res) {
 	if (!req.body)
 		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 	const { id, receiverId } = req.params;
-	const { message } = req.body;
+	const { message, type, room_id } = req.body;
 	try {
+		const _type = type ? type.trim().toLowerCase() : null;
+		const _room_id = room_id ? room_id.trim() : null;
 		if (!id || !receiverId || !message)
 			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
+		if (_type && _type !== 'invite')
+			return res.status(errorCodes.INVALID_FIELDS.status).send(errorCodes.INVALID_FIELDS);
+		if (!_type && _room_id)
+			return res.status(errorCodes.INVALID_FIELDS.status).send(errorCodes.INVALID_FIELDS);
 		if (!req.user.user_id)
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 		if (id !== '@me' && id != req.user.user_id)
@@ -123,9 +131,11 @@ export async function sendMessage(req, res) {
 		const relation = await findFriendRelation(user.user_id, receiverId);
 		if (!relation || relation.status !== 'accepted')
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-		const { messageId, timestamp } = await saveMessage(user.user_id, receiverId, encrypt(cleanMessage));
+		const { messageId, timestamp } = await saveMessage(user.user_id, receiverId, encrypt(cleanMessage), _type || 'text');
 		const data = {
 			content: cleanMessage,
+			type: _type || 'text',
+			room_id: _room_id,
 			message_id: messageId,
 			timestamp: timestamp,
 			sender_id: user.user_id,
@@ -148,7 +158,7 @@ export async function sendMessage(req, res) {
 		const socket = global.wsClients.get(Number(receiverId));
 		if (socket && socket.readyState === 1)
 			socket.send(JSON.stringify({op: "message_send", data }));
-		return res.status(201).send({ success: true, content: cleanMessage, message_id: messageId, timestamp: timestamp, sender_id: user.user_id, user: data.user });
+		return res.status(201).send({ success: true, type: _type || 'text', room_id: _room_id, content: cleanMessage, message_id: messageId, timestamp: timestamp, sender_id: user.user_id, user: data.user });
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}

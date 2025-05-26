@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getGatewaySocket, connectGateWaySocket } from "./GatewaySocket";
+import { generateTimeBasedId } from "./CheckConnection";
 
 const host = window.location.hostname;
 
@@ -22,9 +23,12 @@ type Message = {
   receiver_id: number;
   message: string;
   timestamp: string;
+  type?: string;
+  room_id?: string;
 };
 
 export default function ChatWindow() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [me, setMe] = useState<User | null>(null);
@@ -36,15 +40,18 @@ export default function ChatWindow() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const ws = useRef<WebSocket | null>(null);
+  const pongWs = useRef<WebSocket | null>(null);
   const [viewMode, setViewMode] = useState<"friends" | "chat">("friends");
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [joiningRoom, setJoiningRoom] = useState<string | null>(null);
 
   useEffect(() => { selectedFriendRef.current = selectedFriend; }, [selectedFriend]);
 
   useEffect(() => {
     axios.get(`https://${host}:8000/api/users/@me`, { withCredentials: true })
-      .then(res => setMe(res.data));
+      .then(res => setMe(res.data))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -52,7 +59,8 @@ export default function ChatWindow() {
     axios.get(`https://${host}:8000/api/users/${me.id}/friends`, { withCredentials: true })
       .then(res => {
         setFriends(res.data.filter((f: Friend) => f.type === 1));
-      });
+      })
+      .catch(() => {});
   }, [me]);
 
   useEffect(() => {
@@ -84,6 +92,8 @@ export default function ChatWindow() {
 		const newMessages = res.data.map((msg: any) => ({
 		  ...msg,
 		  message: msg.message ?? msg.content,
+		  type: msg.type,
+		  room_id: msg.room_id,
 		}));
 		newMessages.reverse();
 		
@@ -92,6 +102,7 @@ export default function ChatWindow() {
 		setMessages(prev => reset ? newMessages : [...newMessages, ...prev]); 
 		setOffset(currentOffset + 50);
 	  })
+	  .catch(() => {})
 	  .finally(() => setLoading(false));
   };
 
@@ -102,50 +113,84 @@ export default function ChatWindow() {
     }
     const socket = ws.current;
 
-    socket.onmessage = (event) => {
-		try {
-		  const data = JSON.parse(event.data);
-	  
-		  if (data.op === "message_send") {
-			const newMsg = {
-			  message_id: data.data.message_id,
-			  sender_id: Number(data.data.sender_id),
-			  receiver_id: Number(me?.id),
-			  message: data.data.content || data.data.message,
-			  timestamp: data.data.timestamp,
-			};
-			
-			if (selectedFriendRef.current && newMsg.sender_id === Number(selectedFriendRef.current.id)) {
-			  setMessages(prev => {
-				if (prev.some(m => m.message_id === newMsg.message_id)) return prev;
-				const newMessages = [...prev, newMsg];
-				setTimeout(scrollToBottom, 50);
-				return newMessages;
-			  });
-			}
-		  }
-		  if (data.op === "message_delete") {
-			setMessages(prev => prev.filter(m => m.message_id !== Number(data.data.message_id)));
-		  }
-		} catch {}
-	  };
-    return () => { if (socket) socket.onmessage = null; };
+    if (socket) {
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+    
+          if (data.op === "message_send") {
+            const newMsg = {
+              message_id: data.data.message_id,
+              sender_id: Number(data.data.sender_id),
+              receiver_id: Number(me?.id),
+              message: data.data.content || data.data.message,
+              timestamp: data.data.timestamp,
+              type: data.data.type,
+              room_id: data.data.room_id,
+            };
+            
+            if (selectedFriendRef.current && newMsg.sender_id === Number(selectedFriendRef.current.id)) {
+              setMessages(prev => {
+                if (prev.some(m => m.message_id === newMsg.message_id)) return prev;
+                const newMessages = [...prev, newMsg];
+                setTimeout(scrollToBottom, 50);
+                return newMessages;
+              });
+            }
+          }
+          if (data.op === "message_delete") {
+            setMessages(prev => prev.filter(m => m.message_id !== Number(data.data.message_id)));
+          }
+        } catch {}
+      };
+    }
+
+    return () => { 
+      if (socket) socket.onmessage = null; 
+    };
   }, [me]);
 
-  const handleSend = async (e?: React.FormEvent) => {
+  useEffect(() => {
+    return () => {
+      if (pongWs.current) {
+        pongWs.current.close();
+        pongWs.current = null;
+      }
+    };
+  }, []);
+
+  const handleSend = async (e?: React.FormEvent, messageType: string = "text") => {
 	if (e) e.preventDefault();
-	if (!message.trim() || !selectedFriend || !me) return;
+	if (messageType === "text" && !message.trim()) return;
+	if (!selectedFriend || !me) return;
 	
-	const msgToSend = message;
+	let msgToSend = message;
+	let requestBody: any = {
+	  timestamp: new Date().toISOString()
+	};
+
+	if (messageType === "invite") {
+	  const roomId = generateTimeBasedId();
+	  msgToSend = `🏓 Invitation au Pong !`;
+	  requestBody = {
+		...requestBody,
+		message: msgToSend,
+		type: "invite",
+		room_id: roomId
+	  };
+	} else {
+	  requestBody = {
+		...requestBody,
+		message: msgToSend
+	  };
+	}
+	
 	setMessage("");
 	
 	try {
 	  const res = await axios.post(
 		`https://${host}:8000/api/users/@me/messages/${selectedFriend.id}`,
-		{ 
-		  message: msgToSend,
-		  timestamp: new Date().toISOString()
-		},
+		requestBody,
 		{ withCredentials: true }
 	  );
 	  
@@ -154,7 +199,9 @@ export default function ChatWindow() {
 		message: res.data.content || res.data.message,
 		sender_id: Number(me.id),
 		receiver_id: Number(selectedFriend.id),
-		timestamp: res.data.timestamp || new Date().toISOString()
+		timestamp: res.data.timestamp || new Date().toISOString(),
+		type: res.data.type || messageType,
+		room_id: res.data.room_id
 	  };
 	  
 	  setMessages(prev => {
@@ -164,16 +211,68 @@ export default function ChatWindow() {
 	  
 	  scrollToBottom();
 	} catch (err) {
-	  setMessage(msgToSend);
+	  if (messageType === "text") {
+		setMessage(msgToSend);
+	  }
 	}
+  };
+
+  const handlePongInvite = () => {
+	handleSend(undefined, "invite");
+  };
+
+  const handleJoinPong = (roomId: string) => {
+	if (!me || !roomId || joiningRoom === roomId) return;
+	
+	setJoiningRoom(roomId);
+	
+	if (pongWs.current) {
+	  pongWs.current.close();
+	  pongWs.current = null;
+	}
+	
+	navigate('/pong/duo', { 
+	  state: { 
+		fromStartGame: true, 
+		roomID: roomId, 
+		username: me.username 
+	  } 
+	});
+	
+	setTimeout(() => {
+	  try {
+		const wsUrl = `wss://${host}:8000/api/pong/duo?roomID=${roomId}&username=${me.username}&terminal=false&game_id=undefined&match=undefined&round=undefined&isTournament=undefined&user_id=${me.id}&mode=undefined`;
+		
+		pongWs.current = new WebSocket(wsUrl);
+		
+		pongWs.current.onopen = () => {
+		  setJoiningRoom(null);
+		};
+		
+		pongWs.current.onerror = () => {
+		  setJoiningRoom(null);
+		  if (pongWs.current) {
+			pongWs.current.close();
+			pongWs.current = null;
+		  }
+		};
+		
+		pongWs.current.onclose = () => {
+		  setJoiningRoom(null);
+		  pongWs.current = null;
+		};
+		
+	  } catch (error) {
+		setJoiningRoom(null);
+	  }
+	}, 100);
   };
 
   const handleDelete = async (msgId: number) => {
     try {
       await axios.delete(`https://${host}:8000/api/messages/${msgId}`, { withCredentials: true });
 	  setMessages(prev => prev.filter(m => m.message_id !== msgId));
-    } catch (err) {
-    }
+    } catch (err) {}
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -186,6 +285,79 @@ export default function ChatWindow() {
     } catch {
       return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
+  };
+
+  const renderMessage = (m: Message) => {
+	const isMyMessage = Number(m.sender_id) === Number(me?.id);
+	const isJoining = joiningRoom === m.room_id;
+	
+	if (m.type === "invite") {
+	  return (
+		<div key={m.message_id} className="flex justify-center mb-4">
+		  <div className="bg-gradient-to-r from-[#f7c80e] to-[#44a29f] p-4 rounded-2xl shadow-lg max-w-xs mx-2 border-2 border-[#0b0c10]">
+			<div className="text-center">
+			  <div className="text-2xl mb-2">🏓</div>
+			  <div className="text-[#0b0c10] font-bold text-lg mb-2">
+				{isMyMessage ? "Tu as envoyé" : `${selectedFriend?.username} t'a envoyé`}
+			  </div>
+			  <div className="text-[#0b0c10] font-semibold mb-3">
+				une invitation au Pong !
+			  </div>
+			  
+			  <div className="flex gap-2 justify-center">
+				<button
+				  onClick={() => handleJoinPong(m.room_id!)}
+				  disabled={isJoining}
+				  className={`px-4 py-2 rounded-xl font-bold transition duration-200 ${
+					isJoining 
+					  ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+					  : isMyMessage 
+						? 'bg-[#0b0c10] text-[#44a29f] hover:bg-[#1e2933]'
+						: 'bg-[#0b0c10] text-[#f7c80e] hover:bg-[#1e2933]'
+				  }`}
+				>
+				  {isJoining ? "Connexion..." : "Rejoindre"}
+				</button>
+			  </div>
+			  
+			  <div className="text-xs text-[#0b0c10] mt-3 opacity-70">
+				Room: {m.room_id}
+			  </div>
+			  <div className="text-xs text-[#0b0c10] mt-1 opacity-70">
+				{formatTimestamp(m.timestamp)}
+			  </div>
+			</div>
+		  </div>
+		</div>
+	  );
+	}
+
+	return (
+	  <div key={m.message_id}
+		className={`flex items-end gap-1 mb-2 ${isMyMessage ? "justify-end" : "justify-start"}`}>
+		{!isMyMessage && (
+		  <img src={selectedFriend?.avatar_url || "/assets/no_profile.jpg"} className="w-7 h-7 rounded-full mr-1" />
+		)}
+		<div
+		  className={`rounded-2xl px-4 py-2 max-w-[60vw] md:max-w-[18rem] break-words shadow
+			${isMyMessage
+			  ? "bg-[#44a29f] text-white rounded-br-[0.6rem]"
+			  : "bg-[#5d5570] text-white rounded-bl-[0.6rem]"}`
+		  }
+		>
+		  <span style={{ wordBreak: "break-word" }}>{m.message}</span>
+		  <span className="block text-xs text-[#f7c80e] mt-1 text-right whitespace-nowrap">
+			{formatTimestamp(m.timestamp)}
+		  </span>
+		</div>
+		{isMyMessage &&
+		  <button onClick={() => handleDelete(m.message_id)}
+			title="Supprimer"
+			className="text-gray-300 hover:text-red-500 ml-1 text-xs">
+			✕
+		  </button>}
+	  </div>
+	);
   };
 
   const chatBoxClass =
@@ -249,7 +421,16 @@ export default function ChatWindow() {
                     </svg>
                   </button>
                   <img src={selectedFriend?.avatar_url || "/assets/no_profile.jpg"} className="w-8 h-8 rounded-full border-2 border-[#44a29f]" />
-                  <span className="font-bold text-[#f7c80e] text-base truncate"><Link to={`/profil/${selectedFriend?.id}`}>{selectedFriend?.username}</Link></span>
+                  <span className="font-bold text-[#f7c80e] text-base truncate flex-1">
+                    <Link to={`/profil/${selectedFriend?.id}`}>{selectedFriend?.username}</Link>
+                  </span>
+                  <button
+                    onClick={handlePongInvite}
+                    className="bg-gradient-to-r from-[#f7c80e] to-[#44a29f] text-[#0b0c10] px-3 py-1 rounded-lg font-bold hover:from-[#44a29f] hover:to-[#f7c80e] transition duration-200 text-sm flex items-center gap-1"
+                    title="Inviter au Pong"
+                  >
+                    🏓 Défi
+                  </button>
                 </div>
                 <div
                   ref={scrollContainerRef}
@@ -272,35 +453,7 @@ export default function ChatWindow() {
                   {loading && messages.length === 0 ? (
                     <div className="text-center text-gray-400 pt-8">Chargement...</div>
                   ) : (
-                    messages.map(m => {
-                      const isMyMessage = Number(m.sender_id) === Number(me?.id);
-                      return (
-                        <div key={m.message_id}
-                          className={`flex items-end gap-1 mb-2 ${isMyMessage ? "justify-end" : "justify-start"}`}>
-                          {!isMyMessage && (
-                            <img src={selectedFriend?.avatar_url || "/assets/no_profile.jpg"} className="w-7 h-7 rounded-full mr-1" />
-                          )}
-                          <div
-                            className={`rounded-2xl px-4 py-2 max-w-[60vw] md:max-w-[18rem] break-words shadow
-                              ${isMyMessage
-                                ? "bg-[#44a29f] text-white rounded-br-[0.6rem]"
-                                : "bg-[#5d5570] text-white rounded-bl-[0.6rem]"}`
-                            }
-                          >
-                            <span style={{ wordBreak: "break-word" }}>{m.message}</span>
-                            <span className="block text-xs text-[#f7c80e] mt-1 text-right whitespace-nowrap">
-                              {formatTimestamp(m.timestamp)}
-                            </span>
-                          </div>
-                          {isMyMessage &&
-                            <button onClick={() => handleDelete(m.message_id)}
-                              title="Supprimer"
-                              className="text-gray-300 hover:text-red-500 ml-1 text-xs">
-                              ✕
-                            </button>}
-                        </div>
-                      );
-                    })
+                    messages.map(m => renderMessage(m))
                   )}
                   <div ref={messagesEndRef} />
                 </div>

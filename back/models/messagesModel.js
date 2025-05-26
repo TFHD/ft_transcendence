@@ -1,13 +1,13 @@
 import db from '../database/db.js';
 import { generateRandomMessageID } from './userModel.js';
 
-export async function saveMessage(userId, receiverId, message) {
+export async function saveMessage(userId, receiverId, message, type) {
 	const messageId = generateRandomMessageID();
 	const row = await db.get(`
-		INSERT INTO messages (message_id, sender_id, receiver_id, content)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO messages (message_id, sender_id, receiver_id, content, type)
+		VALUES (?, ?, ?, ?, ?)
 		RETURNING message_id, timestamp
-	`, [messageId, userId, receiverId, message]);
+	`, [messageId, userId, receiverId, message, type]);
 
 	return { messageId: row.message_id, timestamp: row.timestamp };
 }
