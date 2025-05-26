@@ -1,1 +1,0 @@
-export const cookieSecret = process.env.COOKIE_SECRET;
