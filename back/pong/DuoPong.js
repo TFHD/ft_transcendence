@@ -462,6 +462,7 @@ export async function duoPong(connection, req)
 					rooms.delete(currentPlayerInfo.roomID);
 					console.log('empty room, deleted');
 				}
+				currentRoom.game.shouldStop = true;
 			}
 			else if (currentRoom.player2socket == socket)
 			{
@@ -472,8 +473,8 @@ export async function duoPong(connection, req)
 					rooms.delete(currentPlayerInfo.roomID);
 					console.log('empty room, deleted');
 				}
+				currentRoom.game.shouldStop = true;
 			}
-			currentRoom.game.shouldStop = true;
 		}
 		userInfos.delete(socket);
 		console.log('goodbye client');
