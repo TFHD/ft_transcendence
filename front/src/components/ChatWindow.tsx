@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { Link, useNavigate } from 'react-router-dom';
-import { getGatewaySocket, connectGateWaySocket } from "./GatewaySocket";
+import { getGatewaySocket, connectGateWaySocket, addGatewayListener, removeGatewayListener, closeGateWaySocket } from "../components/GatewaySocket";
 import { generateTimeBasedId } from "./CheckConnection";
 
 const host = window.location.hostname;
@@ -109,12 +109,9 @@ export default function ChatWindow() {
   useEffect(() => {
     if (!me) return;
     if (!ws.current) {
-      ws.current = getGatewaySocket() || connectGateWaySocket(`wss://${host}:8000/api/gateway`);
+      ws.current = connectGateWaySocket(`wss://${host}:8000/api/gateway`);
     }
-    const socket = ws.current;
-
-    if (socket) {
-      socket.onmessage = (event) => {
+      const handler = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
     
@@ -143,10 +140,10 @@ export default function ChatWindow() {
           }
         } catch {}
       };
-    }
 
-    return () => { 
-      if (socket) socket.onmessage = null; 
+    addGatewayListener(handler);
+    return () => {
+      removeGatewayListener(handler);
     };
   }, [me]);
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
 import Modal2FA from '../components/Model2FA'
 import GoogleLoginButton from "../components/GoogleButton";
@@ -55,6 +55,7 @@ const HomePage = () => {
         email: formData.identifier,
         password: formData.password,
       }, {withCredentials: true});
+      navigate("/lobby");
       setStatusMessage({
         text: "Connexion réussie !",
         type: "success",

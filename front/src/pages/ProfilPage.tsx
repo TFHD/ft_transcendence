@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckToken } from "../components/CheckConnection";
 import axios from 'axios';
-import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket } from '../components/GatewaySocket'
+import { getGatewaySocket, connectGateWaySocket, addGatewayListener, removeGatewayListener, closeGateWaySocket } from "../components/GatewaySocket";
 import ChatWindow from '../components/ChatWindow';
 
-
 const host = window.location.hostname;
-let ws: WebSocket | null = null;
+let ws1: WebSocket | null = null;
 
 type User = {
   id: number;
@@ -38,7 +37,7 @@ const ProfilPage = () => {
   const [isRequestSent, setIsRequestSent] = useState(false);
   const [alreadyFriend, setAlreadyFriend] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [blockRelation, setBlockRelation] = useState<FriendRelation | null>(null); // <- Ajout
+  const [blockRelation, setBlockRelation] = useState<FriendRelation | null>(null);
   const [blockError, setBlockError] = useState(false);
   const [onlineMap, setOnlineMap] = useState<{ [userId: number]: boolean }>({});
 
@@ -55,9 +54,10 @@ const ProfilPage = () => {
   useEffect(() => {
     CheckToken().then(res => {
       if (!res) { navigate("/"); closeGateWaySocket(); }
-      ws = getGatewaySocket()
-      if (!ws) {
-        ws = connectGateWaySocket(`wss://${host}:8000/api/gateway`);
+      ws1 = getGatewaySocket();
+      if(!ws1) {
+        ws1 = connectGateWaySocket(`wss://${host}:8000/api/gateway`);
+        console.log("connexion reussie !");
       }
     });
 
@@ -106,6 +106,7 @@ const ProfilPage = () => {
       const friends: FriendRelation[] = [];
       const requests: FriendRelation[] = [];
       let blockRel: FriendRelation | null = null;
+      let hasPendingRequest = false;
 
       for (const relation of res.data as FriendRelation[]) {
         if (relation.type === 2) {
@@ -115,13 +116,20 @@ const ProfilPage = () => {
         else if (relation.type === 0 && me.id === user.id) {
           requests.push(relation);
         }
+        else if (relation.type === 0 && relation.initiator_id === me.id) {
+          hasPendingRequest = true;
+        }
       }
+
       setBlockRelation(blockRel);
       setIsBlocked(!!blockRel);
       setFriendsList(friends);
       setFriendRequests(requests);
+      setIsRequestSent(hasPendingRequest);
+      
       const amIFriend = friends.some((relation) => relation.user.id === me!.id || (isOwnProfile && relation.user.id !== me!.id));
       setAlreadyFriend(amIFriend);
+      
       return friends;
     } catch (err) {}
   };
@@ -129,73 +137,87 @@ const ProfilPage = () => {
   useEffect(() => {
     if (user && me) {
       fetchRelations().then(friends => {
-        setOnlineMap(computeOnlineMap(friends!));
+        if (friends) {
+          setOnlineMap(computeOnlineMap(friends));
+        }
       });
     }
   }, [user, me]);
 
   useEffect(() => {
-    if (!ws || !me) return;
-    ws.onopen = () => { console.log('Successfully connected to server'); };
-    ws.onerror = (e) => { console.log('Connection error', e); };
-    ws.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); ws = null; };
+    if (!ws1 || !me) return;
+    ws1.onopen = () => { console.log('Successfully connected to server'); };
+    ws1.onerror = (e) => { console.log('Connection error', e); };
+    ws1.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); ws1 = null; };
 
-    ws.onmessage = (message) => {
-      try {
-        const gateway = JSON.parse(message.data);
-        if (gateway.op === "user_online" && gateway.data?.user)
-          setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: true }));
-        if (gateway.op === "user_offline" && gateway.data?.user)
-          setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: false }));
-        if (gateway.op === "friends_add" && gateway.data && gateway.data.user) {
-          setFriendsList(prev => {
-            if (prev.some(f => f.user.id === gateway.data.user.id)) {
-              return prev;
-            } else if (isOwnProfile) {
-              return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: gateway.data.user }];
-            } else {
-              return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: me! }];
-            }
+    const handler = (message: MessageEvent) => {
+      const gateway = JSON.parse(message.data);
+      if (gateway.op === "user_online" && gateway.data?.user)
+        setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: true }));
+      if (gateway.op === "user_offline" && gateway.data?.user)
+        setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: false }));
+      if (gateway.op === "friends_add" && gateway.data && gateway.data.user) {
+        setFriendsList(prev => {
+          if (prev.some(f => f.user.id === gateway.data.user.id)) {
+            return prev;
+          } else if (isOwnProfile) {
+            return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: gateway.data.user }];
+          } else {
+            return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: me! }];
+          }
+        });
+        setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
+        setOnlineMap(prev => ({ ...prev, [gateway.data.user.id]: gateway.data.user.last_seen ? (Date.now() - new Date(gateway.data.user.last_seen).getTime() < 35000) : false }));
+      }
+
+      if (gateway.op === "friends_remove" && gateway.data && gateway.data.user) {
+        setFriendsList(prev => prev.filter(f => f.user.id !== gateway.data.user.id));
+        setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
+        setOnlineMap(prev => {
+          const { [gateway.data.user.id]: removed, ...rest } = prev;
+          return rest;
+        });
+        if (user && user.id === gateway.data.user.id) {
+          fetchRelations();
+        }
+      }
+
+      if (gateway.op === "friends_block" && gateway.data && gateway.data.user) {
+        if (me && gateway.data.user.id === me.id) {
+          setIsBlocked(true);
+          setAlreadyFriend(false);
+          setBlockRelation({
+            type: 2,
+            initiator_id: gateway.initiator_id,
+            user: user!,
           });
-          setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
-          setOnlineMap(prev => ({ ...prev, [gateway.data.user.id]: gateway.data.user.last_seen ? (Date.now() - new Date(gateway.data.user.last_seen).getTime() < 35000) : false }));
         }
-
-        if (gateway.op === "friends_remove" && gateway.data && gateway.data.user) {
-          setFriendsList(prev => prev.filter(f => f.user.id !== gateway.data.user.id));
-          setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
-          setOnlineMap(prev => {
-            const { [gateway.data.user.id]: removed, ...rest } = prev;
-            return rest;
+        if (user && gateway.data.user.id === user.id) {
+          setIsBlocked(true);
+          setAlreadyFriend(false);
+          setBlockRelation({
+            type: 2,
+            initiator_id: me!.id,
+            user: user,
           });
-          if (user && user.id === gateway.data.user.id) {
-            fetchRelations();
-          }
         }
+      }
 
-        if (gateway.op === "friends_block" && gateway.data && gateway.data.user) {
-          if (user && gateway.data.user.id === user.id) {
-            setIsBlocked(true);
-            setAlreadyFriend(false);
-          }
+      if (gateway.op === "friends_request" && gateway.data && gateway.data.user) {
+        if (isOwnProfile) {
+          setFriendRequests(prev =>
+            prev.some(req => req.user.id === gateway.data.user.id)
+              ? prev
+              : [...prev, { type: 0, initiator_id: gateway.initiator_id, user: gateway.data.user }]
+          );
         }
-
-        if (gateway.op === "friends_request" && gateway.data && gateway.data.user) {
-          if (isOwnProfile) {
-            setFriendRequests(prev =>
-              prev.some(req => req.user.id === gateway.data.user.id)
-                ? prev
-                : [...prev, { type: 0, initiator_id: gateway.initiator_id, user: gateway.data.user }]
-            );
-          }
-        }
-      } catch (err) {}
+      }
     };
-
+    addGatewayListener(handler);
     return () => {
-      if (ws) ws.onmessage = null;
+      removeGatewayListener(handler);
     };
-  }, [ws, me, isOwnProfile, user]);
+  }, [ws1, me, isOwnProfile, user]);
 
   const sendFriendRequest = async (userId: number) => {
     try {
@@ -206,10 +228,14 @@ const ProfilPage = () => {
 
   const blockUser = async (userId: number) => {
     try {
-      await axios.put(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { type: 2 }, { withCredentials: true });
+      await axios.put(`https://${host}:8000/api/users/@me/friends/${userId}`, { type: 2 }, { withCredentials: true });
       setIsBlocked(true);
       setAlreadyFriend(false);
+      setIsRequestSent(false);
       setBlockError(false);
+      if (user) {
+        setBlockRelation({ type: 2, initiator_id: me!.id, user: user });
+      }
     } catch (err) {
       setBlockError(true);
     }
@@ -219,6 +245,7 @@ const ProfilPage = () => {
     try {
       await axios.delete(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { withCredentials: true });
       setIsBlocked(false);
+      setBlockRelation(null);
       setAlreadyFriend(false);
       setBlockError(false);
     } catch (err) {
@@ -359,6 +386,7 @@ const ProfilPage = () => {
     else if (isRequestSent) state = "pending";
 
     const canUnblock = blockRelation && blockRelation.type === 2 && blockRelation.initiator_id === me?.id;
+    const isBlockedByOther = blockRelation && blockRelation.type === 2 && blockRelation.initiator_id !== me?.id;
 
     return (
       <div className="fixed bottom-10 right-10 z-50 flex gap-2">
@@ -372,7 +400,7 @@ const ProfilPage = () => {
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill={blockError ? "#f39c12" : "#44a29f"} /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
             {blockError ? "Tu es bloqué" : "Débloquer"}
           </button>
-        ) : blockRelation && blockRelation.type === 2 ? (
+        ) : isBlockedByOther ? (
           <button
             className="flex items-center gap-2 bg-orange-400 text-white px-6 py-3 rounded-full shadow-xl text-lg font-bold cursor-not-allowed"
             disabled
@@ -413,7 +441,7 @@ const ProfilPage = () => {
               Ami
             </button>
           )}
-          {!isOwnProfile && (
+          {!isOwnProfile && !isBlocked && (
             <button
               onClick={() => blockUser(user!.id)}
               className="flex items-center gap-2 bg-[#f39c12] text-white px-6 py-3 rounded-full shadow-xl hover:bg-[#e67e22] transition text-lg font-bold"
@@ -508,7 +536,7 @@ const ProfilPage = () => {
           border-radius: 8px;
         }
       `}</style>
-      <ChatWindow />
+      <ChatWindow/>
     </div>
   );
 };
