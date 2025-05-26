@@ -163,24 +163,7 @@ const MAXY = 10;
 const MINY = -10;
 
 function normalize(value, min, max) {
-	return 2 * (value - min) / (max - min) - 1;
-}
-
-function sendNormalized(socket, currentGame) {
-	const normalizedBallX = normalize(currentGame.ball.position.x, MINX, MAXX);
-	const normalizedBallY = normalize(currentGame.ball.position.y, MINY, MAXY);
-	const normalizedPlayer1Y = normalize(currentGame.player1.y, MINY, MAXY);
-	const normalizedPlayer2Y = normalize(currentGame.player2.y, MINY, MAXY);
-
-	if (currentGame.player1.isTerminal === "true")
-	{
-		socket.send(JSON.stringify({
-			ballX: normalizedBallX,
-			ballY: normalizedBallY,
-			player1Y: normalizedPlayer1Y,
-			player2Y: normalizedPlayer2Y,
-		}));
-	}
+	return (value - min) / (max - min);
 }
 
 function sendDatas(socket, currentGame) {
