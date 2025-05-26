@@ -127,6 +127,8 @@ async function setWinner(room, dataTournament)
 			}
 				user_win = await findUserById(winner.player_id);
 				user_loose = await findUserById(looser.player_id);
+				if (!user_win || !user_loose || !looser.username || !winner.username)
+					return ;
 				await updateUser(user_win.user_id, {last_opponent: looser.username});
 				await updateUser(user_loose.user_id, {last_opponent: winner.username});
 				await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, equality, "tournament", 0);
@@ -135,6 +137,8 @@ async function setWinner(room, dataTournament)
 		{
 			user_win = await findUserByUsername(currentGame.winner);
 			user_loose = await findUserByUsername(currentGame.looser);
+			if (!user_win || !user_loose || !looser.username || !winner.username)
+				return ;
 			await updateUser(user_win.user_id, {last_opponent: user_loose.username});
 			await updateUser(user_loose.user_id, {last_opponent: user_win.username});
 			await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, equality, "duo", 0);

@@ -163,7 +163,9 @@ async function setWinner(currentGame, username)
 		currentGame.looser = username;
 	}
 	const user = await findUserByUsername(username);
-	
+
+	if (!user || !username)
+		return ;
 	if (currentGame.winner === username)
 		await updateUser(user.user_id, {singleplayer_win : user.singleplayer_win + 1, last_opponent: username + "1"});
 	else
