@@ -71,7 +71,7 @@ extern	char		TCLI_WSBUF_SEND[1024];
 # define	TCLI_URL			TCLI_CTX->url
 # define	TCLI_URL_HDR		"https://Trans:8000/api/"
 # define	TCLI_WSS_HDR		"wss://Trans:8000/api/"
-# define	TCLI_WSS_UPGRADE	"wss://Trans:8000/api/pong/solo?username=sacha&terminal=true"
+# define	TCLI_WSS_UPGRADE	"wss://Trans:8000/api/pong/practice?username=sacha&terminal=true"
 # define	TCLI_WSS_MULTI		"wss://Trans:8000/api/pong/duo?roomID=cacaca&username=sacha&terminal=true"
 
 # define	TCLI_IP				TCLI_CTX->ip

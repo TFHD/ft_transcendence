@@ -64,7 +64,7 @@ TCLI_API(cleanup)(void)
 	free(TCLI_CBSTR);
 	free(TCLI_URL);
 	free(TCLI_CTX);
-	printf("\033[25h?");
+	printf("\033[?25h");
 }
 
 TCLI_API(error)(const char *msg)

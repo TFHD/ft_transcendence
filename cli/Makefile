@@ -12,7 +12,7 @@ OBJS 		:=	$(addprefix $(OBJ_DIR)/, $(SRCS:%.c=%.o))
 
 CC			:=	clang
 
-CFLAGS		:=	-Wall -Wextra -g -ferror-limit=10000000
+CFLAGS		:=	-Wall -Wextra -g -ferror-limit=5
 IFLAGS		:=	-I include 						\
 				-I ./include/curl				\
 				-I ./include/cJSON				\

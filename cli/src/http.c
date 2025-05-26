@@ -146,9 +146,10 @@ TCLI_API(makeRequest)(TCLI_SceneCtx *ctx, uint64_t type)
 {
 	if (type == TCLI_DO_LOGIN)
 	{
-		int	res = 0;
+		int				res = 0;
+		TCLI_LogInfo	*log = ctx->data;
 
-		TCLI_login(ctx->elems[3].input, ctx->elems[4].input);
+		TCLI_login(log->username, log->password);
 		TCLI_sendRequest(&res, TCLI_POST);
 
 		//printf("received [%s]\n", TCLI_CBSTR);

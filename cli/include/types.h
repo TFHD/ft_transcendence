@@ -29,6 +29,8 @@ typedef struct	_tcli_fvec2			fvec2;
 
 typedef struct	_tcli				TCLI;
 typedef struct	_tcli_elemHdr		TCLI_ElemHdr;
+typedef struct	_tcli_transform		TCLI_Transform;
+typedef struct	_tcli_interactable	TCLI_Interactable;
 typedef struct	_tcli_action		TCLI_Action;
 typedef struct	_tcli_elem			TCLI_Elem;
 typedef struct	_tcli_sceneCtx		TCLI_SceneCtx;
@@ -37,8 +39,9 @@ typedef struct	_tcli_buff			TCLI_Buffer;
 typedef enum	_tcli_reqtype		TCLI_RequestType;
 
 typedef TCLI_SceneCtx				*(*TCLI_Scene)(void);
-typedef void						(*TCLI_Renderer)(TCLI_Elem *);
+typedef void						(*TCLI_Renderer)(TCLI_ElemHdr *);
 typedef void						(*TCLI_SceneLoader)(TCLI_Scene *);
+typedef void						(*TCLI_ElemLoader)(TCLI_SceneCtx *, TCLI_ElemHdr *);
 typedef void						(*TCLI_Requester)(TCLI_SceneCtx *, uint64_t);
 typedef void						(*TCLI_Evaluer)(uint64_t);
 

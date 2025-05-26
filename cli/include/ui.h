@@ -10,16 +10,12 @@
 # include <context.h>
 # include <http.h>
 
-# define	TCLI_ELEM_LAST ((void *)-1UL)
+# define	TCLI_ELEM_NULL ((void *)-1UL)
 
-enum
-{
-	TCLI_IDX_BOX = 0,
-	TCLI_IDX_TEXT = 1,
-	TCLI_IDX_INPUT = 2,
-	TCLI_IDX_DEFAULT = 3,
-	TCLI_IDX_LAST = 4
-};
+# define	KACTION(F, A, K)	(TCLI_Action){.func = F, .arg = A, .key = K}
+# define	ACTION(F, A)		KACTION(F, A, -1)
+# define	NOOP()				KACTION(NULL, NULL, -1)
+# define	ACTION_LIST			(TCLI_Action[])
 
 enum
 {
@@ -27,6 +23,8 @@ enum
 	TCLI_ELEM_TEXTBOX = 1,
 	TCLI_ELEM_BUTTON = 2,
 	TCLI_ELEM_IMAGE = 3,
+
+	TCLI_ELEM_LAST = 4
 };
 
 enum
@@ -53,102 +51,88 @@ struct	_tcli_elemHdr
 
 struct	_tcli_action
 {
-	void		*func;
-	void		*arg;
+	void	*func;
+	void	*arg;
+	int32_t	key;
+};
+
+struct	_tcli_interactable
+{
+	TCLI_Action	onSelect;
+	TCLI_Action	onDeselect;
+	TCLI_Action	*onEnter;
+	TCLI_Action	*onKey;
+	uint32_t	onEnterCount;
+	uint32_t	onKeyCount;
+};
+
+struct	_tcli_transform
+{
+	vec2	pos;
+	vec2	size;
 };
 
 struct	_tcli_elem
 {
-	TCLI(ElemHdr)		h;
-	struct _tcli_elem	*nexts[4];
-	char				txt[16];
-	char				input[16];
-	uint32_t			*image;
-	uint32_t			colors[4];
-	vec2				pos[4];
-	vec2				size;
-	uint32_t			action;
-	uint32_t			actionCount;
-	TCLI(Action)		onSelect;
-	TCLI(Action)		onDeselect;
+	TCLI_ElemHdr		h;
+	TCLI_Transform		t;
+	TCLI_Interactable	*i;
+	uint32_t			color;
+	uint32_t			colorD;
+	void				*data;
 };
+
+typedef struct	_tcli_loginfo
+{
+	char	username[16];
+	char	password[16];
+	char	confirm[16];
+	char	twoFa[7];
+	char	_reserved;
+}	TCLI_LogInfo;
 
 struct	_tcli_sceneCtx
 {
-	TCLI(Elem)		elems[16];
-	TCLI(Elem)		*select;
-	TCLI(Elem)		*last;
-	TCLI(Action)	actions[8];
-	uint32_t		actionCount;
+	TCLI_ElemHdr	**elems;
+	TCLI_ElemHdr	*select;
+	TCLI_ElemHdr	*last;
+	void			*data;
 	uint32_t		elemCount;
+	uint32_t		elemSize;
 };
 
 TCLI_API(loadScene)
 (void *toLoad);
 
 TCLI_API(renderText)
-(TCLI(Elem) *e);
+(TCLI_ElemHdr *e);
 
 TCLI_API(renderTextbox)
-(TCLI(Elem) *e);
+(TCLI_ElemHdr *e);
 
 TCLI_API(renderButton)
-(TCLI(Elem) *e);
+(TCLI_ElemHdr *e);
 
 TCLI_API(renderImage)
-(TCLI(Elem) *e);
+(TCLI_ElemHdr *e);
 
 TCLI_API(render)
-(TCLI(SceneCtx) *ctx);
+(TCLI_SceneCtx *ctx);
 
 TCLI_API(handleKey)
-(TCLI(SceneCtx) *ctx, char key);
+(TCLI_SceneCtx *ctx, char key);
 
-TCLI_API(rootElem)
-(TCLI(SceneCtx) *ctx);
+TCLI_API(handleJump)
+(TCLI_SceneCtx *ctx, TCLI_ElemHdr *next);
 
-TCLI(Elem)	*TCLI(newText)
-(TCLI(SceneCtx) *ctx, const char *txt, vec2 pos, uint32_t txtColor, uint32_t dftColor);
+TCLI_API(handleAction)
+(TCLI_SceneCtx *ctx, TCLI_Action *action);
 
-TCLI(Elem)	*TCLI(newTextbox)
-(TCLI(SceneCtx) *ctx, const char *txt, vec2 pos, vec2 size, uint32_t txtColor);
-
-TCLI(Elem)	*TCLI(newButton)
+TCLI_API(makeInteractions)
 (
-	TCLI(SceneCtx) *ctx,
-	const char *txt,
-	vec2 pos,
-	vec2 size,
-	uint32_t txtColor,
-	uint32_t boxColor,
-	uint32_t dftColor
+	TCLI_ElemHdr *hdr,
+	TCLI_Action *onEnter,
+	TCLI_Action *onKey
 );
-
-TCLI(Elem)	*TCLI(newImage)
-(TCLI(SceneCtx) *ctx, vec2 pos, vec2 size, uint32_t *image);
-
-TCLI_API(select)
-(TCLI(Elem) *elem);
-
-TCLI_API(deselect)
-(TCLI(Elem) *elem);
-
-TCLI_API(setPos)
-(TCLI(Elem) *elem, uint8_t idx, vec2 pos);
-
-TCLI_API(setColor)
-(TCLI(Elem) *elem, uint8_t idx, uint32_t color);
-
-TCLI_API(setNext)
-(TCLI(Elem) *elem, uint8_t idx, TCLI(Elem) *next);
-
-TCLI_API(addAction)
-(TCLI(SceneCtx) *ctx, TCLI(Elem) *to, TCLI(Action) what);
-
-TCLI_API(setTextInvisible)
-(TCLI(Elem) *elem);
-
-TCLI_API(setTextVisible)
-(TCLI(Elem) *elem);
 
 #endif		// _UI_H

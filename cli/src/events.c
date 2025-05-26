@@ -128,12 +128,20 @@ void	TCLI_eventsInit(TCLI_Events *events)
 	{
 		root = DefaultRootWindow(events->display);
 		attr.override_redirect = 1;
+
+		events->win = XCreateWindow(
+			events->display, root,
+			0, 0, 1, 1, 0,
+			CopyFromParent, InputOutput,  // Changed from InputOnly
+			CopyFromParent, CWOverrideRedirect, &attr
+		);
+		/*
 		events->win = XCreateWindow(
 			events->display, root,
 			-1, -1, 1, 1, 0,
 			CopyFromParent, InputOnly,
 			CopyFromParent, CWOverrideRedirect, &attr
-		);
+		);*/
 		XSelectInput(
 			events->display, events->win,
 			KeyPressMask | KeyReleaseMask

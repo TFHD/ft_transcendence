@@ -26,7 +26,7 @@ void	TCLI_loop(void)
     curl_easy_setopt(CURL_CTX, CURLOPT_WRITEDATA, &TCLI_CBSTR);
 
 	TCLI_SceneCtx	*ctx	= NULL;
-	TCLI_SCENE				= &TCLI_loginPage;
+	TCLI_SCENE				= &TCLI_mainMenu;
 // 	TCLI_SCENE				= &TCLI_debugPage;
 	TCLI_STATUS				|= TCLI_SCENE_SWAP;
 
@@ -40,6 +40,7 @@ void	TCLI_loop(void)
 	{
 		if (TCLI_SCENE)
 			ctx = TCLI_SCENE();
+
 		if (TCLI_STATUS & TCLI_SCENE_SWAP)
 		{
 			TCLI_screenClear(&TCLI_SCREEN);
@@ -71,7 +72,7 @@ void	TCLI_loop(void)
 		}
 		TCLI_render(ctx);
 
-#if 0
+#if 1
 		write(STDOUT_FILENO, "\033[0;0f", 6);
 		write(STDOUT_FILENO, TCLI_SCREEN.data,
 			TCLI_SCREEN.width * TCLI_SCREEN.height * TCLI_CHAR_SIZE);
