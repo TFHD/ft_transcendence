@@ -118,8 +118,31 @@ const PlayerSettingsPage = () => {
         });
       }
     } catch (err) {
+		let errorMessage = "Échec du changement d'email.";
+		if (err.response && err.response.data) {
+			switch (err.response.data.code) {
+				case "GOOGLE_USER":
+					errorMessage = "Impossible de changer l'email d'un compte Google.";
+					break ;
+				case "MISSING_FIELDS":
+					errorMessage = "Veuillez remplir tous les champs.";
+					break ;
+				case "PASSWORD_INVALID":
+					errorMessage = "Mot de passe incorrect.";
+					break ;
+				case "USER_ALREADY_EXISTS":
+					errorMessage = "Un compte avec cet email existe déjà.";
+					break ;
+				case "EMAIL_INVALID":
+					errorMessage = "L'email fourni est invalide.";
+					break ;
+				case "INVALID_CREDENTIALS":
+					errorMessage = "Identifiants invalides. Veuillez vérifier votre mot de passe.";
+					break ;
+			}
+		}
         setStatusMessage({
-          text: "Le mail existe déjà !",
+          text: errorMessage,
           type: "failed",
       });
     }
@@ -219,7 +242,7 @@ const PlayerSettingsPage = () => {
       alert("Avatar mis à jour avec succès !");
     } catch (error) {
       console.error("Erreur lors du changement d'avatar :", error);
-      alert("Échec du changement d'avatar. Vérifie ton mot de passe.");
+      alert("Échec du changement d'avatar. Vérifie le format de l'image.");
     }
   };
 

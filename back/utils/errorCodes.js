@@ -130,5 +130,11 @@ export const errorCodes = Object.freeze({
 		type: 'validation_error',
 		message: 'Message not found.',
 		status: 404
+	},
+	GOOGLE_USER: {
+		code: 'GOOGLE_USER',
+		type: 'validation_error',
+		message: 'Google users are not allowed to change their email or username.',
+		status: 403
 	}
 });

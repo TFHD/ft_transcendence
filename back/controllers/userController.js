@@ -187,16 +187,16 @@ export async function patchUserFromId(req, res) {
 	const updates = {};
 
 	try {
-		if (email) {
+		if (email && !user.google_id) {
 			if (!isValidEmail(email))
 				return res.status(errorCodes.EMAIL_INVALID.status).send(errorCodes.EMAIL_INVALID);
 			const existing = await findUserByEmail(hashEmail(email));
-			if (existing && existing.user_id !== req.user.user_id)
+			if (existing)
 				return res.status(errorCodes.USER_ALREADY_EXISTS.status).send(errorCodes.USER_ALREADY_EXISTS);
 			updates.email = encrypt(email);
 			updates.email_hash = hashEmail(email);
 		}
-		if (new_password) {
+		if (new_password && !user.google_id) {
 			if (!isValidPassword(new_password))
 				return res.status(errorCodes.PASSWORD_INVALID.status).send(errorCodes.PASSWORD_INVALID);
 
@@ -221,8 +221,10 @@ export async function patchUserFromId(req, res) {
 			updates.avatar_url = avatar_url;
 			fs.unlinkSync(tmpPath);
 		}
-		if (Object.keys(updates).length === 0) {
-			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS); }
+		if (Object.keys(updates).length === 0 && !user.google_id)
+			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
+		else if (Object.keys(updates).length === 0 && user.google_id)
+			return res.status(errorCodes.GOOGLE_USER.status).send(errorCodes.GOOGLE_USER);
 		await updateUser(req.user.user_id, updates);
 		return res.status(204).send();
 	} catch (error) {
