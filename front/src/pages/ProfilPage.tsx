@@ -151,68 +151,81 @@ const ProfilPage = () => {
     ws1.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); ws1 = null; };
 
     const handler = (message: MessageEvent) => {
-      const gateway = JSON.parse(message.data);
-      if (gateway.op === "user_online" && gateway.data?.user)
-        setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: true }));
-      if (gateway.op === "user_offline" && gateway.data?.user)
-        setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: false }));
-      if (gateway.op === "friends_add" && gateway.data && gateway.data.user) {
-        setFriendsList(prev => {
-          if (prev.some(f => f.user.id === gateway.data.user.id)) {
-            return prev;
-          } else if (isOwnProfile) {
-            return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: gateway.data.user }];
-          } else {
-            return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: me! }];
-          }
-        });
-        setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
-        setOnlineMap(prev => ({ ...prev, [gateway.data.user.id]: gateway.data.user.last_seen ? (Date.now() - new Date(gateway.data.user.last_seen).getTime() < 35000) : false }));
-      }
+		const gateway = JSON.parse(message.data);
+		
+		if (gateway.op === "user_online" && gateway.data?.user)
+			setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: true }));
+		if (gateway.op === "user_offline" && gateway.data?.user)
+			setOnlineMap(prev => ({ ...prev, [gateway.data.user.user_id]: false }));
+			
+		if (gateway.op === "friends_add" && gateway.data && gateway.data.user) {
+			const addedFriend = gateway.data.user;
+			
+			setFriendsList(prev => {
+				if (prev.some(f => f.user.id === addedFriend.id)) return prev;
+				return [...prev, { type: 1, initiator_id: gateway.initiator_id, user: addedFriend }];
+			});
+			setFriendRequests(prev => prev.filter(req => req.user.id !== addedFriend.id));
+			if (user && user.id === addedFriend.id) {
+				setAlreadyFriend(true);
+				setIsRequestSent(false);
+			}
+			const isOnline = addedFriend.last_seen ? 
+				(Date.now() - parseMySQLUTC(addedFriend.last_seen) < 35000) : false;
+			setOnlineMap(prev => ({ 
+				...prev, 
+				[addedFriend.id]: isOnline
+			}));
+		}
+		if (gateway.op === "friends_remove" && gateway.data && gateway.data.user) {
+			const removedUser = gateway.data.user;
+			
+			setFriendsList(prev => prev.filter(f => f.user.id !== removedUser.id));
+			setFriendRequests(prev => prev.filter(req => req.user.id !== removedUser.id));
+			
+			setOnlineMap(prev => {
+				const { [removedUser.id]: removed, ...rest } = prev;
+				return rest;
+			});
+			
+			if (user && user.id === removedUser.id) {
+				setAlreadyFriend(false);
+				setIsRequestSent(false);
+			}
+		}
 
-      if (gateway.op === "friends_remove" && gateway.data && gateway.data.user) {
-        setFriendsList(prev => prev.filter(f => f.user.id !== gateway.data.user.id));
-        setFriendRequests(prev => prev.filter(req => req.user.id !== gateway.data.user.id));
-        setOnlineMap(prev => {
-          const { [gateway.data.user.id]: removed, ...rest } = prev;
-          return rest;
-        });
-        if (user && user.id === gateway.data.user.id) {
-          fetchRelations();
-        }
-      }
+		if (gateway.op === "friends_block" && gateway.data && gateway.data.user) {
+			if (me && gateway.data.user.id === me.id) {
+				setIsBlocked(true);
+				setAlreadyFriend(false);
+				setBlockRelation({
+					type: 2,
+					initiator_id: gateway.initiator_id,
+					user: me,
+				});
+			}
+			if (user && gateway.data.user.id === user.id) {
+				setIsBlocked(true);
+				setAlreadyFriend(false);
+				setBlockRelation({
+					type: 2,
+					initiator_id: user.id,
+					user: user,
+				});
+			}
+		}
 
-      if (gateway.op === "friends_block" && gateway.data && gateway.data.user) {
-        if (me && gateway.data.user.id === me.id) {
-          setIsBlocked(true);
-          setAlreadyFriend(false);
-          setBlockRelation({
-            type: 2,
-            initiator_id: gateway.initiator_id,
-            user: user!,
-          });
-        }
-        if (user && gateway.data.user.id === user.id) {
-          setIsBlocked(true);
-          setAlreadyFriend(false);
-          setBlockRelation({
-            type: 2,
-            initiator_id: me!.id,
-            user: user,
-          });
-        }
-      }
+		if (gateway.op === "friends_request" && gateway.data && gateway.data.user) {
+			const requestUser = gateway.data.user;
 
-      if (gateway.op === "friends_request" && gateway.data && gateway.data.user) {
-        if (isOwnProfile) {
-          setFriendRequests(prev =>
-            prev.some(req => req.user.id === gateway.data.user.id)
-              ? prev
-              : [...prev, { type: 0, initiator_id: gateway.initiator_id, user: gateway.data.user }]
-          );
-        }
-      }
-    };
+			if (isOwnProfile) {
+				setFriendRequests(prev => {
+					if (prev.some(req => req.user.id === requestUser.id)) return prev;
+					return [...prev, { type: 0, initiator_id: gateway.initiator_id, user: requestUser }];
+				});
+			}
+		}
+	};
     addGatewayListener(handler);
     return () => {
       removeGatewayListener(handler);
@@ -256,32 +269,18 @@ const ProfilPage = () => {
   const acceptFriendRequest = async (userId: number) => {
     try {
       await axios.put(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { type: 1 }, { withCredentials: true });
-      setFriendRequests(friendRequests.filter(req => req.user.id !== userId));
-      setFriendsList(friendsList => {
-        if (friendsList.some(f => f.user.id === userId)) return friendsList;
-        const req = friendRequests.find(r => r.user.id === userId);
-        return req ? [...friendsList, { type: 1, initiator_id: req.initiator_id, user: req.user }] : friendsList;
-      });
     } catch (err) {}
   };
 
   const deleteFriend = async (userId: number) => {
     try {
       await axios.delete(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { withCredentials: true });
-      setFriendsList(friendsList.filter(friend => friend.user.id !== userId));
-      setAlreadyFriend(false);
-      setOnlineMap(prev => {
-        const { [userId]: removed, ...rest } = prev;
-        return rest;
-      });
     } catch (err) {}
   };
 
   const cancelFriendRequest = async (userId: number) => {
     try {
       await axios.delete(`https://${host}:8000/api/users/${me!.id}/friends/${userId}`, { withCredentials: true });
-      setFriendRequests(friendRequests.filter(req => req.user.id !== userId));
-      setIsRequestSent(false);
     } catch (err) {}
   };
 
@@ -331,34 +330,6 @@ const ProfilPage = () => {
                 <path stroke="white" strokeWidth="2" d="M6 6l8 8M14 6l-8 8" />
               </svg>
             </button>
-            {canUnblock ? (
-              <button
-                onClick={onUnblock}
-                className={`p-2 rounded-full transition ${blockError ? "bg-orange-400 text-white" : "bg-[#44a29f] text-white hover:bg-[#36a97f]"}`}
-                title="Débloquer l'utilisateur"
-              >
-                <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
-                  <circle cx="10" cy="10" r="8" stroke="#fff" strokeWidth="2" />
-                  <path d="M7 10l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                {blockError && (
-                  <span className="ml-2 text-sm font-bold">Tu es bloqué</span>
-                )}
-              </button>
-            ) : blocked ? (
-              <span className="text-orange-400 font-bold ml-2">Utilisateur bloqué</span>
-            ) : (
-              <button
-                onClick={onBlock}
-                className="bg-[#f39c12] text-white p-2 rounded-full hover:bg-[#e67e22] transition"
-                title="Bloquer l'utilisateur"
-              >
-                <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
-                  <circle cx="10" cy="10" r="8" stroke="#fff" strokeWidth="2" />
-                  <path d="M6 6l8 8M14 6l-8 8" stroke="white" strokeWidth="2" />
-                </svg>
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -434,14 +405,17 @@ const ProfilPage = () => {
           )}
           {state === "friend" && (
             <button
-              className="flex items-center gap-2 bg-[#44a29f] text-white px-6 py-3 rounded-full shadow-xl cursor-not-allowed text-lg font-bold"
-              disabled
+              onClick={() => deleteFriend(user!.id)}
+              className="flex items-center gap-2 bg-[#e74c3c] text-white px-6 py-3 rounded-full shadow-xl hover:bg-[#c0392b] transition text-lg font-bold"
+              title="Retirer l'ami"
             >
-              <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#44a29f" /><path d="M7 12l3 3 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
-              Ami
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="white" strokeWidth="2" d="M6 6l12 12M18 6l-12 12" />
+              </svg>
+              Retirer l'ami
             </button>
           )}
-          {!isOwnProfile && !isBlocked && (
+          {!isOwnProfile && !isBlocked && !alreadyFriend && (
             <button
               onClick={() => blockUser(user!.id)}
               className="flex items-center gap-2 bg-[#f39c12] text-white px-6 py-3 rounded-full shadow-xl hover:bg-[#e67e22] transition text-lg font-bold"

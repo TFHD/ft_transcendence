@@ -15,6 +15,7 @@ type User = {
 type Friend = {
   user: User;
   type: number;
+  initiator_id: number;
 };
 
 type Message = {
@@ -40,7 +41,6 @@ export default function ChatWindow() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const ws = useRef<WebSocket | null>(null);
-  const pongWs = useRef<WebSocket | null>(null);
   const [viewMode, setViewMode] = useState<"friends" | "chat">("friends");
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -138,6 +138,46 @@ export default function ChatWindow() {
           if (data.op === "message_delete") {
             setMessages(prev => prev.filter(m => m.message_id !== Number(data.data.message_id)));
           }
+          if (data.op === "friends_add" && data.data && data.data.user) {
+            const addedFriend = data.data.user;
+            
+            setFriends(prev => {
+              if (prev.some(f => f.user.id === addedFriend.id)) return prev;
+              return [...prev, { 
+                user: addedFriend, 
+                type: 1, 
+                initiator_id: data.initiator_id 
+              }];
+            });
+          }
+          if (data.op === "friends_remove" && data.data && data.data.user) {
+            const removedUser = data.data.user;
+            
+            setFriends(prev => prev.filter(f => f.user.id !== removedUser.id));
+            if (selectedFriend && selectedFriend.id === removedUser.id) {
+              setSelectedFriend(null);
+              setViewMode("friends");
+              setMessages([]);
+            }
+          }
+          if (data.op === "friends_block" && data.data && data.data.user) {
+            const blockedUser = data.data.user;
+            const initiatorId = data.initiator_id;
+            if (me && (blockedUser.id === me.id || initiatorId === me.id)) {
+              setFriends(prev => prev.filter(f => 
+                f.user.id !== blockedUser.id && 
+                f.user.id !== (blockedUser.id === me.id ? initiatorId : blockedUser.id)
+              ));
+              if (selectedFriend && 
+                  (selectedFriend.id === blockedUser.id || 
+                   (blockedUser.id === me.id && selectedFriend.id === initiatorId))) {
+                setSelectedFriend(null);
+                setViewMode("friends");
+                setMessages([]);
+              }
+            }
+          }
+
         } catch {}
       };
 
@@ -145,16 +185,7 @@ export default function ChatWindow() {
     return () => {
       removeGatewayListener(handler);
     };
-  }, [me]);
-
-  useEffect(() => {
-    return () => {
-      if (pongWs.current) {
-        pongWs.current.close();
-        pongWs.current = null;
-      }
-    };
-  }, []);
+  }, [me, selectedFriend]);
 
   const handleSend = async (e?: React.FormEvent, messageType: string = "text") => {
 	if (e) e.preventDefault();
@@ -218,52 +249,23 @@ export default function ChatWindow() {
 	handleSend(undefined, "invite");
   };
 
-  const handleJoinPong = (roomId: string) => {
-	if (!me || !roomId || joiningRoom === roomId) return;
+	const handleJoinPong = (roomId: string) => {
+		if (!me || !roomId || joiningRoom === roomId) return ;
 	
-	setJoiningRoom(roomId);
-	
-	if (pongWs.current) {
-	  pongWs.current.close();
-	  pongWs.current = null;
-	}
-	
-	navigate('/pong/duo', { 
-	  state: { 
-		fromStartGame: true, 
-		roomID: roomId, 
-		username: me.username 
-	  } 
-	});
-	
-	setTimeout(() => {
-	  try {
-		const wsUrl = `wss://${host}:8000/api/pong/duo?roomID=${roomId}&username=${me.username}&terminal=false&game_id=undefined&match=undefined&round=undefined&isTournament=undefined&user_id=${me.id}&mode=undefined`;
+		setJoiningRoom(roomId);
 		
-		pongWs.current = new WebSocket(wsUrl);
+		navigate('/pong/duo', { 
+			state: { 
+			fromStartGame: true, 
+			roomID: roomId, 
+			username: me.username 
+			} 
+		});
 		
-		pongWs.current.onopen = () => {
-		  setJoiningRoom(null);
-		};
-		
-		pongWs.current.onerror = () => {
-		  setJoiningRoom(null);
-		  if (pongWs.current) {
-			pongWs.current.close();
-			pongWs.current = null;
-		  }
-		};
-		
-		pongWs.current.onclose = () => {
-		  setJoiningRoom(null);
-		  pongWs.current = null;
-		};
-		
-	  } catch (error) {
-		setJoiningRoom(null);
-	  }
-	}, 100);
-  };
+		setTimeout(() => {
+			setJoiningRoom(null);
+		}, 1000);
+	};
 
   const handleDelete = async (msgId: number) => {
     try {

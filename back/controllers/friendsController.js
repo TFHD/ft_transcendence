@@ -16,13 +16,38 @@ async function addFriend(req, res, friendId, friendInfo) {
 				status: 'accepted',
 				initiator_id: req.user.user_id
 			});
-			const data = {
+			const otherUser = await findUserByUserId(friendId);
+			const otherUserInfo = {
+				id: otherUser.user_id,
+				username: otherUser.username,
+				created_at: otherUser.created_at,
+				updated_at: otherUser.updated_at,
+				multiplayer_win: otherUser.multiplayer_win,
+				multiplayer_loose: otherUser.multiplayer_loose,
+				practice_win: otherUser.practice_win,
+				practice_loose: otherUser.practice_loose,
+				singleplayer_win: otherUser.singleplayer_win,
+				singleplayer_loose: otherUser.singleplayer_loose,
+				last_opponent: otherUser.last_opponent,
+				avatar_url: otherUser.avatar_url,
+				last_seen: otherUser.last_seen
+			};
+			const dataForOther = {
 				type: 1,
-				user: friendInfo
+				user: friendInfo,
+				initiator_id: req.user.user_id
+			};
+			const dataForMe = {
+				type: 1,
+				user: otherUserInfo,
+				initiator_id: req.user.user_id
 			};
 			const socket = global.wsClients.get(Number(friendId));
+			const socketMe = global.wsClients.get(Number(req.user.user_id));
 			if (socket && socket.readyState === 1)
-				socket.send(JSON.stringify({op: "friends_add", data }));
+				socket.send(JSON.stringify({op: "friends_add", data: dataForOther, initiator_id: req.user.user_id}));
+			if (socketMe && socketMe.readyState === 1)
+				socketMe.send(JSON.stringify({op: "friends_add", data: dataForMe, initiator_id: req.user.user_id}));
 			return res.status(204).send();
 		};
 		return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
@@ -31,13 +56,14 @@ async function addFriend(req, res, friendId, friendInfo) {
 		status: 'pending',
 		initiator_id: req.user.user_id
 	});
-	const data = {
+	const dataForOther = {
 		type: 0,
-		user: friendInfo
+		user: friendInfo,
+		initiator_id: req.user.user_id
 	};
 	const socket = global.wsClients.get(Number(friendId));
 	if (socket && socket.readyState === 1)
-		socket.send(JSON.stringify({op: "friends_request", data }));
+		socket.send(JSON.stringify({op: "friends_request", data: dataForOther, initiator_id: req.user.user_id}));
 	return res.status(201).send();
 }
 
@@ -52,11 +78,12 @@ async function blockFriend(req, res, friendId, friendInfo) {
 		});
 		const data = {
 			type: 2,
+			initiator_id: req.user.user_id,
 			user: friendInfo
 		};
 		const socket = global.wsClients.get(Number(friendId));
 		if (socket && socket.readyState === 1)
-			socket.send(JSON.stringify({op: "friends_block", data }));
+			socket.send(JSON.stringify({op: "friends_block", data, initiator_id: req.user.user_id}));
 		return res.status(204).send();
 	};
 	await createFriendRelation(req.user.user_id, friendId, {
@@ -65,11 +92,12 @@ async function blockFriend(req, res, friendId, friendInfo) {
 	});
 	const data = {
 		type: 2,
-		user: friendInfo
+		user: friendInfo,
+		initiator_id: req.user.user_id
 	};
 	const socket = global.wsClients.get(Number(friendId));
 	if (socket && socket.readyState === 1)
-		socket.send(JSON.stringify({op: "friends_block", data }));
+		socket.send(JSON.stringify({op: "friends_block", data, initiator_id: req.user.user_id}));
 	return res.status(201).send();
 }
 
@@ -100,7 +128,24 @@ export async function manageFriendshipDelete(req, res) {
 				if (relation.status === 'accepted' || relation.status === 'pending'
 					|| relation.initiator_id === req.user.user_id) {
 					await deleteFriendRelation(req.user.user_id, friendId);
-					const data = {
+					const otherUser = await findUserByUserId(friendId);
+					const otherUserInfo = {
+						id: otherUser.user_id,
+						username: otherUser.username,
+						created_at: otherUser.created_at,
+						updated_at: otherUser.updated_at,
+						multiplayer_win: otherUser.multiplayer_win,
+						multiplayer_loose: otherUser.multiplayer_loose,
+						practice_win: otherUser.practice_win,
+						practice_loose: otherUser.practice_loose,
+						singleplayer_win: otherUser.singleplayer_win,
+						singleplayer_loose: otherUser.singleplayer_loose,
+						last_opponent: otherUser.last_opponent,
+						avatar_url: otherUser.avatar_url,
+						last_seen: otherUser.last_seen
+					};
+					const dataForOther = {
+						initiator_id: req.user.user_id,
 						user: {
 							id: req.user.user_id,
 							username: req.user.username,
@@ -113,13 +158,20 @@ export async function manageFriendshipDelete(req, res) {
 							singleplayer_win: req.user.singleplayer_win,
 							singleplayer_loose: req.user.singleplayer_loose,
 							last_opponent: req.user.last_opponent,
-							avatar_url : req.user.avatar_url,
+							avatar_url: req.user.avatar_url,
 							last_seen: req.user.last_seen
 						}
 					};
+					const dataForMe = {
+						initiator_id: req.user.user_id,
+						user: otherUserInfo
+					};
 					const socket = global.wsClients.get(Number(friendId));
+					const socketMe = global.wsClients.get(Number(req.user.user_id));
 					if (socket && socket.readyState === 1)
-						socket.send(JSON.stringify({op: "friends_remove", data }));
+						socket.send(JSON.stringify({op: "friends_remove", data: dataForOther}));
+					if (socketMe && socketMe.readyState === 1)
+						socketMe.send(JSON.stringify({op: "friends_remove", data: dataForMe}));
 				}
 				else
 					return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
@@ -171,7 +223,7 @@ export async function manageFriendshipPut(req, res) {
 				singleplayer_win: req.user.singleplayer_win,
 				singleplayer_loose: req.user.singleplayer_loose,
 				last_opponent: req.user.last_opponent,
-				avatar_url : req.user.avatar_url,
+				avatar_url: req.user.avatar_url,
 				last_seen: req.user.last_seen
 			}
 			switch (type) {
@@ -247,7 +299,7 @@ export async function getAllFriends(req, res) {
 						singleplayer_win: friendInfo.singleplayer_win,
 						singleplayer_loose: friendInfo.singleplayer_loose,
 						last_opponent: friendInfo.last_opponent,
-						avatar_url : friendInfo.avatar_url,
+						avatar_url: friendInfo.avatar_url,
 						last_seen: friendInfo.last_seen
 					}
 				};
