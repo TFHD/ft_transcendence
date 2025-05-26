@@ -111,7 +111,7 @@ TCLI(Elem)	*TCLI(newText)
 (TCLI(SceneCtx) *ctx, const char *txt, vec2 pos, uint32_t txtColor, uint32_t dftColor);
 
 TCLI(Elem)	*TCLI(newTextbox)
-(TCLI(SceneCtx) *ctx, const char *txt, vec2 pos, uint32_t txtColor);
+(TCLI(SceneCtx) *ctx, const char *txt, vec2 pos, vec2 size, uint32_t txtColor);
 
 TCLI(Elem)	*TCLI(newButton)
 (

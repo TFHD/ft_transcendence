@@ -3,13 +3,7 @@
 cd include/
 tar -xvf dependancies.tar.gz
 cd curl/
-./configure --prefix=$PWD/../../ --with-ssl --without-libpsl
-make
-make install
-
-cd ../nopoll/
-./autogen.sh
-./configure --prefix=$PWD/../../
+./configure --prefix=$PWD/../../ --with-ssl --enable-websockets --without-libpsl
 make
 make install
 
