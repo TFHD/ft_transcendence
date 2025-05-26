@@ -215,6 +215,8 @@ const	SoloPongGame = async (socket, username) =>
 
 		updateBall(currentGame, socket);
 
+		if (currentGame.player1.score >= 5 || currentGame.player2.score >= 5)
+			currentGame.shouldStop = true;
 		if (!currentGame.shouldStop)
 		{
 			sendDatas(socket, currentGame, username);
@@ -222,6 +224,7 @@ const	SoloPongGame = async (socket, username) =>
 		}
 	}
 	setWinner(currentGame, username);
+	socket.send(JSON.stringify({shouldStop : true}));
 	console.log('Stopped game');
 }
 
