@@ -347,7 +347,7 @@ function addUserToRoom(socket, roomID, username, dataTournament, terminal)
 			startRoom(roomID, dataTournament);
 		}
 		else
-			console.log('erm, room is full boi');
+			socket?.send(JSON.stringify({ shouldStop: true}));
 	}
 	else
 	{
@@ -389,7 +389,6 @@ export async function duoPong(connection, req)
 			clearInterval(interval);
 			socket.terminate();
 			userSockets.delete(socket);
-			userGames.delete(socket);
 			console.log('Disconnected due to inactivity');
 			return;
 		}
