@@ -1,8 +1,9 @@
 import db from '../database/db.js';
 import crypto from 'crypto';
+import { decrypt } from '../utils/crypto.js';
 
 export const findUserByEmail = async (email) => {
-	return await db.get('SELECT * FROM users WHERE email = ?', email);
+	return await db.get('SELECT * FROM users WHERE email_hash = ?', email);
 };
 
 export const findUserByUsername = async (username) => {
@@ -20,7 +21,7 @@ export const findUserByUserId = async (userId) => {
 
 export const findUserByUsernameOrEmail = async (username, email) => {
 	return await db.get(
-		'SELECT * FROM users WHERE username = ? OR email = ?',
+		'SELECT * FROM users WHERE username = ? OR email_hash = ?',
 		username, email
 	);
 };
@@ -54,14 +55,14 @@ export const deleteUser = async (userId) => {
 	await stmt.run(userId);
 }
 
-export const createUser = async (email, username, password, google_id) => {
+export const createUser = async (email, email_hash, username, password, google_id) => {
 	const userId = generateRandomUserID();
 
 	const stmt = await db.prepare(
-		'INSERT INTO users (user_id, email, username, password, google_id) VALUES (?, ?, ?, ?, ?)'
+		'INSERT INTO users (user_id, email, email_hash, username, password, google_id) VALUES (?, ?, ?, ?, ?, ?)'
 	);
-	await stmt.run(userId, email, username, password, google_id ? google_id : null);
-	return { id: userId, email, username };
+	await stmt.run(userId, email, email_hash, username, password, google_id ? google_id : null);
+	return { id: userId, email: decrypt(email), username };
 };
 
 export const updateUser = async (id, fields) => {

@@ -35,6 +35,7 @@ const app = fastify({
 app.register(cookie, {
 	secret: cookieSecret
 });
+
 app.register(cors, {
 	origin: (origin, callback) => {
 		const clientIp = origin ? new URL(origin).hostname : null;
@@ -60,7 +61,7 @@ app.register(cors, {
 // 			callback(new Error("Origin not allowed"), false);
 // 	},
 // 	credentials: true,
-// 	methods: ['GET', 'POST', 'PATCH', 'DELETE', PUT]
+// 	methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT']
 // });
 
 app.register(websocket);

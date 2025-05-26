@@ -13,6 +13,7 @@ await db.exec(`
 		username TEXT NOT NULL UNIQUE,
 		password TEXT,
 		email TEXT NOT NULL UNIQUE,
+		email_hash TEXT NOT NULL UNIQUE,
 		avatar_url TEXT DEFAULT NULL,
 		multiplayer_win INT DEFAULT 0,
 		multiplayer_loose INT DEFAULT 0,

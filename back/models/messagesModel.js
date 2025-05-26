@@ -38,3 +38,10 @@ export async function getAllMessages(userId, targetId, limit = 50, offset = 0) {
 		LIMIT ? OFFSET ?
 	`, [userId, targetId, targetId, userId, limit, offset]);
 }
+
+export async function deleteMessagesByUserId(userId) {
+	await db.run(`
+		DELETE FROM messages
+		WHERE sender_id = ? OR receiver_id = ?
+	`, [userId, userId]);
+}

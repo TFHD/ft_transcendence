@@ -1,14 +1,17 @@
-import { deleteUser, findUserByEmail, findUserByUsername, updateUser, findUsersByPartialUsername, findUserByUserId } from "../models/userModel.js";
+import { deleteUser, findUserByEmail, updateUser, findUsersByPartialUsername, findUserByUserId } from "../models/userModel.js";
 import { errorCodes } from "../utils/errorCodes.js";
-import { deleteSession, getSessionByUserId } from "../models/sessionModel.js";
-import { getHistoryByUsername } from "../models/historyModel.js";
-import { isValidUsername, isValidEmail, isValidPassword } from "../utils/validators.js";
+import { deleteSession } from "../models/sessionModel.js";
+import { getHistoryByUsername, deleteHistory } from "../models/historyModel.js";
+import { isValidEmail, isValidPassword } from "../utils/validators.js";
 import bcrypt from "bcrypt";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
 import cloudinary from "cloudinary";
 import { randomUUID } from "crypto";
+import { deleteAllFriendsByUserId } from "../models/friendsModel.js";
+import { deleteMessagesByUserId } from "../models/messagesModel.js";
+import { encrypt, decrypt, hashEmail } from "../utils/crypto.js";
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
@@ -67,7 +70,7 @@ export async function getUsersByUsername(req, res) {
 			return res.status(200).send({
 				id: user.user_id,
 				username: user.username,
-				email: user.email,
+				email: decrypt(user.email),
 				created_at: user.created_at,
 				updated_at: user.updated_at,
 				multiplayer_win: user.multiplayer_win,
@@ -85,7 +88,6 @@ export async function getUsersByUsername(req, res) {
 			const users = await findUsersByPartialUsername(id);
 			if (!users)
 				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
-			//console.log(users);
 			const sesssion = req.session
 			if (!sesssion)
 				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
@@ -115,7 +117,7 @@ export async function getUserFromId(req, res) {
 			return res.status(200).send({
 				id: user.user_id,
 				username: user.username,
-				email: user.email,
+				email: decrypt(user.email),
 				created_at: user.created_at,
 				updated_at: user.updated_at,
 				multiplayer_win: user.multiplayer_win,
@@ -161,7 +163,7 @@ export async function patchUserFromId(req, res) {
 	if (!req.body)
 		return res.status(errorCodes.JSON_PARSE_ERROR.status).send(errorCodes.JSON_PARSE_ERROR);
 	let { id } = req.params;
-	const { username, email, password, new_password } = req.body;
+	const { email, password, new_password } = req.body;
 
 	const file = req.body.file;
 	if (!id)
@@ -185,25 +187,14 @@ export async function patchUserFromId(req, res) {
 	const updates = {};
 
 	try {
-		if (username) {
-			if (!isValidUsername(username))
-				return res.status(errorCodes.USERNAME_INVALID.status).send(errorCodes.USERNAME_INVALID);
-
-			const existing = await findUserByUsername(username);
-			if (existing && existing.user_id !== req.user.user_id)
-				return res.status(errorCodes.USER_ALREADY_EXISTS.status).send(errorCodes.USER_ALREADY_EXISTS);
-
-			updates.username = username;
-		}
 		if (email) {
 			if (!isValidEmail(email))
 				return res.status(errorCodes.EMAIL_INVALID.status).send(errorCodes.EMAIL_INVALID);
-
-			const existing = await findUserByEmail(email);
+			const existing = await findUserByEmail(hashEmail(email));
 			if (existing && existing.user_id !== req.user.user_id)
 				return res.status(errorCodes.USER_ALREADY_EXISTS.status).send(errorCodes.USER_ALREADY_EXISTS);
-
-			updates.email = email;
+			updates.email = encrypt(email);
+			updates.email_hash = hashEmail(email);
 		}
 		if (new_password) {
 			if (!isValidPassword(new_password))
@@ -253,7 +244,15 @@ export async function deleteOwnUser(req, res) {
 	const session = req.session;
 	if (!session)
 		return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-	deleteUser(id);
-	deleteSession(session.token);
-	res.status(204).send();
+	try {
+		await deleteUser(id);
+		await deleteSession(session.token);
+		await cloudinary.v2.uploader.destroy(`avatars/avatar_${id}`, { resource_type: 'image' });
+		await deleteMessagesByUserId(id);
+		await deleteHistory(id);
+		await deleteAllFriendsByUserId(id);
+		res.status(204).send();
+	} catch (error) {
+		res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
+	}
 }

@@ -6,6 +6,8 @@ import { cookieOpts, isValidEmail, isValidPassword, isValidUsername } from '../u
 import { errorCodes } from '../utils/errorCodes.js';
 import { OAuth2Client } from 'google-auth-library';
 import { googleClientId } from '../config/google.config.js';
+import { encrypt, decrypt, hashEmail } from '../utils/crypto.js';
+import speakeasy from 'speakeasy';
 
 const client = new OAuth2Client(googleClientId);
 
@@ -41,13 +43,13 @@ export async function registerUser(req, res) {
 		return res.status(errorCodes.PASSWORD_INVALID.status).send(errorCodes.PASSWORD_INVALID);
 
 	try {
-		const existingUser = await findUserByUsernameOrEmail(username, email);
+		const existingUser = await findUserByUsernameOrEmail(username, hashEmail(email));
 
 		if (existingUser)
 			return res.status(errorCodes.USER_ALREADY_EXISTS.status).send(errorCodes.USER_ALREADY_EXISTS);
 
 		const hashedPassword = await bcrypt.hash(password, 10);
-		const user = await createUser(email, username, hashedPassword);
+		const user = await createUser(encrypt(email), hashEmail(email), username, hashedPassword);
 
 		return res.status(201).send({ user });
 	} catch (error) {
@@ -66,7 +68,7 @@ export async function loginUser(req, res) {
 		return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
 
 	try {
-		const user = await findUserByUsernameOrEmail(username, email);
+		const user = await findUserByUsernameOrEmail(username, hashEmail(email));
 
 		if (!user)
 			return res.status(errorCodes.INVALID_CREDENTIALS.status).send(errorCodes.INVALID_CREDENTIALS);
@@ -80,7 +82,7 @@ export async function loginUser(req, res) {
 			if (!code2fa)
 				return res.status(errorCodes.TWOFA_REQUIRED.status).send(errorCodes.TWOFA_REQUIRED);
 			const verified = speakeasy.totp.verify({
-				secret: user.twofa_secret,
+				secret: decrypt(user.twofa_secret),
 				encoding: 'base32',
 				token: code2fa,
 				window: 1
@@ -142,12 +144,13 @@ export async function googleLoginUser(req, res) {
 		if (!username || username.trim() === '')
 			return res.status(errorCodes.USERNAME_INVALID.status).send(errorCodes.USERNAME_INVALID);
 		if (!user) {
-			const existingUser = await findUserByUsernameOrEmail(username, email);
+			const existingUser = await findUserByUsernameOrEmail(username, hashEmail(email));
 			if (existingUser)
 				return await returnCookie(existingUser, res);
 
 			user = await createUser(
-				email,
+				encrypt(email),
+				hashEmail(email),
 				username,
 				null,
 				sub

@@ -1,5 +1,6 @@
 import { updateUser } from "../models/userModel.js";
 import { errorCodes } from "../utils/errorCodes.js";
+import { encrypt, decrypt } from "../utils/crypto.js";
 
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
@@ -13,7 +14,7 @@ export async function setup2FA(req, res) {
 		const secret = speakeasy.generateSecret({ name: `ft_transcendence: (${req.user.username})` });
 
 		await updateUser(req.user.user_id, {
-			twofa_secret: secret.base32
+			twofa_secret: encrypt(secret.base32)
 		});
 
 		const otpAuthUrl = secret.otpauth_url;
@@ -51,7 +52,7 @@ export async function verify2FA(req, res) {
 			return res.status(errorCodes.TWOFA_NOT_ENABLED.status).send(errorCodes.TWOFA_NOT_ENABLED);
 
 		const verified = speakeasy.totp.verify({
-			secret: req.user.twofa_secret,
+			secret: decrypt(req.user.twofa_secret),
 			encoding: 'base32',
 			token: token,
 			window: 1
@@ -82,7 +83,7 @@ export async function delete2FA(req, res) {
 		if (!req.user.twofa_enabled)
 			return res.status(errorCodes.TWOFA_NOT_ENABLED.status).send(errorCodes.TWOFA_NOT_ENABLED);
 		const verified = speakeasy.totp.verify({
-			secret: req.user.twofa_secret,
+			secret: decrypt(req.user.twofa_secret),
 			encoding: 'base32',
 			token: token,
 			window: 1
