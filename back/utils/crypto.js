@@ -4,6 +4,8 @@ const key = crypto.createHash('sha256').update(String(process.env.SECRET_KEY)).d
 const algorithm = 'aes-256-cbc';
 
 export function hashEmail(email) {
+	if (!email)
+		return ;
 	const hash = crypto.createHash('sha256').update(email).digest('hex');
 	return hash;
 }
