@@ -131,7 +131,7 @@ export async function sendMessage(req, res) {
 		const relation = await findFriendRelation(user.user_id, receiverId);
 		if (!relation || relation.status !== 'accepted')
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-		const { messageId, timestamp } = await saveMessage(user.user_id, receiverId, encrypt(cleanMessage), _type || 'text');
+		const { messageId, timestamp } = await saveMessage(user.user_id, receiverId, encrypt(cleanMessage), _type || 'text', _room_id || null);
 		const data = {
 			content: cleanMessage,
 			type: _type || 'text',
