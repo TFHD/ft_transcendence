@@ -26,6 +26,7 @@ const GoogleLoginButton = () => {
       });
       window.location.reload();
     } catch (err) {
+      console.error("Google login failed", err);
     }
   };
 

@@ -26,8 +26,8 @@ const StartGamePractice = () => {
     useEffect(() => {
       CheckToken().then(res => {
         if (!res) { navigate("/"); closeGateWaySocket(); } 
-        if (!getGatewaySocket())
-          connectGateWaySocket(`https://${host}:8000/api/gateway`);
+        if (!getGatewaySocket()) {
+          connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
         });
 
     const getInfos = async () => {

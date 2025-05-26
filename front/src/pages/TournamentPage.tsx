@@ -35,8 +35,8 @@ const TournamentPage = () => {
   useEffect(() => {
     CheckToken().then(res => {
       if (!res) { navigate("/"); closeGateWaySocket(); } 
-      if (!getGatewaySocket())
-            connectGateWaySocket(`https://${host}:8000/api/gateway`);
+      if (!getGatewaySocket()) {
+            connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
     });
 
     if (!fromStartGame)
@@ -83,6 +83,9 @@ const TournamentPage = () => {
       }
     };
 
+    ws.onopen = () => { console.log('Successfully connected to server'); };
+    ws.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); };
+    ws.onerror = (e) => { console.log('Connection error', e); };
     return () => {}
 
   }, [navigate, finish, matchPlayed, roundPlayed]);

@@ -30,8 +30,8 @@ const PlayerSettingsPage = () => {
   useEffect(() => {
     CheckToken().then(res => {
       if (!res) { navigate("/"); closeGateWaySocket(); }
-      if (!getGatewaySocket())
-        connectGateWaySocket(`https://${host}:8000/api/gateway`);
+      if (!getGatewaySocket()) {
+        connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
       const check2FA = async () => {
         const isEnabled = await getIsAuthA2F();
         setTwoFA(isEnabled);
@@ -44,6 +44,7 @@ const PlayerSettingsPage = () => {
             setAvatarPreview(avatar);
           }
         } catch (error) {
+          console.error("Erreur lors de la récupération de l'utilisateur :", error);
         }
       };
       check2FA();
@@ -173,7 +174,9 @@ const PlayerSettingsPage = () => {
       });
       setNewPassword({ ...changePassword, password: "" });
       navigate("/");
-    } catch (err) { }
+    } catch (err) {
+      console.log("failed");
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -195,6 +198,7 @@ const PlayerSettingsPage = () => {
       alert("Votre compte a été supprimé.");
       navigate("/");
     } catch (err) {
+      console.error("Erreur lors de la suppression du compte :");
       alert("Échec de la suppression du compte.");
     }
   };
@@ -237,6 +241,7 @@ const PlayerSettingsPage = () => {
   
       alert("Avatar mis à jour avec succès !");
     } catch (error) {
+      console.error("Erreur lors du changement d'avatar :", error);
       alert("Échec du changement d'avatar. Vérifie le format de l'image.");
     }
   };

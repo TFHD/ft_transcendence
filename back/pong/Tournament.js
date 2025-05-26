@@ -21,6 +21,7 @@ class   TournamentRoom
 {
     constructor()
     {
+        console.log('created new tournament room')
         this.users = new Map();
         this.games = new Map();
         this.ready_to_play = new Map();
@@ -41,19 +42,19 @@ const	userInfos = new Map();
 async function addMatchIntoDB(tournamentID, p1_displayname, p2_displayname, p1_score, p2_score, match, round, winner_id, next_match, next_round)
 {
     try { await createMatch(tournamentID, p1_displayname, p2_displayname, p1_score, p2_score, match, round, winner_id, next_match, next_round); }
-    catch (e) { }
+    catch (e) { console.log(e); }
 }
 
 async function setNextInfosIntoDB(tournamentID, match, round, next_match, next_round)
 {
     try { await changeNextvalue(tournamentID, match, round, next_match, next_round); }
-    catch (e) { }
+    catch (e) { console.log(e); }
 }
 
 async function deleteTournament(tournamentID)
 {
     try { await deleteGame(tournamentID); await deleteTournamentMatches(tournamentID); }
-    catch (e) { } 
+    catch (e) { console.log(e); } 
 }
 
 function getOperator(tournamentID)
@@ -106,7 +107,7 @@ async function updatePlayer(tournamentID, number)
         else
             await createGame(tournamentID, "tournament", 1, 4);
     }
-    catch (e) { }
+    catch (e) { console.log(e); }
 }
 
 async function sendInformations(tournamentID)
@@ -148,7 +149,7 @@ async function setNextMatch(tournamentID, match, round)
             await setNextInfosIntoDB(tournamentID, match, round, nextMatch, nextRound)
         }
     }
-    catch (e) { }
+    catch (e) { console.log(e); }
 }
 
 //=====================================================================================================================================================
@@ -187,7 +188,7 @@ async function generateMatches(tournamentID)
             }
         }
     }
-    catch (e) { }
+    catch (e) { console.log(e); }
 }
 
 async function finishMatch(tournamentID, matchPlayed)
@@ -203,15 +204,19 @@ async function finishMatch(tournamentID, matchPlayed)
             currentTournament.round++;
             currentTournament.match = 1;
             if (currentTournament.round > Math.sqrt(currentTournament.users.size))
+            {
+                console.log("Finished tournament!");
                 currentTournament.state = "Finish";
+            }
             else
             {
+                console.log("Finished game");
                 await generateMatches(tournamentID);
                 LetsPlay(tournamentID);
             }
         }
     }
-    catch (e) { };
+    catch (e) { console.log(e); };
 }
 
 async function LetsPlay(tournamentID)
@@ -295,8 +300,10 @@ async function canFinish(tournamentID, matchPlayed, round, socket)
     const currentTournament = tournamentRooms.get(tournamentID);
     const currentMatch = await getMatchByMatchRound(tournamentID, matchPlayed, round);
 
-    if (currentTournament.finish_match.get(round + matchPlayed + "")) 
+    if (currentTournament.finish_match.get(round + matchPlayed + "")) {
+        console.log(`${userInfos.get(socket).username} SAID THEY FINISHED PLAYING`);
         return true;
+    }
     else {
         currentTournament.finish_match.set(round + matchPlayed + "", socket);
         return false;
@@ -308,8 +315,10 @@ async function joinTournament(socket, tournamentID)
     const   currentUser         = userInfos.get(socket);
     let     currentTournament   = tournamentRooms.get(currentUser.tournamentID);
 
+    console.log(`NEW JOIN: ${currentUser.username}`)
     if (currentUser.username == "0" || currentUser.username == 0)
     {
+        console.log(`ILLEGAL USERNAME (${currentUser.username})`)
         socket.send(JSON.stringify({alreadyInUse : true}));
         return ;
     }
@@ -319,6 +328,7 @@ async function joinTournament(socket, tournamentID)
             if (user.username == currentUser.username)
             {
                 socket.send(JSON.stringify({alreadyInUse: true}));
+                console.log(`USERNAME ALREADY USED IN ROOM (${currentUser.username})`); // A PACKET SHOULD BE SENT THE THE USER SO HE GOES BACK TO THE PREVIOUS PAGE AND CLOSES HIS WS
                 return ;
             }
         currentTournament.users.set(socket, currentUser);
@@ -359,10 +369,13 @@ export async function tournament(connection, req)
         let currentUser = userInfos.get(socket);
         let currentTournament = tournamentRooms.get(currentUser.tournamentID);
 
-        if (currentUser.valid && packet)
+        if (!currentUser.valid)
+            console.log("Invalid user");
+        else if (packet)
         {
             if (packet.start && getOperator(tournamentID) == socket)
             {
+                console.log('Start game');
                 currentTournament.state = "En cours";
                 generateMatches(tournamentID);
                 LetsPlay(tournamentID);
@@ -402,15 +415,18 @@ export async function tournament(connection, req)
         {
             if (currentTournament.state == "En cours" && !currentTournament.nuked)
             {
+                console.log("NUKE THE ROOM!");
                 sendAll(currentUser.tournamentID, { stop : true });
                 currentTournament.nuked = true;
             } 
             if (currentTournament.users.delete(socket))
                 updatePlayer(currentUser.tournamentID, -1);
+            console.log('client leave the room');
             if (currentTournament.users.size === 0)
             {
                 tournamentRooms.delete(currentUser.tournamentID);
                 deleteTournament(currentUser.tournamentID);
+                console.log('Plus personne dans la room, elle est détruite');
             }
             else
             {
@@ -419,6 +435,7 @@ export async function tournament(connection, req)
                     user.isOP = true;
             }
         }
+        console.log(`GOODBYE IN TOURNAMENT ${userInfos.get(socket).username}`)
         userInfos.delete(socket);
     })
 }

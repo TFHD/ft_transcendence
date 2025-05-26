@@ -168,6 +168,7 @@ export default function ChatWindow() {
 	let requestBody: any = {
 	  timestamp: new Date().toISOString()
 	};
+
 	if (messageType === "invite") {
 	  const roomId = generateTimeBasedId();
 	  msgToSend = `🏓 Invitation au Pong !`;

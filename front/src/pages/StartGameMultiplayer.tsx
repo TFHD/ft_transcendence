@@ -37,8 +37,8 @@ const StartGameMultiplayer = () => {
   useEffect(() => {
     CheckToken().then(res => {
       if (!res) { navigate("/"); closeGateWaySocket(); } 
-      if (!getGatewaySocket())
-        connectGateWaySocket(`https://${host}:8000/api/gateway`);
+      if (!getGatewaySocket()) {
+        connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
     });
 
     const getInfos = async () => {
@@ -80,7 +80,7 @@ const StartGameMultiplayer = () => {
         }
         else if (game.data && game.data.players + 1 <= game.data.limit)
           navigate(`/tournament/${roomId}`, { state: { fromStartGame: true, roomID: roomId, join: "exist", username: tournamentUsername } });
-      } catch (e) { }
+      } catch (e) { console.log(e); }
     }
     else
       navigate(`/pong/duo`, { state: { fromStartGame: true, roomID: roomId, username : userData.username } });

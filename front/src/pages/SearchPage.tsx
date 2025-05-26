@@ -24,6 +24,7 @@ const SearchPage = () => {
     const navigate = useNavigate();
 
     const handleSearch = () => {
+      console.log(search);
       navigate(`/search/${searched}`);
     };
 
@@ -31,8 +32,8 @@ const SearchPage = () => {
       CheckToken().then(res => {
         if (!res) { navigate("/"); closeGateWaySocket(); } 
         });
-        if (!getGatewaySocket())
-          connectGateWaySocket(`https://${host}:8000/api/gateway`);
+        if (!getGatewaySocket()) {
+          connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
         const fetchUsers = async () => {
         try {
             const res = await axios.get(`https://${host}:8000/api/search/${search}`, {
@@ -40,6 +41,7 @@ const SearchPage = () => {
             });
             setUsers(res.data.users);
         } catch (err) {
+            console.error("Erreur lors de la recherche des utilisateurs :", err);
         }
         };
 
@@ -71,6 +73,7 @@ const SearchPage = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && searched != "") {
+                    console.log(searched);
                     handleSearch();
                   }
                 }}
