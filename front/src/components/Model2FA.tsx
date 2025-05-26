@@ -19,6 +19,11 @@ const Modal2FA: React.FC<Modal2FAProps> = ({ message, onSubmit, onClose }) => {
           className="w-full p-2 rounded bg-[#0b0c10] border border-[#5d5570] text-white"
           value={code}
           onChange={(e) => setCode(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              onSubmit(code);
+            }
+          }}
         />
         <div className="flex justify-end space-x-2">
           <button

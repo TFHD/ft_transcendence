@@ -41,7 +41,7 @@ const BabylonScene = () => {
       if (!res) { navigate("/"); closeGateWaySocket(); }
     });
     if (!getGatewaySocket()) {
-      connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
+      connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
 
 
     if (!canvasRef.current) return;

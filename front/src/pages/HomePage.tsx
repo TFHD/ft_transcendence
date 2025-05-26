@@ -48,53 +48,48 @@ const HomePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     let code2FA = "";
-    let isConnected = false;
+    let reponse = null;
     try {
-      await axios.post(`https://${host}:8000/api/auth/login`, {
+      reponse = await axios.post(`https://${host}:8000/api/auth/login`, {
         username: formData.identifier,
         email: formData.identifier,
         password: formData.password,
-      }, {
-        withCredentials: true
-      });
-      const is2FA = await getIsAuthA2F();
-      if (is2FA) {
-        code2FA = await askFor2FACode();
-        try {
-          await axios.post(`https://${host}:8000/api/auth/2fa/verify`, {
-            token: code2FA,
-          }, {
-            withCredentials: true
-        });
-        isConnected = true;
-      } catch (err) {
-        await axios.post(`https://${host}:8000/api/auth/logout`, undefined, {
-          withCredentials: true,
-          headers: {
-            'Content-Type': ''
-          }
-        });
-      }
-    } else
-        isConnected = true;
-    if (isConnected) {
+      }, {withCredentials: true});
       setStatusMessage({
         text: "Connexion réussie !",
         type: "success",
       });
-      navigate("/lobby");
-    }
-    else {
-      setStatusMessage({
-        text: "Code 2FA incorrect !",
-        type: "error",
-      });
-    }
     } catch (err) {
-      setStatusMessage({
-        text: "Erreur lors de la connection. Veuillez réessayer.",
-        type: "error",
-      });
+      if (err.response.data.message == "Two-factor authentication is required.") {
+        try {
+          code2FA = await askFor2FACode();
+          reponse = await axios.post(`https://${host}:8000/api/auth/login`, {
+            username: formData.identifier,
+            email: formData.identifier,
+            password: formData.password,
+          }, {
+            withCredentials: true,
+            headers : {
+              'x-2fa-token' : code2FA
+            }
+          });
+          navigate("/lobby");
+          setStatusMessage({
+            text: "Connexion avec succès !",
+            type: "error",
+          });
+        } catch (err) {
+          setStatusMessage({
+            text: "Le code A2F est faux !",
+            type: "error",
+          });
+        }
+      }
+      else
+        setStatusMessage({
+          text: "Le mot de passe ou l'email est invalide !",
+          type: "error",
+        });
     }
   };
 

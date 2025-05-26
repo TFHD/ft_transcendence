@@ -33,7 +33,7 @@ const SearchPage = () => {
         if (!res) { navigate("/"); closeGateWaySocket(); } 
         });
         if (!getGatewaySocket()) {
-          connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
+          connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
         const fetchUsers = async () => {
         try {
             const res = await axios.get(`https://${host}:8000/api/search/${search}`, {

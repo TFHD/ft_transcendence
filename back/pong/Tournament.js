@@ -85,7 +85,7 @@ function getSocketByUserName(tournamentID, username)
     if (currentTournament)
     {
         for (const [socket, user] of currentTournament.users)
-            if (user.username === username)
+            if (user.username == username)
                 return socket;
     }
     return null;
@@ -125,7 +125,16 @@ async function sendInformations(tournamentID)
         });
         currentTournament = tournamentRooms.get(tournamentID);
         game = await getGameByGameId(tournamentID);
-        await mssleep(300);
+        await mssleep(100);
+    }
+    if (currentTournament && currentTournament.state == "Finish") {
+        sendAll(tournamentID, {
+            id : tournamentID,
+            mode : "tournament",
+            players : game.players,
+            limit : game.players_limit,
+            state : currentTournament.state,
+        });
     }
 }
 
@@ -228,8 +237,12 @@ async function LetsPlay(tournamentID)
                 user1 = match.p1_displayname;
                 user2 = match.p2_displayname;
                 if (user1 && user2) {
-                    getSocketByUserName(tournamentID, user1).send(JSON.stringify(data));
-                    getSocketByUserName(tournamentID, user2).send(JSON.stringify(data));
+                    const socket1 = getSocketByUserName(tournamentID, user1);
+                    if (socket1)
+                        socket1.send(JSON.stringify(data));
+                    const socket2 = getSocketByUserName(tournamentID, user2);
+                    if (socket2)
+                        socket2.socket2send(JSON.stringify(data));
                 }
             }
         }
@@ -248,8 +261,12 @@ async function LetsPlay(tournamentID)
                     else user2 = the_match.winner_id;
                 }
                 if (user1 && user2) {
-                    getSocketByUserName(tournamentID, user1).send(JSON.stringify(data));
-                    getSocketByUserName(tournamentID, user2).send(JSON.stringify(data));
+                    const socket1 = getSocketByUserName(tournamentID, user1);
+                    const socket2 = getSocketByUserName(tournamentID, user2);
+                    if (socket1)
+                        socket1.socket2send(JSON.stringify(data));
+                    if (socket2)
+                        socket2.socket2send(JSON.stringify(data));
                 }
             }
         }
@@ -283,14 +300,14 @@ async function canFinish(tournamentID, matchPlayed, round, socket)
     const currentTournament = tournamentRooms.get(tournamentID);
     const currentMatch = await getMatchByMatchRound(tournamentID, matchPlayed, round);
 
-    console.log(`${userInfos.get(socket).username} SAID THEY FINISHED PLAYING`)
-    if (currentMatch.winner_id != 0)
-    {
-        console.log('YAY CAN FINISH THE MATCH, SPIT ON THAT THING')
-        return (true)
+    if (currentTournament.finish_match.get(round + matchPlayed + "")) {
+        console.log(`${userInfos.get(socket).username} SAID THEY FINISHED PLAYING`);
+        return true;
     }
-    console.log('CANT FINISH MATCH GROS CACA PUTE TA MERE')
-    return (false)
+    else {
+        currentTournament.finish_match.set(round + matchPlayed + "", socket);
+        return false;
+    }
 }
 
 async function joinTournament(socket, tournamentID)
@@ -324,10 +341,8 @@ async function joinTournament(socket, tournamentID)
         currentUser.isOP = true;
         await updatePlayer(tournamentID, 0);
         currentTournament.users.set(socket, currentUser);
-        sendInformations(tournamentID);
+        await sendInformations(tournamentID);
     }
-    else
-        ;
 }
 
 export async function tournament(connection, req)

@@ -16,6 +16,7 @@ const PlayerSettingsPage = () => {
   const [verificationCode, setVerificationCode] = useState<string>('');
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [canChangeAvatar, setcanChangeAvatar] = useState<boolean>(true);
   const [changeMail, setChangeMail] = useState({ email: "", password: "" });
   const [changePassword, setNewPassword] = useState({ password: "", new_password: "" });
   const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
@@ -30,7 +31,7 @@ const PlayerSettingsPage = () => {
     CheckToken().then(res => {
       if (!res) { navigate("/"); closeGateWaySocket(); }
       if (!getGatewaySocket()) {
-        connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
+        connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
       const check2FA = async () => {
         const isEnabled = await getIsAuthA2F();
         setTwoFA(isEnabled);
@@ -206,7 +207,7 @@ const PlayerSettingsPage = () => {
   
     const formData = new FormData();
     formData.append("file", selectedFile);
-  
+    setSelectedFile(null);
     try {
       await axios.patch(`https://${host}:8000/api/users/@me`, formData, {
         headers: {
@@ -216,7 +217,6 @@ const PlayerSettingsPage = () => {
       });
   
       alert("Avatar mis à jour avec succès !");
-      setSelectedFile(null);
     } catch (error) {
       console.error("Erreur lors du changement d'avatar :", error);
       alert("Échec du changement d'avatar. Vérifie ton mot de passe.");
@@ -265,7 +265,7 @@ const PlayerSettingsPage = () => {
                 onChange={handleFileChange}
               />
               <button
-                className="bg-[#44a29f] hover:bg-[#3b8a8a] px-4 py-2 rounded text-white"
+                className={`bg-[#44a29f] px-4 py-2 rounded text-white hover:bg-[#3b8a8a] ${selectedFile ? "cursor-pointer" : "cursor-not-allowed"}`}
                 onClick={handleAvatarSubmit}
                 disabled={!selectedFile}
               >

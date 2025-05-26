@@ -41,6 +41,8 @@ const BabylonPage = () => {
       });
     }
     getId().then(res => {user_id = res;});
+    if (location.state?.fromStartGame)
+      navigate(location.pathname, { replace: true, state: undefined });
   }, []);
 
   useEffect(() => {
@@ -48,7 +50,7 @@ const BabylonPage = () => {
     CheckToken().then(res => {
     if (!res) { navigate("/"); closeGateWaySocket(); } 
     if (!getGatewaySocket()) {
-      connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
+      connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
     });
 
     if (gameMode != "solo" && gameMode != "duo" && gameMode != "practice")
@@ -103,7 +105,7 @@ const BabylonPage = () => {
         const rect = new GUI.Rectangle();
         rect.width = width;
         rect.height = height;
-        rect.alpha = 0.4;
+        rect.alpha = 0.7; // CHANGED: plus visible
         rect.cornerRadius = cornerRadius;
         rect.color = "white";
         rect.thickness = thickness;
@@ -133,10 +135,17 @@ const BabylonPage = () => {
         label.left = horizontalPos + "px";
         label.textHorizontalAlignment = HorizonAlignment;
         label.textVerticalAlignment = VerticalAlignment;
+        // --- STYLE MODERN ---
+        label.fontFamily = "Orbitron, Exo, Arial";
+        label.shadowColor = "#000";
+        label.shadowBlur = 8;
+        label.outlineWidth = 4;
+        label.outlineColor = "#000";
         if (display)
           gui.addControl(label);
         return label;
       };
+
       const changeGameVisual = () => {
         Status = ENUM_STATUS.InGame;
         updateGameElementsVisibility(true);
@@ -216,7 +225,7 @@ const BabylonPage = () => {
 
       const engine = new BABYLON.Engine(canvasRef.current, true);
       const scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
+      scene.clearColor = new BABYLON.Color4(0.08, 0.09, 0.13, 1); // CHANGED: fond anthracite doux
 
       const camera = new BABYLON.ArcRotateCamera(
         "camera",
@@ -230,12 +239,36 @@ const BabylonPage = () => {
 
       const gui = GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
-      const Player1Name = createTextBox("Player1", 32, 25, 25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
-      const Player2Name = createTextBox("Player2", 32, 25, -25, "white", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
-      const Player1Score = createTextBox("0", 29, 55, 25, "red", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
-      const Player2Score = createTextBox("0", 29, 55, -25, "red", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true);
-      const PauseTextBox = createTextBox(ENUM_STATUS.pause, 70, 0, 0, "white", GUI.Control.HORIZONTAL_ALIGNMENT_CENTER, GUI.Control.VERTICAL_ALIGNMENT_CENTER, false);
-      const PauseBackgroundBox = createBackgroundBox("400px", "120px", "gray", 2, 20, false);
+      const Player1Name = createTextBox("Player1", 32, 25, 25, "#F4D35E", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true); // jaune pastel
+      Player1Name.fontFamily = "Orbitron, Exo, Arial";
+      Player1Name.shadowColor = "#000";
+      Player1Name.shadowBlur = 8;
+      Player1Name.outlineWidth = 4;
+      Player1Name.outlineColor = "#000";
+
+      const Player2Name = createTextBox("Player2", 32, 25, -25, "#3FA7D6", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true); // bleu clair
+      Player2Name.fontFamily = "Orbitron, Exo, Arial";
+      Player2Name.shadowColor = "#000";
+      Player2Name.shadowBlur = 8;
+      Player2Name.outlineWidth = 4;
+      Player2Name.outlineColor = "#000";
+
+      const Player1Score = createTextBox("0", 42, 55, 25, "#08D9D6", GUI.Control.HORIZONTAL_ALIGNMENT_LEFT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true); // bleu néon
+      Player1Score.fontFamily = "Orbitron, Exo, Arial";
+      Player1Score.shadowColor = "#000";
+      Player1Score.shadowBlur = 10;
+
+      const Player2Score = createTextBox("0", 42, 55, -25, "#FF2E63", GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT, GUI.Control.VERTICAL_ALIGNMENT_TOP, true); // rose néon
+      Player2Score.fontFamily = "Orbitron, Exo, Arial";
+      Player2Score.shadowColor = "#000";
+      Player2Score.shadowBlur = 10;
+
+      const PauseTextBox = createTextBox(ENUM_STATUS.pause, 70, 0, 0, "#F4D35E", GUI.Control.HORIZONTAL_ALIGNMENT_CENTER, GUI.Control.VERTICAL_ALIGNMENT_CENTER, false);
+      PauseTextBox.fontFamily = "Orbitron, Exo, Arial";
+      PauseTextBox.shadowColor = "#000";
+      PauseTextBox.shadowBlur = 12;
+
+      const PauseBackgroundBox = createBackgroundBox("400px", "120px", "#222A35", 0, 30, false); // gris bleuté foncé, arrondi
 
       camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
       const customKeyboardInput = new BABYLON.ArcRotateCameraKeyboardMoveInput();
@@ -285,26 +318,56 @@ const BabylonPage = () => {
       starsParticles.renderingGroupId = 0;
       starsParticles.start();
 
-      const paddleMaterial = new BABYLON.StandardMaterial("paddleMat", scene);
-      paddleMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
+      const paddlePBRLeft = new BABYLON.PBRMaterial("paddlePBRLeft", scene);
+      paddlePBRLeft.albedoColor = new BABYLON.Color3(0.1, 0.85, 0.82);
+      paddlePBRLeft.alpha = 0.95;
+      paddlePBRLeft.metallic = 0.2;
+      paddlePBRLeft.roughness = 0.6;
+      paddlePBRLeft.reflectivityColor = new BABYLON.Color3(0.1, 0.2, 0.2);
+      
+      const paddlePBRRight = new BABYLON.PBRMaterial("paddlePBRRight", scene);
+      paddlePBRRight.albedoColor = new BABYLON.Color3(0.98, 0.18, 0.38);
+      paddlePBRRight.alpha = 0.95;
+      paddlePBRRight.metallic = 0.2;
+      paddlePBRRight.roughness = 0.6;
+      paddlePBRRight.reflectivityColor = new BABYLON.Color3(0.2, 0.1, 0.15);
 
-      const leftPaddle = BABYLON.MeshBuilder.CreateBox("leftPaddle", { width: 1, height: 5, depth: 1 }, scene);
+      const leftPaddle = BABYLON.MeshBuilder.CreateCapsule("leftPaddle", { height: 5, radius: 0.55 }, scene);
       leftPaddle.position = new BABYLON.Vector3(-20, 0, 0);
-      leftPaddle.material = paddleMaterial;
+      leftPaddle.material = paddlePBRLeft;
 
-      const rightPaddle = BABYLON.MeshBuilder.CreateBox("rightPaddle", { width: 1, height: 5, depth: 1 }, scene);
+      const rightPaddle = BABYLON.MeshBuilder.CreateCapsule("rightPaddle", { height: 5, radius: 0.55 }, scene);
       rightPaddle.position = new BABYLON.Vector3(20, 0, 0);
-      rightPaddle.material = paddleMaterial;
+      rightPaddle.material = paddlePBRRight;
 
       const ballMaterial = new BABYLON.StandardMaterial("ballMat", scene);
-      ballMaterial.diffuseColor = new BABYLON.Color3(0, 1, 0);
+      ballMaterial.diffuseColor = new BABYLON.Color3(0.97, 0.93, 0.36);
+      ballMaterial.emissiveColor = new BABYLON.Color3(1, 1, 0.4);
+      ballMaterial.specularColor = new BABYLON.Color3(1, 1, 0.7);
 
-      const ball = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 1 }, scene);
+      const ball = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 1.2 }, scene);
       ball.position = new BABYLON.Vector3(0, 0, 0);
       ball.material = ballMaterial;
+      const gl = new BABYLON.GlowLayer("glow", scene);
+      gl.addIncludedOnlyMesh(ball);
 
-      const topWall = createWall("topWall", {width: 45, height : WALL_HEIGHT, depth: 5}, new BABYLON.Vector3(0, 11, 0), new BABYLON.Color3(0.25, 0.25, 0.25));
-      const bottomWall = createWall("bottomWall", {width: 45, height: WALL_HEIGHT, depth: 5}, new BABYLON.Vector3(0, -11, 0), new BABYLON.Color3(0.25, 0.25, 0.25));
+      const wallMaterial = new BABYLON.StandardMaterial("wallMat", scene);
+      wallMaterial.diffuseColor = new BABYLON.Color3(0.15, 0.18, 0.21);
+      wallMaterial.alpha = 0.7;
+
+      const topWall = BABYLON.MeshBuilder.CreateBox("topWall", {width: 45, height : WALL_HEIGHT, depth: 5}, scene);
+      topWall.position = new BABYLON.Vector3(0, 11, 0);
+      topWall.material = wallMaterial;
+      topWall.isPickable = false;
+      topWall.edgesWidth = 2.0;
+      topWall.edgesColor = new BABYLON.Color4(0.7, 0.7, 0.7, 1);
+
+      const bottomWall = BABYLON.MeshBuilder.CreateBox("bottomWall", {width: 45, height: WALL_HEIGHT, depth: 5}, scene);
+      bottomWall.position = new BABYLON.Vector3(0, -11, 0);
+      bottomWall.material = wallMaterial;
+      bottomWall.isPickable = false;
+      bottomWall.edgesWidth = 2.0;
+      bottomWall.edgesColor = new BABYLON.Color4(0.7, 0.7, 0.7, 1);
 
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
@@ -356,7 +419,7 @@ const BabylonPage = () => {
             if (dataTournament.game_id != undefined)
               navigate(`/tournament/${dataTournament.game_id}`, { state : {fromStartGame : true, finish : true, roomID : dataTournament.game_id, username : username, matchPlayed : dataTournament.match , roundPlayed : dataTournament.round}});
             else
-              navigate(-1);
+              navigate("/start-game-multiplayer");
           }
 
           createExplosion(ball.position, {r1 : 0, g1 : 1, b1 : 0}, {r2 : 0, g2 : 1, b2 : 0}, 0.5, 2, 0.1, 0.2, 200);

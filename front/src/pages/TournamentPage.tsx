@@ -36,7 +36,7 @@ const TournamentPage = () => {
     CheckToken().then(res => {
       if (!res) { navigate("/"); closeGateWaySocket(); } 
       if (!getGatewaySocket()) {
-            connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("conection reussie !");}
+            connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
     });
 
     if (!fromStartGame)
@@ -62,6 +62,10 @@ const TournamentPage = () => {
       if (server_packet.id) {
         setGameInfos(prev => ({...prev, id: server_packet.id, mode: server_packet.mode, players: server_packet.players,
                                         limit: server_packet.limit, state: server_packet.state }));
+        if (server_packet.state == "Finish") {
+          closeTournamentSocket();
+          navigate("/start-game-multiplayer");
+        }
       }
       if (server_packet.canPlay != undefined && server_packet.matchToPlay != undefined && server_packet.roundToPlay != undefined) {
         setcanPlay(server_packet.canPlay);
@@ -74,7 +78,7 @@ const TournamentPage = () => {
       }
       if (server_packet.stop)
       {
-        ws!.close();
+        ws?.close();
         navigate("/lobby");
       }
     };
