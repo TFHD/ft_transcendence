@@ -1,5 +1,6 @@
 import speakeasy from 'speakeasy';
 import { errorCodes } from '../utils/errorCodes.js';
+import { decrypt } from '../utils/crypto.js';
 
 export async function twoFAMiddleware(req, res) {
 	try {
@@ -9,7 +10,7 @@ export async function twoFAMiddleware(req, res) {
 				return res.status(errorCodes.TWOFA_REQUIRED.status).send(errorCodes.TWOFA_REQUIRED);
 
 			const verified = speakeasy.totp.verify({
-				secret: req.user.twofa_secret,
+				secret: decrypt(req.user.twofa_secret),
 				encoding: 'base32',
 				token: token2fa,
 				window: 1

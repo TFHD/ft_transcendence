@@ -2,6 +2,7 @@ import { findFriendRelation } from "../models/friendsModel.js";
 import { saveMessage, removeMessage, getAllMessages, findMessageById } from "../models/messagesModel.js";
 import { errorCodes } from "../utils/errorCodes.js";
 import { findUserByUserId } from "../models/userModel.js";
+import { encrypt, decrypt } from "../utils/crypto.js";
 import xss from "xss";
 
 export async function getMessages(req, res) {
@@ -38,7 +39,11 @@ export async function getMessages(req, res) {
 		const messages = await getAllMessages(user.user_id, targetId, limit, offset);
 		if (!messages || messages.length === 0)
 			return res.status(200).send([]);
-		return res.status(200).send(messages);
+		const decryptedMessages = messages.map(message => ({
+			...message,
+			content: decrypt(message.content)
+		}));
+		return res.status(200).send(decryptedMessages);
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}
@@ -118,7 +123,7 @@ export async function sendMessage(req, res) {
 		const relation = await findFriendRelation(user.user_id, receiverId);
 		if (!relation || relation.status !== 'accepted')
 			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
-		const { messageId, timestamp } = await saveMessage(user.user_id, receiverId, cleanMessage);
+		const { messageId, timestamp } = await saveMessage(user.user_id, receiverId, encrypt(cleanMessage));
 		const data = {
 			content: cleanMessage,
 			message_id: messageId,

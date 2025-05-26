@@ -47,3 +47,10 @@ export async function deleteFriendRelation(user1_id, user2_id) {
 		WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
 	`, [user1_id, user2_id, user2_id, user1_id]);
 }
+
+export async function deleteAllFriendsByUserId(user_id) {
+	await db.run(`
+		DELETE FROM friends
+		WHERE user1_id = ? OR user2_id = ?
+	`, [user_id, user_id]);
+}
