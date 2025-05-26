@@ -194,8 +194,7 @@ const	SoloPongGame = async (socket) =>
 {
 	let currentGame = userGames.get(socket);
 
-	console.log('Starting practice pong game');
-	AILogic(currentGame); //Starts AI in an async function
+	AILogic(currentGame);
 	while (!currentGame.shouldStop)
 	{
 		updatePaddlePos(currentGame);
@@ -212,7 +211,6 @@ const	SoloPongGame = async (socket) =>
 	}
 	setWinner(currentGame);
 	socket.send(JSON.stringify({shouldStop : true}));
-	console.log('Stopped game');
 }
 
 async function setWinner(currentGame)
@@ -258,7 +256,6 @@ export async function	practicePong(connection, req)
 			socket.terminate();
 			userSockets.delete(socket);
 			userGames.delete(socket);
-			console.log('Disconnected due to inactivity');
 			return;
 		}
 		socket.isAlive = false;
@@ -267,7 +264,6 @@ export async function	practicePong(connection, req)
 
 	if (!userSockets.has(socket))
 	{
-		console.log('Adding new user to set');
 		userSockets.add(socket);
 		userGames.set(socket, new Game());
 		userGames.get(socket).player1.name = username;
@@ -297,6 +293,5 @@ export async function	practicePong(connection, req)
 		currentGame.shouldStop = true;
 		userSockets.delete(socket);
 		userGames.delete(socket);
-		console.log('goodbye client');
 	})
 }

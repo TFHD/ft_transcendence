@@ -68,7 +68,6 @@ const ProfilPage = () => {
         });
         setUser(res.data);
       } catch (err) {
-        console.error('Erreur de récupération du profil utilisateur :', err);
       }
     };
 
@@ -136,9 +135,7 @@ const ProfilPage = () => {
 
   useEffect(() => {
     if (!ws || !me) return;
-    ws.onopen = () => { console.log('Successfully connected to server'); };
-    ws.onerror = (e) => { console.log('Connection error', e); };
-    ws.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); ws = null; };
+    ws.onclose = (event) => { ws = null; };
 
     ws.onmessage = (message) => {
       try {

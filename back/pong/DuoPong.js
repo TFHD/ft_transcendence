@@ -54,7 +54,6 @@ class	Room
 {
 	constructor()
 	{
-		console.log('created a new room');
 		this.player1socket = null;
 		this.player2socket = null;
 		this.game = new Game();
@@ -113,7 +112,6 @@ async function setWinner(room, dataTournament)
 		}
 		if (currentGame.player1.score === currentGame.player2.score)
 			equality = 1;
-		console.log("tournament : " + dataTournament.isTournament);
 		if (dataTournament.isTournament != undefined && dataTournament.isTournament != "undefined")
 		{
 			const match = await getMatchByMatchRound(dataTournament.game_id, dataTournament.match, dataTournament.round);
@@ -146,10 +144,7 @@ async function setWinner(room, dataTournament)
 		await updateMultiplayerStats(user_win.username);
 		await updateMultiplayerStats(user_loose.username);
 	}
-	catch (e)
-	{
-		console.log(e);
-	}
+	catch (e) { }
 };
 
 function updateAnglePosBall(ball, paddle, player, ballVelocity)
@@ -290,7 +285,6 @@ async function startRoom(roomID, dataTournament)
 	let	room = rooms.get(roomID);
 	let currentGame = room.game;
 
-	console.log('Starting duo pong game');
 	while (!currentGame.shouldStop)
 	{
 		updatePaddlePos(currentGame);
@@ -310,7 +304,6 @@ async function startRoom(roomID, dataTournament)
 		room.player1socket.send(JSON.stringify({ shouldStop: true}));
 	if (room.player2socket)
 		room.player2socket.send(JSON.stringify({ shouldStop: true}));
-	console.log('Stopped game');
 	rooms.delete(roomID);
 }
 
@@ -318,16 +311,12 @@ function	register_user(socket, username)
 {
 	if (!userInfos.has(socket))
 	{
-		console.log('New user, saving socket info');
 		if (username != undefined)
 		{
 			userInfos.set(socket, new PlayerInfo());
 			userInfos.get(socket).username = username;
-			console.log(`USER USERNAME: ${userInfos.get(socket).username}`);
 		}
 	}
-	else
-		console.log('Old user, doing nothing');	
 }
 
 function addUserToRoom(socket, roomID, username, dataTournament, terminal)
@@ -342,7 +331,6 @@ function addUserToRoom(socket, roomID, username, dataTournament, terminal)
 			room.player1socket = socket;
 		else if (room.player2socket == null && userInfos.get(room.player1socket).username != username)
 		{
-			console.log('added user2 in the room');
 			room.player2socket = socket;
 			room.game.player2.username = username;
 			room.game.player2.isTerminal = terminal;
@@ -357,7 +345,6 @@ function addUserToRoom(socket, roomID, username, dataTournament, terminal)
 	{
 		rooms.set(roomID, new Room());
 		room = rooms.get(roomID);
-		console.log('added user1 in the room');
 		room.player1socket = socket;
 		room.game.player1.username = username;
 		room.game.player1.isTerminal = terminal;
@@ -393,35 +380,22 @@ export async function duoPong(connection, req)
 			clearInterval(interval);
 			socket.terminate();
 			userSockets.delete(socket);
-			console.log('Disconnected due to inactivity');
 			return;
 		}
 		socket.isAlive = false;
 		socket.ping();
 	}, 10 * 1000);
-
-	console.log(username);
 	register_user(socket, username);
-	
 	let	currentRoom = null;
 	let	currentPlayerInfo = null;
 	const roomID = req.query?.roomID;
 	if (roomID != "undefined" && roomID != null)
-	{
-		console.log(roomID);
 		addUserToRoom(socket, roomID, username, dataTournament, req.query?.terminal);
-	}
 	currentPlayerInfo = userInfos.get(socket);
 	currentRoom = rooms.get(currentPlayerInfo.roomID);
-	if (!currentRoom)
-		console.log('User hasn\'t given a roomID yet');
-
 	socket.on('message', message =>
 	{
 		let packet = parseJSON(message);
-		
-		console.log(packet);
-		console.log(message.toString());
 		currentRoom = rooms.get(currentPlayerInfo.roomID);
 		if (packet && currentPlayerInfo.roomID)
 		{
@@ -438,15 +412,8 @@ export async function duoPong(connection, req)
 				if (packet.key == 's')
 					player.DownInput = packet.state;
 			}
-			else if (currentRoom && !currentRoom.player2socket)
-				console.log('You are alone in this room');
-			else
-				console.log('erm... You are not in a room lil bro');
 		}
-		else
-			console.log('erm... You are not in a room lil bro');
 	})
-
 	socket.on('close', () =>
 	{
 		clearInterval(interval);	
@@ -458,10 +425,7 @@ export async function duoPong(connection, req)
 				currentRoom.player1socket = null;
 				currentRoom.player1 = null;
 				if (currentRoom.player2socket == null)
-				{
 					rooms.delete(currentPlayerInfo.roomID);
-					console.log('empty room, deleted');
-				}
 				currentRoom.game.shouldStop = true;
 			}
 			else if (currentRoom.player2socket == socket)
@@ -469,14 +433,10 @@ export async function duoPong(connection, req)
 				currentRoom.player2socket = null;
 				currentRoom.player2 = null;
 				if (currentRoom.player1socket == null)
-				{
 					rooms.delete(currentPlayerInfo.roomID);
-					console.log('empty room, deleted');
-				}
 				currentRoom.game.shouldStop = true;
 			}
 		}
 		userInfos.delete(socket);
-		console.log('goodbye client');
 	})
 }

@@ -15,8 +15,8 @@ const RegisterPage = () => {
       if (res)
         navigate("/lobby");
       });
-      if (!getGatewaySocket()) {
-        connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
+      if (!getGatewaySocket())
+        connectGateWaySocket(`https://${host}:8000/api/gateway`);
   }, []);
 
   const [formData, setFormData] = useState({

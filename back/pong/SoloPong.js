@@ -210,7 +210,6 @@ const	SoloPongGame = async (socket, username) =>
 {
 	let currentGame = userGames.get(socket);
 
-	console.log('Starting solo pong game');
 	while (!currentGame.shouldStop)
 	{
 		updatePaddlePos(currentGame);
@@ -227,19 +226,15 @@ const	SoloPongGame = async (socket, username) =>
 	}
 	setWinner(currentGame, username);
 	socket.send(JSON.stringify({shouldStop : true}));
-	console.log('Stopped game');
 }
 
 export async function	soloPong(connection, req)
 {	
-	console.log(req);
 	const sessionData = await authSocketMiddleware(req);
-	console.log("caca");
 	if (!sessionData) {
 		socket.close(1008, "Unauthorized");
 		return ;
 	}
-	console.log("caca1");
 	const socket = connection;
 	const username = req.query?.username;
 	
@@ -247,14 +242,12 @@ export async function	soloPong(connection, req)
 	socket.on('pong', () => {
 		socket.isAlive = true;
 	});
-	console.log("caca2");
 	const interval = setInterval(() => {
 		if (socket.isAlive === false) {
 			clearInterval(interval);
 			socket.terminate();
 			userSockets.delete(socket);
 			userGames.delete(socket);
-			console.log('Disconnected due to inactivity');
 			return;
 		}
 		socket.isAlive = false;
@@ -263,15 +256,11 @@ export async function	soloPong(connection, req)
 
 	if (!userSockets.has(socket))
 	{
-		console.log('Adding new user to set');
 		userSockets.add(socket);
 		userGames.set(socket, new Game());
 		userGames.get(socket).player1.isTerminal = req.query?.terminal;
-
 		if (username)
 			SoloPongGame(socket, username);
-		else
-			console.log('No username given');
 	}
 
 	const currentGame = userGames.get(socket);
@@ -299,6 +288,5 @@ export async function	soloPong(connection, req)
 		currentGame.shouldStop = true;
 		userSockets.delete(socket);
 		userGames.delete(socket);
-		console.log('goodbye client');
 	})
 }

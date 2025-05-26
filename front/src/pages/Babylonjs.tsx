@@ -49,8 +49,8 @@ const BabylonPage = () => {
     if (username === "default") return;
     CheckToken().then(res => {
     if (!res) { navigate("/"); closeGateWaySocket(); } 
-    if (!getGatewaySocket()) {
-      connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
+    if (!getGatewaySocket())
+      connectGateWaySocket(`https://${host}:8000/api/gateway`);
     });
 
     if (gameMode != "solo" && gameMode != "duo" && gameMode != "practice")
@@ -386,12 +386,9 @@ const BabylonPage = () => {
         if (!ws)
         {
             user_id = res;
-            console.log(gameMode);
             ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&isTournament=${isTournament}&user_id=${user_id}&mode=${mode}`);
             wsRef.current = ws;
         }
-
-        ws.onopen = () => { console.log('Successfully connected to server'); };
 
         ws.onmessage = (message) =>
         {
@@ -429,13 +426,7 @@ const BabylonPage = () => {
 
         ws.onclose = (event) =>
         {
-          console.log('Disconnected from server', event.code, event.reason);
           ws = null;
-        };
-
-        ws.onerror = (e) =>
-        {
-          console.log('Connection error', e);
         };
       });
         return () =>

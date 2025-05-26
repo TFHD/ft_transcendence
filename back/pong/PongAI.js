@@ -142,7 +142,6 @@ function	calcBallHit(currentGame)
         if (iter++ > MAX_ITER)
             break ;
     }
-    console.log('returning ball position')
 	return (tempGame.ball.position.y);
 }
 
@@ -162,14 +161,11 @@ async function UpdateAI(currentGame, mode)
         else
 		    await mssleep(16);
 	}
-	console.log('Stopped AI ballpos checker');
 }
 
 export async function AILogic(currentGame)
 {
-    console.log('Starting AI ball checker');
-	UpdateAI(currentGame, currentGame.AIMode); //Updates AI's infos on the game every second (async)
-    console.log('Starting AI gameplay');
+	UpdateAI(currentGame, currentGame.AIMode);
 	while (!currentGame.shouldStop)
 	{
         currentGame.player2.UpInput = false;
@@ -188,10 +184,6 @@ export async function AILogic(currentGame)
                 currentGame.player2.DownInput = true;
             }
         }
-
-		//Small sleep cuz why not IG
 		await mssleep(16);
 	}
-
-	console.log('Stopped ai');
 }

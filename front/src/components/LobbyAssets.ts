@@ -30,7 +30,6 @@ const mesh = BABYLON.SceneLoader.ImportMesh(
     },
     null,
     (scene, message, exception) => {
-      console.error("Erreur de chargement de la maison :", message, exception);
     }
   );
 

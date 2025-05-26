@@ -11,6 +11,7 @@ import SearchPage from "./pages/SearchPage"
 import ProfilPage from "./pages/ProfilPage"
 import TournamentPage from "./pages/TournamentPage"
 import NotFound from './pages/NotFound';
+import RGPDPage from './pages/RGPDPage';
 
 const App = () => {
   return (
@@ -26,6 +27,7 @@ const App = () => {
           <Route path="/search/:param" element={<SearchPage/>}/>
           <Route path="/profil/:user" element={<ProfilPage/>}/>
           <Route path="/tournament/:id" element={<TournamentPage/>}/>
+		  <Route path="/privacy" element={<RGPDPage/>}/>
 		  <Route path="*" element={<NotFound/>}/>
         </Routes>
       </Router>
