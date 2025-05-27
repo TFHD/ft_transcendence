@@ -13,6 +13,7 @@ _BLUE	= $(shell $(TPUT) setaf 26)
 all: prod
 
 prod:
+	@bash -c 'cd front && npm i'
 	@./script.sh
 	@bash -c 'docker compose -f ./docker-compose.prod.yml up --build; status=$$?; if [ $$status -eq 130 ]; then exit 0; else exit $$status; fi'
 
