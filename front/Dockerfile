@@ -1,32 +1,22 @@
-FROM node:23
-
-WORKDIR /app
-
-COPY package.json ./
-RUN npm install
-COPY . .
-RUN npx tailwindcss init -p
-
-EXPOSE 3000
-CMD ["npm", "run", "dev"]
-
-# FROM node:23-alpine AS build
+# FROM node:23
 
 # WORKDIR /app
 
 # COPY package.json ./
 # RUN npm install
+# COPY . .
 # RUN npx tailwindcss init -p
 
-# COPY . .
+# EXPOSE 3000
+# CMD ["npm", "run", "dev"]
 
-# RUN npm run build
+FROM node:23-alpine AS build
 
-# FROM nginx:alpine
+WORKDIR /app
 
-# COPY --from=build /app/dist /usr/share/nginx/html
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# EXPOSE 80
+COPY . .
 
-# CMD ["nginx", "-g", "daemon off;"]
+RUN npm run build

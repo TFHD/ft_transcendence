@@ -51,7 +51,7 @@ export async function registerUser(req, res) {
 		const hashedPassword = await bcrypt.hash(password, 10);
 		const user = await createUser(encrypt(email), hashEmail(email), username, hashedPassword);
 
-		return res.status(201).send({ user });
+		return res.status(201).send(user);
 	} catch (error) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}

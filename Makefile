@@ -10,15 +10,19 @@ _GRAY	= $(shell $(TPUT) setaf 8)
 _PURPLE	= $(shell $(TPUT) setaf 5)
 _BLUE	= $(shell $(TPUT) setaf 26)
 
-all: up
+all: prod
 
-up:
+prod:
 	@./script.sh
-	@bash -c 'docker compose -f ./docker-compose.yml up --build; status=$$?; if [ $$status -eq 130 ]; then exit 0; else exit $$status; fi'
+	@bash -c 'docker compose -f ./docker-compose.prod.yml up --build; status=$$?; if [ $$status -eq 130 ]; then exit 0; else exit $$status; fi'
+
+dev:
+	@./script.sh
+	@bash -c 'docker compose -f ./docker-compose.dev.yml up --build; status=$$?; if [ $$status -eq 130 ]; then exit 0; else exit $$status; fi'
 
 down:
 	@printf "\n🔧 $(_GREEN)Down containers$(_RESET) 🔧\n\n"
-	@docker compose -f ./docker-compose.yml down
+	@docker compose -f ./docker-compose.dev.yml down
 
 clean: down
 	@rm -rf front/node_modules
