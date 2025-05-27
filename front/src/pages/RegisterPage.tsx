@@ -72,6 +72,7 @@ const RegisterPage = () => {
             value={formData.username}
             onChange={handleChange}
             required
+            maxLength={16}
             className="w-full px-4 py-2 rounded bg-[#5d5570] text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#44a29f]"
             placeholder="Nom d'utilisateur"
           />
