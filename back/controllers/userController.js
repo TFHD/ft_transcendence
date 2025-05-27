@@ -99,21 +99,14 @@ export async function getUsersByUsername(req, res) {
 			if (!sesssion)
 				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
 			return res.status(200).send({
-				id: user.user_id,
-				username: user.username,
-				email: decrypt(user.email),
-				created_at: user.created_at,
-				updated_at: user.updated_at,
-				multiplayer_win: user.multiplayer_win,
-				multiplayer_loose: user.multiplayer_loose,
-				practice_win: user.practice_win,
-				practice_loose: user.practice_loose,
-				singleplayer_win: user.singleplayer_win,
-				singleplayer_loose: user.singleplayer_loose,
-				last_opponent: user.last_opponent,
-				twofa_enabled: user.twofa_enabled,
-				avatar_url : user.avatar_url,
-				last_seen: user.last_seen
+				users : [{
+					user_id: user.user_id,
+					username: user.username,
+					multiplayer_win: user.multiplayer_win,
+					multiplayer_loose: user.multiplayer_loose,
+					last_opponent: user.last_opponent,
+					avatar_url : user.avatar_url,
+				}]
 			});
 		} else {
 			const users = await findUsersByPartialUsername(id);
