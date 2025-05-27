@@ -4,7 +4,6 @@ import axios, { AxiosResponse } from 'axios';
 import { CheckToken, getIsAuthA2F, checkCode } from "../components/CheckConnection";
 import Modal2FA from '../components/Model2FA'
 import GoogleLoginButton from "../components/GoogleButton";
-import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
 
 const host = window.location.hostname;
 

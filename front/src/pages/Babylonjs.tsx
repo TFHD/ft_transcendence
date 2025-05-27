@@ -55,8 +55,6 @@ const BabylonPage = () => {
 
     if (gameMode != "solo" && gameMode != "duo" && gameMode != "practice")
       navigate("/lobby");
-    else if (gameMode != "solo" && !fromStartGame)
-      navigate("/lobby");
     else
       canAcessgame = true;
 
@@ -94,6 +92,15 @@ const BabylonPage = () => {
         return wall;
       };
 
+      const navigateChoose = (gameMode : string) => {
+        if (gameMode == "duo")
+          navigate("/start-game-multiplayer");
+        else if (gameMode == "solo")
+          navigate("/lobby");
+        else
+          navigate("/start-game-practice");
+      }
+
       const createBackgroundBox = (
         width: string,
         height: string,
@@ -105,7 +112,7 @@ const BabylonPage = () => {
         const rect = new GUI.Rectangle();
         rect.width = width;
         rect.height = height;
-        rect.alpha = 0.7; // CHANGED: plus visible
+        rect.alpha = 0.7;
         rect.cornerRadius = cornerRadius;
         rect.color = "white";
         rect.thickness = thickness;
@@ -158,6 +165,9 @@ const BabylonPage = () => {
       };
       const handleKeyDown = (event: KeyboardEvent) =>
       {
+        if (event.key == "Escape") {
+          navigateChoose(gameMode);
+        }
         if (event.key in keyState && Status == ENUM_STATUS.InGame)
         {
           ws?.send(JSON.stringify({ key: event.key, state: true }));
@@ -419,7 +429,7 @@ const BabylonPage = () => {
             if (dataTournament.game_id != undefined)
               navigate(`/tournament/${dataTournament.game_id}`, { state : {fromStartGame : true, finish : true, roomID : dataTournament.game_id, username : username, matchPlayed : dataTournament.match , roundPlayed : dataTournament.round}});
             else
-              navigate("/start-game-multiplayer");
+              navigateChoose(gameMode);
           }
 
           createExplosion(ball.position, {r1 : 0, g1 : 1, b1 : 0}, {r2 : 0, g2 : 1, b2 : 0}, 0.5, 2, 0.1, 0.2, 200);

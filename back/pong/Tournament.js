@@ -28,6 +28,7 @@ class   TournamentRoom
         this.finish_match = new Map();
         this.match = 1;
         this.round = 1;
+        this.winner = "";
         this.state = "En attente";
         this.nuked = false;
     }
@@ -116,24 +117,29 @@ async function sendInformations(tournamentID)
     let game                = await getGameByGameId(tournamentID);
     while (game && currentTournament && currentTournament.state != "Finish")
     {
+        const usernames = Array.from(currentTournament.users.values()).map(user => user.username);
         sendAll(tournamentID, {
             id : tournamentID,
             mode : "tournament",
             players : game.players,
             limit : game.players_limit,
             state : currentTournament.state,
+            users : usernames
         });
         currentTournament = tournamentRooms.get(tournamentID);
         game = await getGameByGameId(tournamentID);
         await mssleep(100);
     }
     if (currentTournament && currentTournament.state == "Finish") {
+        const usernames = Array.from(currentTournament.users.values()).map(user => user.username);
         sendAll(tournamentID, {
             id : tournamentID,
             mode : "tournament",
             players : game.players,
             limit : game.players_limit,
             state : currentTournament.state,
+            winner : currentTournament.winner,
+            users : usernames
         });
     }
 }
@@ -191,6 +197,23 @@ async function generateMatches(tournamentID)
     catch (e) { console.log(e); }
 }
 
+async function generateWinnersByRound(tournamentID, maxRounds) {
+    const winnersByRound = {};
+    for (let round = 1; round <= maxRounds; round++) {
+        const matches = await getMatchesByRound(tournamentID, round);
+        winnersByRound[round] = {};
+        matches.forEach(match => {
+            if (match.winner_id) {
+                winnersByRound[round][match.match] = match.winner_id;
+            }
+        });
+        if (Object.keys(winnersByRound[round]).length === 0) {
+            delete winnersByRound[round];
+        }
+    }
+    return winnersByRound;
+}
+
 async function finishMatch(tournamentID, matchPlayed)
 {
     const currentTournament = tournamentRooms.get(tournamentID);
@@ -205,12 +228,17 @@ async function finishMatch(tournamentID, matchPlayed)
             currentTournament.match = 1;
             if (currentTournament.round > Math.sqrt(currentTournament.users.size))
             {
+                const this_match = await getMatchByMatchRound(tournamentID, matchPlayed, currentTournament.round - 1);
+                if (this_match)
+                    currentTournament.winner = this_match.winner_id;
                 console.log("Finished tournament!");
                 currentTournament.state = "Finish";
             }
             else
             {
                 console.log("Finished game");
+                const winnersByRound = await generateWinnersByRound(tournamentID, match_number);
+                sendAll(tournamentID, {winnersByRound});
                 await generateMatches(tournamentID);
                 LetsPlay(tournamentID);
             }
@@ -242,7 +270,7 @@ async function LetsPlay(tournamentID)
                         socket1.send(JSON.stringify(data));
                     const socket2 = getSocketByUserName(tournamentID, user2);
                     if (socket2)
-                        socket2.socket2send(JSON.stringify(data));
+                        socket2.send(JSON.stringify(data));
                 }
             }
         }
@@ -264,9 +292,9 @@ async function LetsPlay(tournamentID)
                     const socket1 = getSocketByUserName(tournamentID, user1);
                     const socket2 = getSocketByUserName(tournamentID, user2);
                     if (socket1)
-                        socket1.socket2send(JSON.stringify(data));
+                        socket1.send(JSON.stringify(data));
                     if (socket2)
-                        socket2.socket2send(JSON.stringify(data));
+                        socket2.send(JSON.stringify(data));
                 }
             }
         }
@@ -328,8 +356,7 @@ async function joinTournament(socket, tournamentID)
             if (user.username == currentUser.username)
             {
                 socket.send(JSON.stringify({alreadyInUse: true}));
-                console.log(`USERNAME ALREADY USED IN ROOM (${currentUser.username})`); // A PACKET SHOULD BE SENT THE THE USER SO HE GOES BACK TO THE PREVIOUS PAGE AND CLOSES HIS WS
-                return ;
+                console.log(`USERNAME ALREADY USED IN ROOM (${currentUser.username})`);
             }
         currentTournament.users.set(socket, currentUser);
         await updatePlayer(tournamentID, 1);         

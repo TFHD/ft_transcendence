@@ -42,7 +42,7 @@ await db.exec(`
 		looser_score INTEGER DEFAULT 0,
 		equality INTEGER DEFAULT 0,
 		game_mode TEXT DEFAULT NULL,
-		time TEXT DEFAULT NULL
+		time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 `);
 

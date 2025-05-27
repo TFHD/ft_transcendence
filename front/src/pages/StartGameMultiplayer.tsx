@@ -88,6 +88,13 @@ const StartGameMultiplayer = () => {
 
   const isValid = isTournamentMode ? (roomId.length === 6 && tournamentUsername.trim().length > 0) : (roomId.length === 6);
 
+  const formatMatchTime = (str: string) => {
+    const [date, time] = str.split(' ');
+    const [year, month, day] = date.split('-');
+    const [hour, minute] = time.split(':');
+    return `${day}/${month}/${year} ${hour}:${minute}`;
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#0b0c10] text-white font-sans overflow-hidden">
     <div className="w-full md:w-80 p-6 bg-[#1e2933] flex flex-col justify-between">
@@ -186,7 +193,8 @@ const StartGameMultiplayer = () => {
                   </div>
                   <span className="text-sm text-gray-400 text-right">
                     🎯 {match.winner_score} - {match.looser_score}<br />
-                    🕹️ {match.game_mode}
+                    🕹️ {match.game_mode}<br />
+                    🕒 {formatMatchTime(match.time)}
                   </span>
                 </li>
               );

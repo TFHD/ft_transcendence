@@ -131,7 +131,7 @@ async function setWinner(room, dataTournament)
 					return ;
 				await updateUser(user_win.user_id, {last_opponent: looser.username});
 				await updateUser(user_loose.user_id, {last_opponent: winner.username});
-				await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, equality, "tournament", 0);
+				await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, equality, "tournament");
 		}
 		else
 		{
@@ -141,7 +141,7 @@ async function setWinner(room, dataTournament)
 				return ;
 			await updateUser(user_win.user_id, {last_opponent: user_loose.username});
 			await updateUser(user_loose.user_id, {last_opponent: user_win.username});
-			await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, equality, "duo", 0);
+			await createHistory(user_win.user_id, user_loose.user_id, user_win.username, user_loose.username, winner.score, looser.score, equality, "duo");
 		}
 		await updateMultiplayerStats(user_win.username);
 		await updateMultiplayerStats(user_loose.username);
