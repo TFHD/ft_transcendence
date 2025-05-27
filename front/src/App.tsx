@@ -27,8 +27,8 @@ const App = () => {
           <Route path="/search/:param" element={<SearchPage/>}/>
           <Route path="/profil/:user" element={<ProfilPage/>}/>
           <Route path="/tournament/:id" element={<TournamentPage/>}/>
-		  <Route path="/privacy" element={<RGPDPage/>}/>
-		  <Route path="*" element={<NotFound/>}/>
+          <Route path="/privacy" element={<RGPDPage/>}/>
+          <Route path="*" element={<NotFound/>}/>
         </Routes>
       </Router>
   );

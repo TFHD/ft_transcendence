@@ -6,17 +6,30 @@ import Modal2FA from '../components/Model2FA'
 import { connectGateWaySocket, getGatewaySocket, closeGateWaySocket} from '../components/GatewaySocket'
 import ChatWindow from '../components/ChatWindow';
 
-
 const host = window.location.hostname;
+
+type User = {
+  id: number;
+  username: string;
+  email : string;
+  avatar_url: string;
+  multiplayer_win: number;
+  multiplayer_loose: number;
+  last_opponent: string;
+  created_at?: string;
+  updated_at?: string;
+  last_seen?: string;
+};
 
 const PlayerSettingsPage = () => {
 
   const [twoFA, setTwoFA] = useState<boolean>(false);
+  
   const [showQRCode, setShowQRCode] = useState<boolean>(false);
+  const [me, setMe] = useState<User | null>(null);
   const [verificationCode, setVerificationCode] = useState<string>('');
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [canChangeAvatar, setcanChangeAvatar] = useState<boolean>(true);
   const [changeMail, setChangeMail] = useState({ email: "", password: "" });
   const [changePassword, setNewPassword] = useState({ password: "", new_password: "" });
   const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
@@ -39,10 +52,8 @@ const PlayerSettingsPage = () => {
           const userResponse = await axios.get(`https://${host}:8000/api/users/@me`, {
             withCredentials: true
           });
-          const avatar = userResponse.data.avatar_url;
-          if (avatar) {
-            setAvatarPreview(avatar);
-          }
+          setMe(userResponse.data);
+
         } catch (error) {
         }
       };
@@ -242,6 +253,24 @@ const PlayerSettingsPage = () => {
     }
   };
 
+  const downloadJSON = async () => {
+
+    try {
+      const response = await axios.get(`https://${host}:8000/api/users/@me/export-data`, { withCredentials: true })
+      const blob = new Blob([JSON.stringify(response.data.data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+    
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = response.data.filename.endsWith('.json') ? response.data.filename : response.data.filename + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    
+      URL.revokeObjectURL(url);
+  } catch (err) {}
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -264,12 +293,23 @@ const PlayerSettingsPage = () => {
 
         <section className="bg-[#1e2933] p-6 rounded-lg shadow space-y-4">
           <h2 className="text-xl font-semibold">Changer l'avatar</h2>
-          <div className="flex items-center justify-between space-x-6">
+          <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-6">
             <img
               src={avatarPreview || '/assets/no_profile.jpg'}
               alt="Avatar actuel"
               className="w-32 h-32 rounded-full object-cover border-4 border-[#44a29f]"
             />
+            <div className="flex flex-col items-start justify-center px-4 py-2 bg-[#222c37] rounded-lg shadow-md min-w-[200px]">
+              <span className="text-lg font-bold text-[#f7c80e] mb-1 flex items-center gap-2">
+                <svg className="w-6 h-6 text-[#44a29f]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4.418 0-8 2.239-8 5v1a1 1 0 001 1h14a1 1 0 001-1v-1c0-2.761-3.582-5-8-5z" />
+                </svg>
+                {me?.username || "Utilisateur"}
+              </span>
+              <span className="text-sm text-gray-400 truncate">
+                {me?.email || "email inconnu"}
+              </span>
+            </div>
             <div className="flex flex-col justify-center space-y-2">
               <label
                 htmlFor="avatar-upload"
@@ -418,12 +458,24 @@ const PlayerSettingsPage = () => {
           </button>
         </section>
 
-        <div className="flex justify-start">
+        <div className="flex justify-between">
           <button
             onClick={() => navigate('/lobby')}
             className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white"
           >
             ← Retour au lobby
+          </button>
+          <button
+            onClick={() => downloadJSON()}
+            className='bg-[#44a29f] hover:bg-[#3b8a8a] px-4 py-2 rounded text-white'
+          >
+            Telecharger mes données
+          </button>
+          <button
+            onClick={() => navigate('/privacy')}
+            className="bg-[#f7c80e] hover:bg-yellow-400 px-4 py-2 rounded text-black font-semibold"
+          >
+            Politique de Confidentialité
           </button>
         </div>
       </div>
