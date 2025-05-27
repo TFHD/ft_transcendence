@@ -9,9 +9,10 @@ import path from "path";
 import { fileURLToPath } from 'url';
 import cloudinary from "cloudinary";
 import { randomUUID } from "crypto";
-import { deleteAllFriendsByUserId } from "../models/friendsModel.js";
-import { deleteMessagesByUserId } from "../models/messagesModel.js";
+import { deleteAllFriendsByUserId, getAllFriendsById } from "../models/friendsModel.js";
+import { deleteMessagesByUserId, getAllMessages } from "../models/messagesModel.js";
 import { encrypt, decrypt, hashEmail } from "../utils/crypto.js";
+import { exportDataObject } from "../utils/exportData.js";
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
@@ -49,6 +50,36 @@ export async function getHistoryFromId(req, res) {
 		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
 	}
 };
+
+export async function RGPDDownload(req, res) {
+	if (!req.params)
+		return res.status(errorCodes.BAD_REQUEST.status).send(errorCodes.BAD_REQUEST);
+	const { id } = req.params;
+	try {
+		if (!id)
+			return res.status(errorCodes.MISSING_FIELDS.status).send(errorCodes.MISSING_FIELDS);
+		if (id === '@me' || id == req.user.user_id) {
+			if (!req.user.user_id)
+				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+			const user = req.user;
+			if (!user)
+				return res.status(errorCodes.USER_NOT_FOUND.status).send(errorCodes.USER_NOT_FOUND);
+			const session = req.session;
+			if (!session)
+				return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+			const timestamp = new Date().toISOString().split('T')[0];
+			const filename = `rgpd-export-${user.username}-${timestamp}.json`;
+			const data = await exportDataObject(user, session);
+			return res.status(200).send({
+				filename: filename,
+				data: data
+			});
+		} else
+			return res.status(errorCodes.UNAUTHORIZED.status).send(errorCodes.UNAUTHORIZED);
+	} catch (error) {
+		return res.status(errorCodes.INTERNAL_SERVER_ERROR.status).send(errorCodes.INTERNAL_SERVER_ERROR);
+	}
+}
 
 export async function getUsersByUsername(req, res) {
 	if (!req.params)

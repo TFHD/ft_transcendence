@@ -1,4 +1,4 @@
-import { getUserFromId, getHistoryFromId, patchUserFromId, deleteOwnUser, getUsersByUsername } from '../controllers/userController.js';
+import { getUserFromId, getHistoryFromId, patchUserFromId, deleteOwnUser, getUsersByUsername, RGPDDownload } from '../controllers/userController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { twoFAMiddleware } from '../middlewares/2faMiddleware.js';
 
@@ -13,4 +13,6 @@ export default async function userRoutes(fastify) {
 	fastify.get('/api/users/:id', { preHandler: authMiddleware }, getUserFromId);
 	fastify.patch('/api/users/:id', { preHandler: [authMiddleware, twoFAMiddleware] }, patchUserFromId);
 	fastify.delete('/api/users/:id', { preHandler: [authMiddleware, twoFAMiddleware] }, deleteOwnUser);
+
+	fastify.get('/api/users/:id/export-data', { preHandler: authMiddleware }, RGPDDownload);
 };
