@@ -17,7 +17,7 @@ uint32_t	TCLI_curlCB(void *ptr, uint32_t size, uint32_t nmemb, void *ud)
 	return (total);
 }
 
-TCLI_API(cookieGet)(char **cookie)
+TCLI_API(getCookie)(char **cookie)
 {
 	if (!cookie)
 		return ;
@@ -53,7 +53,7 @@ TCLI_API(makeUrlWS)(const char *endpoint)
 	const uint32_t	hdrl = strlen(TCLI_WSS_HDR);
 	const uint32_t	endl = strlen(endpoint);
 
-	if (hdrl + endl >= 128)
+	if (hdrl + endl >= 1024)
 		TCLI_error("request too long.");
 
 	memcpy(TCLI_TMP,		TCLI_WSS_HDR,	hdrl);
@@ -62,6 +62,26 @@ TCLI_API(makeUrlWS)(const char *endpoint)
 
 	free(TCLI_URL);
 	TCLI_URL = strdup(TCLI_TMP);
+}
+
+TCLI_API(makeGameUrl)(TCLI_GameInfo *game)
+{
+	static char	endpoint[256] = {0};
+
+	if (*endpoint)
+		memset(endpoint, 0, 256);
+
+	strcat(endpoint, "pong/");
+	strcat(endpoint, game->mode);
+	strcat(endpoint, "?username=");
+	strcat(endpoint, game->username);
+	if (!strcmp(game->mode, "duo"))
+	{
+		strcat(endpoint, "&roomID=");
+		strcat(endpoint, game->roomid);
+	}
+	strcat(endpoint, "&terminal=true");
+	TCLI_makeUrlWS(endpoint);
 }
 
 TCLI_API(makeRequestHeaders)(int c, ...)
@@ -85,23 +105,21 @@ TCLI_API(makePostfields)(cJSON *post)
 }
 
 # define	TCLI_JSON_HDR		"Content-Type: application/json"
-# define	TCLI_ENDPOINT_LOGIN	"auth/login"
 
-TCLI_API(login)(const char *user, const char *pass)
+TCLI_API(login)(TCLI_LogInfo *info)
 {
-	TCLI_makeUrl(TCLI_ENDPOINT_LOGIN);
 	TCLI_makeRequestHeaders(1, TCLI_JSON_HDR);
 
 	cJSON	*log = cJSON_CreateObject();
 	void	*tmp = NULL;
 
-	tmp = cJSON_AddStringToObject(log, "email", user);
+	tmp = cJSON_AddStringToObject(log, "email", info->username);
 	if (!tmp) goto defer;
 
-	tmp = cJSON_AddStringToObject(log, "username", user);
+	tmp = cJSON_AddStringToObject(log, "username", info->username);
 	if (!tmp) goto defer;
 	
-	tmp = cJSON_AddStringToObject(log, "password", pass);
+	tmp = cJSON_AddStringToObject(log, "password", info->password);
 	if (!tmp) goto defer;
 
 	TCLI_makePostfields(log);
@@ -112,11 +130,39 @@ defer:
 	TCLI_error("LOGIN : json creation failed.");
 }
 
-#define TCLI_ENDPOINT_QR	"auth/2fa/setup"
-
-TCLI_API(doQR)(void)
+TCLI_API(register)(TCLI_LogInfo *info)
 {
-	TCLI_makeUrl(TCLI_ENDPOINT_QR);
+	TCLI_makeRequestHeaders(1, TCLI_JSON_HDR);
+
+	cJSON	*log = cJSON_CreateObject();
+	void	*tmp = NULL;
+
+	tmp = cJSON_AddStringToObject(log, "email", info->email);
+	if (!tmp) goto defer;
+
+	tmp = cJSON_AddStringToObject(log, "username", info->username);
+	if (!tmp) goto defer;
+	
+	tmp = cJSON_AddStringToObject(log, "password", info->password);
+	if (!tmp) goto defer;
+
+	TCLI_makePostfields(log);
+	
+	return ;
+
+defer:
+	TCLI_error("LOGIN : json creation failed.");
+}
+
+TCLI_API(logout)(void)
+{
+	TCLI_makeRequestHeaders(1, TCLI_JSON_HDR);
+
+	cJSON	*log = cJSON_CreateObject();
+
+	TCLI_makePostfields(log);
+	
+	return ;
 }
 
 # define	TCLI_REQUEST_FAILED	"[%s] Warning: http request failed with error code %d\n"
@@ -142,94 +188,103 @@ TCLI_API(sendRequest)(int *res, TCLI_RequestType type)
 	TCLI_CBLEN = 0;
 }
 
-TCLI_API(makeRequest)(TCLI_SceneCtx *ctx, uint64_t type)
+TCLI_API(makeRequest)(TCLI_SceneCtx *ctx, void *arg)
 {
-	if (type == TCLI_DO_LOGIN)
+	int				res = 0;
+	uint64_t		type = (uint64_t)arg;
+	TCLI_LogInfo	*log = ctx->data;
+	const char		*endpoints[3] = 
 	{
-		int				res = 0;
-		TCLI_LogInfo	*log = ctx->data;
-
-		TCLI_login(log->username, log->password);
-		TCLI_sendRequest(&res, TCLI_POST);
-
-		//printf("received [%s]\n", TCLI_CBSTR);
-		// TODO : maybe handle request errors one day
-	}
-	if (type == TCLI_DO_QR)
-	{
-		int res = 0;
-
-		TCLI_login("sacha", "12345678");
-		TCLI_sendRequest(&res, TCLI_POST);
-		TCLI_doQR();
-		TCLI_sendRequest(&res, TCLI_GET);
-	}
-}
-
-TCLI_API(handleWsFrames)(void)
-{
-	while (1)
-	{
-		uint64_t					nread = 0;
-		const struct curl_ws_frame	*meta;
-
-		CURLcode	rc = curl_ws_recv(CURL_CTX, TCLI_WSBUF_RECV, 1024, &nread, &meta);
-
-		if (rc == CURLE_AGAIN)
-			break ;
-		if (rc != CURLE_OK)
-		{
-// 			TCLI_STATUS &= ~TCLI_FLAG_OK;
-			break ;
-		}
-		if (meta->flags & CURLWS_TEXT)
-			printf("TEXT: %.*s\n", (int)nread, TCLI_WSBUF_RECV);
-	}
-}
-
-TCLI_API(evalReply)(uint64_t type)
-{
-	TCLI_STATUS &= ~TCLI_REPLY;
-	if (type == TCLI_DO_LOGIN)
-	{
-		cJSON	*reply = cJSON_Parse(TCLI_CBSTR);
-		cJSON	*success = cJSON_GetObjectItemCaseSensitive(reply, "success");
-
-		if (cJSON_IsBool(success) && cJSON_IsTrue(success))
-			TCLI_STATUS |= TCLI_REPLY;
-
-		cJSON_Delete(reply);
-	}
-	if (type == TCLI_DO_QR)
-	{
-		cJSON	*reply = cJSON_Parse(TCLI_CBSTR);
-		cJSON	*cli = cJSON_GetObjectItemCaseSensitive(reply, "cli");
-		cJSON	*qr = cJSON_GetObjectItemCaseSensitive(cli, "qrCodeImage");
-		cJSON	*sizeJ = cJSON_GetObjectItemCaseSensitive(cli, "size");
+		[TCLI_DO_LOGIN]			= "auth/login",
+		[TCLI_DO_LOGOUT]		= "auth/logout",
+		[TCLI_DO_REGISTER]		= "auth/register",
+	};
 	
-		if (!qr || !sizeJ)
-		{
-			cJSON_Delete(reply);
-			printf("Missing information.");
-			return ;
-		}
+	if (type > TCLI_DO_REGISTER)
+		exit(69);
 
-		uint32_t	size = sizeJ->valueint;
-
-		const cJSON	*line = NULL;
-		uint32_t	line_count = 0;
-
-		cJSON_ArrayForEach(line, qr)
-		{
-			const char	*linestring = line->valuestring;
-
-			for (uint32_t i = 0; i < size; ++i)
-			{
-				TCLI_screenSetPixel(&TCLI_SCREEN, (vec2){i, line_count + 15}, linestring[i] == '0' ? 0xFFFFFF : 0);
-			}
-			line_count++;
-		}
-
-		cJSON_Delete(reply);
+	TCLI_makeUrl(endpoints[type]);
+	switch (type)
+	{
+		case TCLI_DO_LOGIN:
+			TCLI_login(log);
+			break ;
+		case TCLI_DO_REGISTER:
+			TCLI_register(log);
+			break ;
+		case TCLI_DO_LOGOUT:
+			TCLI_logout();
+			break ;
+		default:
+			exit(69);
 	}
+	TCLI_sendRequest(&res, TCLI_POST);
+}
+
+TCLI_API(evalReply)(TCLI_SceneCtx *ctx, void *arg)
+{
+	(void)	ctx;
+
+	cJSON		*reply = cJSON_Parse(TCLI_CBSTR);
+	cJSON		*tmp = NULL;
+	uint64_t	type = (uint64_t)arg;
+
+	switch (type)
+	{
+		case TCLI_DO_REGISTER:
+			tmp = cJSON_GetObjectItemCaseSensitive(reply, "user");
+			if (!tmp)
+			{
+				tmp = cJSON_GetObjectItemCaseSensitive(reply, "message");
+				if (cJSON_IsString(tmp))
+				{
+					free(TCLI_ERROR_MSG);
+					TCLI_ERROR_MSG = strdup(tmp->valuestring);
+				}
+				break ;
+			}
+			TCLI_STATUS |= TCLI_REPLY;
+			break ;
+		case TCLI_DO_LOGIN:
+			tmp = cJSON_GetObjectItemCaseSensitive(reply, "success");
+			if (!tmp)
+			{
+				tmp = cJSON_GetObjectItemCaseSensitive(reply, "message");
+				if (cJSON_IsString(tmp))
+				{
+					free(TCLI_ERROR_MSG);
+					TCLI_ERROR_MSG = strdup(tmp->valuestring);
+				}
+			}
+			else
+			{
+				if (cJSON_IsBool(tmp) && cJSON_IsTrue(tmp))
+					TCLI_STATUS |= TCLI_REPLY;
+				const char	*username = ((TCLI_LogInfo *)(TCLI_loginPage()->data))->username;
+				strcpy(TCLI_GAME_INFO.username, username);
+			}
+			break ;
+		case TCLI_DO_LOGOUT:
+			TCLI_STATUS |= TCLI_REPLY;
+			break ;
+		default:
+			break ;
+	}
+	cJSON_Delete(reply);
+}
+
+TCLI_API(react)(TCLI_SceneCtx *ctx, void *errorMsg)
+{
+	(void)	ctx;
+
+	if (TCLI_STATUS & TCLI_REPLY)
+	{
+		TCLI_STATUS &= ~TCLI_REPLY;
+		return ;
+	}
+
+	TCLI_Elem	*elem = (TCLI_Elem *)errorMsg;
+
+	TCLI_STATUS |= TCLI_ACTION_SKIP;
+	elem->data = TCLI_ERROR_MSG;
 }

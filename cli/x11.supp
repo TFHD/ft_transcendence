@@ -1,0 +1,6 @@
+{
+   X11-Generic
+   Memcheck:Leak
+   ...
+   obj:*/libX11.so*
+}

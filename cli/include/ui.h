@@ -12,9 +12,9 @@
 
 # define	TCLI_ELEM_NULL ((void *)-1UL)
 
-# define	KACTION(F, A, K)	(TCLI_Action){.func = F, .arg = A, .key = K}
-# define	ACTION(F, A)		KACTION(F, A, -1)
-# define	NOOP()				KACTION(NULL, NULL, -1)
+# define	KACTION(T, A, K)	(TCLI_Action){.type = T, .arg = (void *)A, .key = K}
+# define	ACTION(T, A)		KACTION(T, A, -1)
+# define	NOOP()				KACTION(0, NULL, -1)
 # define	ACTION_LIST			(TCLI_Action[])
 
 enum
@@ -29,10 +29,12 @@ enum
 
 enum
 {
-	TCLI_SCENE_LINK = 1 << 0,
-	TCLI_SCENE_RELOAD = 1 << 1,
-	TCLI_REQUEST_SEND = 1 << 2,
-	TCLI_REQUEST_RECV = 1 << 3,
+	TCLI_ACTION_JUMP		= 1,
+	TCLI_ACTION_LOAD		= 2,
+	TCLI_ACTION_REQ			= 3,
+	TCLI_ACTION_EVAL		= 4,
+	TCLI_ACTION_REACT		= 5,
+	TCLI_ACTION_SETTINGS	= 6,
 };
 
 enum
@@ -51,19 +53,19 @@ struct	_tcli_elemHdr
 
 struct	_tcli_action
 {
-	void	*func;
-	void	*arg;
-	int32_t	key;
+	void		*arg;
+	uint32_t	type;
+	int32_t		key;
 };
 
 struct	_tcli_interactable
 {
-	TCLI_Action	onSelect;
-	TCLI_Action	onDeselect;
-	TCLI_Action	*onEnter;
-	TCLI_Action	*onKey;
-	uint32_t	onEnterCount;
-	uint32_t	onKeyCount;
+	TCLI_Renderer	onSelect;
+	TCLI_Renderer	onDeselect;
+	TCLI_Action		*onEnter;
+	TCLI_Action		*onKey;
+	uint32_t		onEnterCount;
+	uint32_t		onKeyCount;
 };
 
 struct	_tcli_transform
@@ -79,17 +81,18 @@ struct	_tcli_elem
 	TCLI_Interactable	*i;
 	uint32_t			color;
 	uint32_t			colorD;
+	uint32_t			txtSize;;
 	void				*data;
 };
 
-typedef struct	_tcli_loginfo
+struct	_tcli_loginfo
 {
 	char	username[16];
 	char	password[16];
-	char	confirm[16];
+	char	email[32];
 	char	twoFa[7];
 	char	_reserved;
-}	TCLI_LogInfo;
+};
 
 struct	_tcli_sceneCtx
 {
@@ -102,7 +105,7 @@ struct	_tcli_sceneCtx
 };
 
 TCLI_API(loadScene)
-(void *toLoad);
+(TCLI_SceneCtx *ctx, void *toLoad);
 
 TCLI_API(renderText)
 (TCLI_ElemHdr *e);
@@ -123,7 +126,7 @@ TCLI_API(handleKey)
 (TCLI_SceneCtx *ctx, char key);
 
 TCLI_API(handleJump)
-(TCLI_SceneCtx *ctx, TCLI_ElemHdr *next);
+(TCLI_SceneCtx *ctx, void *next);
 
 TCLI_API(handleAction)
 (TCLI_SceneCtx *ctx, TCLI_Action *action);

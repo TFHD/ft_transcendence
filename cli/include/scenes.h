@@ -8,11 +8,6 @@
 # include <ui.h>
 # include <http.h>
 
-enum
-{
-	TCLI_ACTION_SKIP = 1,
-};
-
 TCLI_SCENE_FUNC(loginPage);
 
 TCLI_SCENE_FUNC(registerPage);

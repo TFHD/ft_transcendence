@@ -83,6 +83,8 @@ TCLI_API(screenDrawText)(TCLI_Screen *screen, const char *text, vec2 start, uint
 	vec2	offset = {0};
 	vec2	charpos = {0};
 
+	if (!text)
+		return ;
 	while (*text)
 	{
 		if (*text < 32)

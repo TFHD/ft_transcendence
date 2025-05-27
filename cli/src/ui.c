@@ -6,8 +6,9 @@
 
 // TODO : Action queue ssystem for modularity
 
-TCLI_API(loadScene)(void *toLoad)
+TCLI_API(loadScene)(TCLI_SceneCtx *ctx, void *toLoad)
 {
+	(void) ctx;
 	TCLI_SCENE = (TCLI_Scene)toLoad;
 	TCLI_STATUS |= TCLI_SCENE_SWAP;
 }
@@ -15,7 +16,7 @@ TCLI_API(loadScene)(void *toLoad)
 // TODO : add SELECT and DESELECT action pushes
 
 
-TCLI_API(handleJump)(TCLI_SceneCtx *ctx, TCLI_ElemHdr *next)
+TCLI_API(handleJump)(TCLI_SceneCtx *ctx, void *next)
 {
 	TCLI_Elem			*current = (TCLI_Elem *)ctx->select;
 
@@ -23,9 +24,8 @@ TCLI_API(handleJump)(TCLI_SceneCtx *ctx, TCLI_ElemHdr *next)
 	{
 		TCLI_Interactable	*inter = current->i;
 
-		printf("current = %p -> trying to jump to %p\n", current, next);
-		if (inter->onDeselect.func)
-			TCLI_handleAction(ctx, &inter->onDeselect);
+		if (inter->onDeselect)
+			inter->onDeselect((TCLI_ElemHdr *)current);
 	}
 
 	if (next == TCLI_ELEM_NULL)
@@ -42,58 +42,44 @@ TCLI_API(handleJump)(TCLI_SceneCtx *ctx, TCLI_ElemHdr *next)
 	ctx->last = (TCLI_ElemHdr *) current;
 	current = (TCLI_Elem *) ctx->select;
 
-	if (current->i && current->i->onSelect.func)
-		TCLI_handleAction(ctx, &current->i->onSelect);
+	if (current->i && current->i->onSelect)
+		current->i->onSelect((TCLI_ElemHdr *)current);
 }
+
+TCLI_INTERN(gameSettings)(TCLI_SceneCtx* ctx, void *arg)
+{
+	(void)	ctx;
+
+	char	*mode = (char *)arg;
+
+	strcpy(TCLI_GAME_INFO.mode, mode);
+	TCLI_GAME_INFO.mode[strlen(mode)] = 0;
+	if (*mode == 's')
+		TCLI_STATUS |= TCLI_PONG_SOLO;
+}
+
+typedef void	(*TCLI_ActionHandler)(TCLI_SceneCtx *, void *);
 
 TCLI_API(handleAction)(TCLI_SceneCtx *ctx, TCLI_Action *action)
 {
-	printf("Action HANDLING !!!\n");
-	if (action->func == TCLI_handleJump)
+	const TCLI_ActionHandler	handlers[7] = 
 	{
-		printf("Element switch !!!\n");
-		TCLI_ElemLoader		f = action->func;
-		TCLI_ElemHdr		*a = action->arg;
+		NULL,
+		TCLI_handleJump,
+		TCLI_loadScene,
+		TCLI_makeRequest,
+		TCLI_evalReply,
+		TCLI_react,
+		TCLI_gameSettings,
+	};
 
-		f(ctx, a);
-		return ;
-	}
-	if (action->func == TCLI_loadScene)
-	{
-		printf("Scene loading !\n");
-		TCLI_SceneLoader	f = action->func;
-		TCLI_Scene			*a = action->arg;
-
-		f(a);
-		return ;
-	}
-	if (action->func == TCLI_makeRequest)
-	{
-		TCLI_Requester	f = action->func;
-		uint64_t		a = (uint64_t) action->arg;
-
-		f(ctx, a);
-		return ;
-	}
-	if (action->func == TCLI_evalReply)
-	{
-		TCLI_Evaluer	f = action->func;
-		uint64_t		a = (uint64_t) action->arg;
-
-		f(a);
-		return ;
-	}
-	printf("TCLI_Renderer  called !!!\n");
-	TCLI_Renderer	f = action->func;
-	TCLI_ElemHdr	*a = action->arg;
-	f(a);
+	if (action->type && action->type < 7)
+		handlers[action->type](ctx, action->arg);
 }
 
 TCLI_INTERN(handleInput)(const TCLI_Elem *current, char key)
 {
 	char	*field = (char *)current->data;
-
-	printf("field pointer = %p\n", field);
 
 	if (current->h.type != TCLI_ELEM_TEXTBOX)
 		return ;
@@ -102,7 +88,7 @@ TCLI_INTERN(handleInput)(const TCLI_Elem *current, char key)
 
 	if (key == 127 && len > 0)
 		field[len - 1] = 0;
-	else if (len >= 15)
+	else if (len >= current->txtSize)
 		return ;
 	else if (key >= 32 && key < 127)
 		field[len] = key;
@@ -111,34 +97,37 @@ TCLI_INTERN(handleInput)(const TCLI_Elem *current, char key)
 TCLI_API(handleKey)(TCLI_SceneCtx *ctx, char key)
 {
 	const TCLI_Elem			*current = (TCLI_Elem *)ctx->select;
+
+	if (current == (void *)1) return ;
+
 	const TCLI_Interactable	*inter = current->i;
 
 	if (!inter)	return ;
 
-	printf("Handling a keystroke ! -> %d\n", key);
 	if (key == '\n')
 	{
-		printf("Enter actions -> %d to go...\n", inter->onEnterCount);
 		for (uint32_t i = 0; i < inter->onEnterCount; ++i)
+		{
+			if (TCLI_STATUS & TCLI_ACTION_SKIP)
+			{
+				TCLI_STATUS &= ~TCLI_ACTION_SKIP;
+				continue ;
+			}
 			TCLI_handleAction(ctx, &inter->onEnter[i]);
+		}
 		return ;
 	}
 
-	printf("Not enter, checking for actions...");
 	for (uint32_t i = 0; i < inter->onKeyCount; ++i)
 	{
 		TCLI_Action	*action = &inter->onKey[i];
 
-		printf("action key = %d ", action->key);
 		if (action->key == key)
 		{
-			printf(" == %d, calling handleAction\n", key);
 			TCLI_handleAction(ctx, action);
 			return ;
 		}
-		printf(" != %d...\n", key);
 	}
-	printf("handleInput called\n");
 	TCLI_handleInput(current, key);
 }
 
@@ -195,7 +184,6 @@ void	TCLI_selectButton(TCLI_ElemHdr *hdr)
 
 	if (!e)
 		return ;
-	printf("le rouge !\n");
 	e->color = 0xF31313;
 }
 
@@ -205,7 +193,6 @@ void	TCLI_deselectButton(TCLI_ElemHdr *hdr)
 
 	if (!e)
 		return ;
-	printf("retour au blanc\n");
 	e->color = e->colorD;
 }
 
@@ -254,17 +241,17 @@ TCLI_API(makeInteractions)
 	if (!inter)
 		return;
 
-	inter->onSelect = ACTION(selectors[hdr->type], e);
-	inter->onDeselect = ACTION(selectors[TCLI_ELEM_LAST + hdr->type], e);
+	inter->onSelect = selectors[hdr->type];
+	inter->onDeselect = selectors[TCLI_ELEM_LAST + hdr->type];
 			
 	uint32_t i;
 
-	for (i = 0; onEnter[i].func; ++i) {}
+	for (i = 0; onEnter[i].type; ++i) {}
 	inter->onEnterCount = i;
 	inter->onEnter = malloc(i * sizeof(TCLI_Action));
 	memcpy(inter->onEnter, onEnter, i * sizeof(TCLI_Action));
 
-	for (i = 0; onKey[i].func; ++i) {}
+	for (i = 0; onKey[i].type; ++i) {}
 	inter->onKeyCount = i;
 	inter->onKey = malloc(i * sizeof(TCLI_Action));
 	memcpy(inter->onKey, onKey, i * sizeof(TCLI_Action));

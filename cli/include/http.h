@@ -23,15 +23,15 @@ enum	_tcli_reqtype
 enum	_tcli_acttype
 {
 	TCLI_DO_LOGIN,
+	TCLI_DO_LOGOUT,
 	TCLI_DO_REGISTER,
-	TCLI_DO_QR
 };
 
 // Curl answer callback
 uint32_t	TCLI(curlCB)
 (void *ptr, uint32_t size, uint32_t nmemb, void *ud);
 
-TCLI_API(cookieGet)
+TCLI_API(getCookie)
 (char **cookie);
 
 TCLI_API(makeUrl)
@@ -39,6 +39,9 @@ TCLI_API(makeUrl)
 
 TCLI_API(makeUrlWS)
 (const char *endpoint);
+
+TCLI_API(makeGameUrl)
+(TCLI_GameInfo *game);
 
 TCLI_API(makeRequestHeaders)
 (int c, ...);
@@ -51,7 +54,7 @@ TCLI_API(sendRequest)
 (int *res, TCLI(RequestType) type);
 
 TCLI_API(makeRequest)
-(TCLI(SceneCtx) *ctx, uint64_t type);
+(TCLI(SceneCtx) *ctx, void *type);
 
 // upgrade to wss  connection , to be called before game, fallback to  http after
 TCLI_API(wssUpgrade)
@@ -62,10 +65,13 @@ TCLI_API(handleWsFrames)
 
 // evaluate request reply for future branching
 TCLI_API(evalReply)
-(uint64_t type);
+(TCLI_SceneCtx *ctx, void *arg);
+
+TCLI_API(react)
+(TCLI_SceneCtx *ctx, void *errorMsg);
 
 // ACTUAL REQUEST CONSTRUCTORS
 TCLI_API(login)
-(const char *user, const char *pass);
+(TCLI_LogInfo *info);
 
 #endif		// _HTTP_H

@@ -35,7 +35,10 @@ typedef struct	_tcli_action		TCLI_Action;
 typedef struct	_tcli_elem			TCLI_Elem;
 typedef struct	_tcli_sceneCtx		TCLI_SceneCtx;
 
+typedef struct	_tcli_loginfo		TCLI_LogInfo;
+
 typedef struct	_tcli_buff			TCLI_Buffer;
+typedef struct	_tcli_gameinfo		TCLI_GameInfo;
 typedef enum	_tcli_reqtype		TCLI_RequestType;
 
 typedef TCLI_SceneCtx				*(*TCLI_Scene)(void);

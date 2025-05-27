@@ -62,15 +62,16 @@ TCLI_API(cleanup)(void)
 	if (CURL_CTX)
 		curl_easy_cleanup(CURL_CTX);
 	free(TCLI_CBSTR);
+	free(TCLI_ERROR_MSG);
 	free(TCLI_URL);
 	free(TCLI_CTX);
-	printf("\033[?25h");
+	printf("\033c\033[0m\033[?25h");
 }
 
 TCLI_API(error)(const char *msg)
 {
 	if (msg)
-		printf("[%s] Error: %s\n", TCLI_EXE, msg);
+		dprintf(2, "[%s] Error: %s\n", TCLI_EXE, msg);
 	exit(1);
 }
 
@@ -82,7 +83,7 @@ TCLI_API(usage)(int err)
 
 TCLI_INTERN(cookieInit)(void)
 {
-	curl_easy_setopt(CURL_CTX, CURLOPT_COOKIEFILE, "");
+	curl_easy_setopt(CURL_CTX, CURLOPT_COOKIEFILE, TCLI_COOKIE_FILE);
 	curl_easy_setopt(CURL_CTX, CURLOPT_COOKIEJAR, TCLI_COOKIE_FP);
 }
 
