@@ -1,7 +1,6 @@
 .nfs*
 *.sqlite
 node_modules/
-*-lock.json
 back/.env
 .vscode
 cli/include/cJSON
