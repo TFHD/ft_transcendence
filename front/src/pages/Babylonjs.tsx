@@ -31,17 +31,29 @@ const BabylonPage = () => {
 		round : location.state?.round,
     game_id :location.state?.game_id,
 	}
+    const [initData] = useState(() => ({
+    fromStartGame: location.state?.fromStartGame,
+    roomID: location.state?.roomID,
+    isTournament: location.state?.isTournament,
+    mode: location.state?.mode,
+    dataTournament: {
+      username: location.state?.username,
+      match: location.state?.match,
+      round: location.state?.round,
+      game_id: location.state?.game_id,
+    }
+  }));
 
   useEffect(() => {
-    if (dataTournament.username != undefined)
-      setUsername(dataTournament.username);
+    if (initData.dataTournament.username != undefined)
+      setUsername(initData.dataTournament.username);
     else {
       getUsername().then(res => {
         setUsername(res);
       });
     }
     getId().then(res => {user_id = res;});
-    if (location.state?.fromStartGame)
+    if (initData.fromStartGame)
       navigate(location.pathname, { replace: true, state: undefined });
   }, []);
 
@@ -396,7 +408,7 @@ const BabylonPage = () => {
         if (!ws)
         {
             user_id = res;
-            ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${roomID}&username=${username}&terminal=${isTerminal}&game_id=${dataTournament.game_id}&match=${dataTournament.match}&round=${dataTournament.round}&isTournament=${isTournament}&user_id=${user_id}&mode=${mode}`);
+            ws = new WebSocket(`wss://${host}:8000/api/pong/${gameMode}?roomID=${initData.roomID}&username=${username}&terminal=${isTerminal}&game_id=${initData.dataTournament.game_id}&match=${initData.dataTournament.match}&round=${initData.dataTournament.round}&isTournament=${initData.isTournament}&user_id=${user_id}&mode=${initData.mode}`);
             wsRef.current = ws;
         }
 
