@@ -120,12 +120,7 @@ const TournamentPage = () => {
         navigate("/lobby");
       }
     };
-
-    ws.onopen = () => { console.log('Successfully connected to server'); };
-    ws.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); };
-    ws.onerror = (e) => { console.log('Connection error', e); };
     return () => { }
-
   }, [navigate, finish, matchPlayed, roundPlayed]);
 
   const handleStart = () => { wsRef.current?.send(JSON.stringify({ start: true })); };

@@ -57,7 +57,6 @@ const ProfilPage = () => {
       ws1 = getGatewaySocket();
       if(!ws1) {
         ws1 = connectGateWaySocket(`wss://${host}:8000/api/gateway`);
-        console.log("connexion reussie !");
       }
     });
 
@@ -68,7 +67,6 @@ const ProfilPage = () => {
         });
         setUser(res.data);
       } catch (err) {
-        console.error('Erreur de récupération du profil utilisateur :', err);
       }
     };
 
@@ -146,9 +144,7 @@ const ProfilPage = () => {
 
   useEffect(() => {
     if (!ws1 || !me) return;
-    ws1.onopen = () => { console.log('Successfully connected to server'); };
-    ws1.onerror = (e) => { console.log('Connection error', e); };
-    ws1.onclose = (event) => { console.log('Disconnected from server', event.code, event.reason); ws1 = null; };
+    ws1.onclose = (event) => { ws1 = null; };
 
     const handler = (message: MessageEvent) => {
 		const gateway = JSON.parse(message.data);

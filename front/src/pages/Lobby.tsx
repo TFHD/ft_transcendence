@@ -26,7 +26,6 @@ const BabylonScene = () => {
       navigate("/");
       closeGateWaySocket();
     } catch (error) {
-      console.error("Erreur lors de la déconnexion :", error);
     }
   };
 
@@ -41,7 +40,7 @@ const BabylonScene = () => {
       if (!res) { navigate("/"); closeGateWaySocket(); }
     });
     if (!getGatewaySocket()) {
-      connectGateWaySocket(`https://${host}:8000/api/gateway`); console.log("connexion reussie !");}
+      connectGateWaySocket(`https://${host}:8000/api/gateway`); }
 
 
     if (!canvasRef.current) return;
