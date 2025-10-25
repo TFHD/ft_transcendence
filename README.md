@@ -163,6 +163,6 @@ Consultez [`api_back.md`](./api_back.md) pour :
 
 ## 👤 Auteur
 
-Projet développé par [TFHD](https://github.com/TFHD).
+Projet développé par [TFHD](https://github.com/TFHD), [SatoSaki](https://github.com/SatoSakii), [Scorpionnem](https://github.com/Scorpionnem) and [Arkturius](https://github.com/Arkturius).
 
 ---
